@@ -1,0 +1,24 @@
+{
+  auto_https off
+}
+
+http://manny.lan {
+  reverse_proxy http://127.0.0.1:8081
+}
+
+http://ha.lan {
+  reverse_proxy 127.0.0.1:8123
+}
+
+http://ad.lan {
+  reverse_proxy 127.0.0.1:3000
+}
+
+http://nr.lan {
+  reverse_proxy 127.0.0.1:1880
+}
+
+http://plane.lan {
+  reverse_proxy 127.0.0.1:8080
+}
+

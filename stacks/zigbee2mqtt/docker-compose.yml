@@ -1,0 +1,23 @@
+services:
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: ghcr.io/koenkk/zigbee2mqtt
+    restart: unless-stopped
+    ports:
+      - "8082:8080"     # fürs erste direkt erreichbar; Caddy kommt gleich oben drauf
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - ./data:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      - "/dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_5041dd7c9d80ef119b3e201cedd322a4-if00-port0:/dev/ttyUSB0"
+    networks:
+      - default
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: proxy
+

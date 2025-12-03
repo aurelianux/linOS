@@ -1,0 +1,155 @@
+- id: sz_wohnzimmer_chill
+  name: Wohnzimmer Chill
+  entities:
+    light.bidschirm:
+      state: 'on'
+      brightness_pct: 30
+      color_temp: 380
+    light.klavier:
+      state: 'on'
+      brightness_pct: 30
+      color_temp: 390
+    light.links:
+      state: 'on'
+      brightness_pct: 40
+      hs_color:
+      - 30
+      - 70
+    light.rechts:
+      state: 'on'
+      brightness_pct: 40
+      hs_color:
+      - 30
+      - 70
+    light.notenschlussel:
+      state: 'on'
+      brightness_pct: 20
+    light.flur:
+      state: 'on'
+      brightness_pct: 20
+      hs_color:
+      - 27
+      - 50
+    light.kuche:
+      state: 'on'
+      brightness_pct: 20
+      hs_color:
+      - 27
+      - 50
+- id: sz_wohnzimmer_aus
+  name: Wohnzimmer Aus
+  entities:
+    light.bidschirm:
+      state: 'off'
+    light.klavier:
+      state: 'off'
+    light.links:
+      state: 'off'
+    light.rechts:
+      state: 'off'
+    light.notenschluessel:
+      state: 'off'
+- id: sz_wohnung_nacht
+  name: Wohnung Nacht
+  entities:
+    light.bidschirm:
+      state: 'off'
+    light.klavier:
+      state: 'off'
+    light.links:
+      state: 'off'
+    light.rechts:
+      state: 'off'
+    light.notenschluessel:
+      state: 'off'
+    light.flur:
+      state: 'off'
+    light.kuche:
+      state: 'off'
+    light.nachttisch:
+      state: 'on'
+      brightness_pct: 8
+      color_temp: 420
+- id: sz_wohnung_away
+  name: Wohnung Abwesend
+  entities:
+    light.bidschirm:
+      state: 'off'
+    light.klavier:
+      state: 'off'
+    light.links:
+      state: 'off'
+    light.rechts:
+      state: 'off'
+    light.notenschluessel:
+      state: 'off'
+    light.flur:
+      state: 'off'
+    light.kuche:
+      state: 'off'
+    light.nachttisch:
+      state: 'off'
+- id: sz_filmabend
+  name: Filmabend
+  entities:
+    light.bidschirm:
+      state: 'on'
+      brightness_pct: 15
+      hs_color:
+      - 25
+      - 70
+    light.klavier:
+      state: 'off'
+    light.links:
+      state: 'on'
+      brightness_pct: 18
+      hs_color:
+      - 25
+      - 60
+    light.rechts:
+      state: 'on'
+      brightness_pct: 18
+      hs_color:
+      - 25
+      - 60
+    light.notenschluessel:
+      state: 'on'
+      brightness_pct: 10
+      hs_color:
+      - 20
+      - 40
+    light.flur:
+      state: 'off'
+    light.kuche:
+      state: 'off'
+- id: sz_lofi_fokus
+  name: Lofi Fokus
+  entities:
+    light.bidschirm:
+      state: 'on'
+      brightness_pct: 65
+      color_temp: 360
+    light.klavier:
+      state: 'on'
+      brightness_pct: 50
+      color_temp: 360
+    light.links:
+      state: 'on'
+      brightness_pct: 20
+      hs_color:
+      - 210
+      - 25
+    light.rechts:
+      state: 'on'
+      brightness_pct: 20
+      hs_color:
+      - 210
+      - 25
+    light.notenschluessel:
+      state: 'off'
+    light.flur:
+      state: 'off'
+    light.kuche:
+      state: 'off'
+    light.nachttisch:
+      state: 'off'

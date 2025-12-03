@@ -1,0 +1,19 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    restart: unless-stopped
+    ports: ["1883:1883","9001:9001"]
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  nodered:
+    image: nodered/node-red
+    container_name: nodered
+    restart: unless-stopped
+    ports: ["1880:1880"]
+    environment: ["TZ=Europe/Berlin"]
+    volumes: ["./nodered:/data"]
+

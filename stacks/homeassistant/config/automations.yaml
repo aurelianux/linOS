@@ -1,0 +1,167 @@
+- id: auto_sunset_chill
+  alias: Wohnzimmer – Chill ab Sonnenuntergang
+  trigger:
+    - platform: sun
+      event: sunset
+      offset: "-00:20:00"
+  condition:
+    - condition: state
+      entity_id: device_tracker.linus_phone
+      state: "home"
+    - condition: state
+      entity_id: input_select.house_mode
+      state: "home"
+  action:
+    - service: scene.turn_on
+      target:
+        entity_id: scene.wohnzimmer_chill
+  mode: single
+
+- id: auto_away_phone_leaves
+  alias: Away-Mode – Handy verlässt Haus
+  trigger:
+    - platform: state
+      entity_id: device_tracker.linus_phone
+      from: "home"
+      to: "not_home"
+  action:
+    # 1) House Mode setzen
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.house_mode
+      data:
+        option: "away"
+
+    # 2) Szene "Wohnung Abwesend"
+    - service: scene.turn_on
+      target:
+        entity_id: scene.wohnung_abwesend
+
+    # 3) Fire TV aus
+    - service: media_player.turn_off
+      target:
+        entity_id: media_player.fire_tv
+
+    # 4) Staubsauger nur tagsüber starten, wenn docked
+    - choose:
+        - conditions:
+            - condition: time
+              after: "09:00:00"
+              before: "19:00:00"
+            - condition: state
+              entity_id: vacuum.s7_max_ultra
+              state: "docked"
+          sequence:
+            - service: vacuum.start
+              target:
+                entity_id: vacuum.s7_max_ultra
+  mode: single
+
+
+- id: auto_arrive_home
+  alias: Ankunft – Modus Home + Licht bei Dunkelheit
+  trigger:
+    - platform: state
+      entity_id: device_tracker.linus_phone
+      from: "not_home"
+      to: "home"
+  action:
+    # 1) House Mode setzen
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.house_mode
+      data:
+        option: "home"
+
+    # 2) Wenn dunkel → Flurlicht kurz an
+    - choose:
+        - conditions:
+            - condition: sun
+              after: sunset
+          sequence:
+            - service: light.turn_on
+              target:
+                entity_id: light.flur
+              data:
+                brightness_pct: 40
+            - delay: "00:03:00"
+            - service: light.turn_off
+              target:
+                entity_id: light.flur
+  mode: restart
+
+
+- id: auto_good_night
+  alias: Gute Nacht – Wohnung runterfahren
+  trigger:
+    - platform: time
+      at: "23:30:00"
+  condition:
+    - condition: state
+      entity_id: device_tracker.linus_phone
+      state: "home"
+  action:
+    # 1) House Mode = sleep
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.house_mode
+      data:
+        option: "sleep"
+
+    # 2) Szene Nacht
+    - service: scene.turn_on
+      target:
+        entity_id: scene.wohnung_nacht
+
+    # 3) Fire TV aus
+    - service: media_player.turn_off
+      target:
+        entity_id: media_player.fire_tv
+
+    # 4) Staubsauger stoppen & andocken
+    - service: vacuum.return_to_base
+      target:
+        entity_id: vacuum.s7_max_ultra
+  mode: single
+
+
+- id: auto_movie_night
+  alias: Filmabend – Licht + Fire TV
+  trigger:
+    - platform: state
+      entity_id: input_boolean.movie_night
+      from: "off"
+      to: "on"
+  action:
+    # 1) Modes setzen
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.house_mode
+      data:
+        option: "home"
+
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.quiet_mode
+
+    # 2) Szene Filmabend
+    - service: scene.turn_on
+      target:
+        entity_id: scene.filmabend
+
+      # 3) Fire TV einschalten
+    - service: media_player.turn_on
+      target:
+        entity_id: media_player.fire_tv
+
+    # 4) Optional: per ADB auf Home springen (wenn androidtv.adb_command vorhanden)
+    - service: androidtv.adb_command
+      target:
+        entity_id: media_player.fire_tv
+        data:
+          command: "HOME"
+
+  mode: single
+
+  
+

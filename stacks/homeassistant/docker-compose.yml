@@ -1,0 +1,18 @@
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    network_mode: host
+    restart: unless-stopped
+    environment: [ "TZ=Europe/Berlin", "DBUS_SYSTEM_BUS_ADDRESS=unix:path=/run/dbus/system_bus_socket" ]
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro        # für Bluetooth/DBus
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    privileged: true
+    devices:
+      - /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_5041dd7c9d80ef119b3e201cedd322a4-if00-port0
+

@@ -1,0 +1,41 @@
+# Home Assistant runtime/state
+stacks/homeassistant/config/.storage/
+stacks/homeassistant/config/home-assistant.log*
+stacks/homeassistant/config/.shopping_list.json
+stacks/homeassistant/config/zigbee.db
+stacks/homeassistant/config/androidtv_remote_*.pem
+stacks/homeassistant/config/custom_components/
+
+# HA DB & Locks
+stacks/homeassistant/config/home-assistant_v2.db*
+stacks/homeassistant/config/.HA_VERSION
+stacks/homeassistant/config/.ha_run.lock
+stacks/homeassistant/config/backups/
+stacks/homeassistant/config/tts/
+stacks/homeassistant/config/deps/
+stacks/homeassistant/config/secrets.yaml
+
+# Mosquitto runtime
+stacks/infra/mosquitto/data/
+stacks/infra/mosquitto/log/
+
+# Node-RED runtime
+stacks/infra/nodered/.config.*.json
+stacks/infra/nodered/node_modules/
+
+# Caddy runtime & internal autosave
+stacks/proxy/data/
+stacks/proxy/config/caddy/
+
+# AdGuard runtime & UI-Config
+stacks/dns/work/
+stacks/dns/conf/AdGuardHome.yaml*
+
+# Zigbee2MQTT runtime
+stacks/zigbee2mqtt/data/
+
+# Plane app secrets/logs
+stacks/applications/plane/plane-app/.env
+stacks/applications/plane/plane-app/plane.env
+stacks/applications/plane/plane-app/plane-debug.log
+

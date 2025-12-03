@@ -1,0 +1,35 @@
+input_select:
+  house_mode:
+    name: House Mode
+    options:
+      - home
+      - away
+      - sleep
+      - guest
+    icon: mdi:home-circle
+
+input_boolean:
+  dog_is_home:
+    name: Dog is home
+    icon: mdi:dog
+
+  quiet_mode:
+    name: Quiet Mode
+    icon: mdi:volume-off
+
+
+input_number:
+  chill_brightness:
+    name: Chill Brightness
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: '%'
+
+  night_brightness:
+    name: Night Brightness
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: '%'
+

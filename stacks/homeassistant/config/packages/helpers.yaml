@@ -1,0 +1,16 @@
+# helpers für deine Automationen
+input_boolean:
+  roborock_alert_ack:
+    name: Roborock-Problem bestätigt
+    icon: mdi:checkbox-marked-circle-outline
+  dog_walk:
+    name: Hunderunde läuft
+    icon: mdi:dog
+
+input_datetime:
+  last_deep_clean:
+    name: Letzte Tiefenreinigung
+    has_date: true
+    has_time: true
+    icon: mdi:robot-vacuum
+
