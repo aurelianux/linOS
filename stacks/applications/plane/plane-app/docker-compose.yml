@@ -234,7 +234,7 @@ services:
     #    protocol: tcp
     #    mode: host
     ports:
-      - "8080:80"
+      - "${PLANE_PROXY_PORT:-8080}:80"
     volumes:
       - proxy_config:/config
       - proxy_data:/data

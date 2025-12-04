@@ -1,0 +1,37 @@
+=== smrestart @ Thu Dec  4 10:40:33 PM CET 2025 ===
+
+=== linOS Stacks ===
+dns            /home/linus/linOS/stacks/dns                       DNS / AdGuard Home
+proxy          /home/linus/linOS/stacks/proxy                     Caddy Reverse Proxy
+infra          /home/linus/linOS/stacks/infra                     MQTT + Node-RED
+homeassistant  /home/linus/linOS/stacks/homeassistant             Home Assistant
+zigbee2mqtt    /home/linus/linOS/stacks/zigbee2mqtt               Zigbee2MQTT
+service-index  /home/linus/linOS/stacks/applications/service-index Service Index / Homelab Dashboard
+plane          /home/linus/linOS/stacks/applications/plane/plane-app Plane App
+
+--- docker compose up -d ---
+
+### dns – DNS / AdGuard Home
+→ /home/linus/linOS/stacks/dns
+
+### proxy – Caddy Reverse Proxy
+→ /home/linus/linOS/stacks/proxy
+
+### infra – MQTT + Node-RED
+→ /home/linus/linOS/stacks/infra
+
+### homeassistant – Home Assistant
+→ /home/linus/linOS/stacks/homeassistant
+
+### zigbee2mqtt – Zigbee2MQTT
+→ /home/linus/linOS/stacks/zigbee2mqtt
+
+### service-index – Service Index / Homelab Dashboard
+→ /home/linus/linOS/stacks/applications/service-index
+
+### plane – Plane App
+→ /home/linus/linOS/stacks/applications/plane/plane-app
+
+--- Status nach Restart ---
+=== linOS Container Status @ Thu Dec  4 10:40:34 PM CET 2025 ===
+

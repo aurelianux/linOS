@@ -4,8 +4,9 @@ services:
   service-index:
     image: nginx:alpine
     container_name: service-index
+    restart: unless-stopped
+    ports:
+      - "${SERVICE_INDEX_PORT:-8081}:80"
     volumes:
       - ./index.html:/usr/share/nginx/html/index.html:ro
-    ports:
-      - "8081:80"   # Seite erreichbar unter http://<host>:8081
-    restart: unless-stopped
+      - ./services.json:/usr/share/nginx/html/services.json:ro

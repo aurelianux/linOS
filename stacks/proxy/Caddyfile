@@ -1,24 +1,24 @@
 {
-  auto_https off
+    # globale Optionen, falls du magst
 }
 
-http://manny.lan {
-  reverse_proxy http://127.0.0.1:8081
+{$LINOS_SERVICE_INDEX_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$SERVICE_INDEX_PORT}
 }
 
-http://ha.lan {
-  reverse_proxy 127.0.0.1:8123
+{$LINOS_HA_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$HA_PORT}
 }
 
-http://ad.lan {
-  reverse_proxy 127.0.0.1:3000
+{$LINOS_PLANE_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$PLANE_PROXY_PORT}
 }
 
-http://nr.lan {
-  reverse_proxy 127.0.0.1:1880
+{$LINOS_FLOW_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$NODE_RED_PORT}
 }
 
-http://plane.lan {
-  reverse_proxy 127.0.0.1:8080
+{$LINOS_DNS_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$DNS_WEB_PORT}
 }
 

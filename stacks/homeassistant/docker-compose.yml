@@ -4,11 +4,13 @@ services:
     container_name: homeassistant
     network_mode: host
     restart: unless-stopped
-    environment: [ "TZ=Europe/Berlin", "DBUS_SYSTEM_BUS_ADDRESS=unix:path=/run/dbus/system_bus_socket" ]
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/run/dbus/system_bus_socket
     volumes:
       - ./config:/config
       - /etc/localtime:/etc/localtime:ro
-      - /run/dbus:/run/dbus:ro        # für Bluetooth/DBus
+      - /run/dbus:/run/dbus:ro
     cap_add:
       - NET_ADMIN
       - NET_RAW

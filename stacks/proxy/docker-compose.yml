@@ -4,6 +4,10 @@ services:
     container_name: caddy
     restart: unless-stopped
     network_mode: host
+    env_file:
+      - ../../.env.linos
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_config:/config
@@ -12,4 +16,3 @@ services:
 volumes:
   caddy_config:
   caddy_data:
-

@@ -4,9 +4,9 @@ services:
     image: ghcr.io/koenkk/zigbee2mqtt
     restart: unless-stopped
     ports:
-      - "8082:8080"     # fürs erste direkt erreichbar; Caddy kommt gleich oben drauf
+      - "${Z2M_WEB_PORT:-8082}:8080"
     environment:
-      - TZ=Europe/Berlin
+      - TZ=${TZ:-Europe/Berlin}
     volumes:
       - ./data:/app/data
       - /run/udev:/run/udev:ro

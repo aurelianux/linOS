@@ -1,0 +1,11 @@
+{
+  "stacks": [
+    { "name": "dns",           "path": "stacks/dns",                        "label": "DNS / AdGuard Home" },
+    { "name": "proxy",         "path": "stacks/proxy",                      "label": "Caddy Reverse Proxy" },
+    { "name": "infra",         "path": "stacks/infra",                      "label": "MQTT + Node-RED" },
+    { "name": "homeassistant", "path": "stacks/homeassistant",              "label": "Home Assistant" },
+    { "name": "zigbee2mqtt",   "path": "stacks/zigbee2mqtt",                "label": "Zigbee2MQTT" },
+    { "name": "service-index", "path": "stacks/applications/service-index", "label": "Service Index / Homelab Dashboard" },
+    { "name": "plane",         "path": "stacks/applications/plane/plane-app", "label": "Plane App" }
+  ]
+}

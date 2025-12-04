@@ -1,212 +1,363 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <title>Manny · Services</title>
+  <meta charset="UTF-8" />
+  <title>linOS – Service Index</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
       color-scheme: dark;
-      --bg: #05060a;
-      --card: #111827;
-      --card-hover: #1f2937;
-      --border: #374151;
-      --accent: #38bdf8;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
+      --bg: #050816;
+      --bg-card: #0b1020;
+      --accent: #4ade80;
+      --accent-soft: #22c55e33;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --border: #1f2933;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
     body {
+      margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
+      background: radial-gradient(circle at top, #111827, #020617 55%);
       color: var(--text);
       min-height: 100vh;
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
-      padding: 24px;
+      padding: 2rem 1rem;
     }
-    .wrap {
-      max-width: 960px;
+    .shell {
       width: 100%;
+      max-width: 1100px;
+      background: linear-gradient(145deg, rgba(15,23,42,0.96), rgba(2,6,23,0.98));
+      border-radius: 1.4rem;
+      border: 1px solid rgba(148,163,184,0.25);
+      box-shadow:
+        0 40px 80px rgba(15,23,42,0.8),
+        0 0 0 1px rgba(15,23,42,0.9);
+      padding: 1.5rem 1.8rem 1.8rem;
+      backdrop-filter: blur(18px);
     }
     header {
-      margin-bottom: 20px;
-      text-align: left;
-    }
-    header h1 {
-      font-size: 1.9rem;
-      margin-bottom: 4px;
-    }
-    header p {
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 14px 12px;
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
-      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, border-color 0.12s ease-out, background 0.12s ease-out;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
     }
-    .card:hover {
-      transform: translateY(-3px);
-      background: var(--card-hover);
-      border-color: var(--accent);
-      box-shadow: 0 24px 60px rgba(8, 47, 73, 0.65);
-    }
-    .card-header {
+    .title-block h1 {
+      margin: 0;
+      font-size: 1.6rem;
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 2px;
+      gap: .6rem;
     }
-    .icon {
-      font-size: 1.4rem;
-    }
-    .name {
-      font-size: 1rem;
-      font-weight: 600;
-    }
-    .tag {
-      font-size: 0.65rem;
+    .badge {
+      font-size: .7rem;
+      padding: .15rem .5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
+      letter-spacing: .1em;
     }
-    .desc {
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-bottom: 4px;
+    .subtitle {
+      margin-top: .25rem;
+      font-size: .9rem;
+      color: var(--text-muted);
     }
-    .link {
-      margin-top: 4px;
-      font-size: 0.82rem;
+    .search-block {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      min-width: 220px;
+    }
+    .search-block label {
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+    }
+    .search-input {
+      position: relative;
+    }
+    .search-input input {
+      width: 100%;
+      padding: .5rem .75rem .5rem 2.1rem;
+      border-radius: .8rem;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: rgba(15,23,42,0.9);
+      color: var(--text);
+      font-size: .85rem;
+      outline: none;
+    }
+    .search-input span {
+      position: absolute;
+      left: .65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: .8rem;
+      color: var(--text-muted);
+    }
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .group {
+      border-radius: 1rem;
+      border: 1px solid rgba(31,41,55,0.9);
+      padding: .9rem 1rem 1rem;
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.07), transparent 55%);
+    }
+    .group-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      margin-bottom: .7rem;
     }
-    .link a {
-      color: var(--accent);
+    .group-title {
+      font-size: .95rem;
+      font-weight: 600;
+    }
+    .group-count {
+      font-size: .75rem;
+      color: var(--text-muted);
+    }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: .6rem;
+    }
+    .card {
+      position: relative;
+      padding: .75rem .8rem .9rem;
+      border-radius: .9rem;
+      border: 1px solid var(--border);
+      background: rgba(9,12,23,0.96);
+      cursor: pointer;
       text-decoration: none;
-      font-weight: 500;
+      color: inherit;
+      transition: border-color .16s ease, transform .14s ease, box-shadow .14s ease, background .18s ease;
     }
-    .link a:hover {
-      text-decoration: underline;
+    .card:hover {
+      border-color: rgba(74,222,128,0.9);
+      box-shadow: 0 0 0 1px rgba(74,222,128,0.35), 0 12px 22px rgba(15,23,42,0.9);
+      transform: translateY(-1px);
+      background: radial-gradient(circle at top, rgba(22,163,74,0.18), rgba(9,9,18,0.97));
     }
-    .url {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.7rem;
-      color: var(--muted);
-      opacity: 0.9;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+      margin-bottom: .3rem;
+    }
+    .card-title {
+      font-size: .9rem;
+      font-weight: 600;
+    }
+    .card-tag {
+      font-size: .65rem;
+      padding: .12rem .45rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .07em;
       white-space: nowrap;
-      max-width: 60%;
-      text-align: right;
     }
-    footer {
-      margin-top: 12px;
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-align: left;
+    .card-desc {
+      font-size: .8rem;
+      color: var(--text-muted);
+      margin-bottom: .35rem;
+    }
+    .card-url {
+      font-size: .75rem;
+      color: rgba(148,163,184,0.95);
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      opacity: .95;
+    }
+    .card-url span {
+      font-size: .9rem;
+    }
+    .footer {
+      margin-top: 1.4rem;
+      font-size: .75rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .pill-row {
+      display: flex;
+      gap: .2rem;
+      flex-wrap: wrap;
+    }
+    .pill {
+      padding: .1rem .45rem;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      font-size: .7rem;
+    }
+    @media (max-width: 720px) {
+      header {
+        flex-direction: column;
+      }
+      .search-block {
+        width: 100%;
+      }
+      body {
+        padding: 1.2rem .7rem;
+      }
+      .shell {
+        padding: 1.1rem 1.2rem 1.3rem;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="shell">
     <header>
-      <h1>Manny · Service Übersicht</h1>
-      <p>Direktlinks zu deinen wichtigsten Diensten auf diesem Host.</p>
+      <div class="title-block">
+        <div class="badge">linOS · manny</div>
+        <h1>Service Index<span style="font-size:1.15rem;color:var(--accent)">●</span></h1>
+        <div class="subtitle" id="subtitle">Lade Dienste…</div>
+      </div>
+      <div class="search-block">
+        <label for="search">Filter</label>
+        <div class="search-input">
+          <span>🔍</span>
+          <input id="search" type="text" placeholder="Nach Dienst oder URL suchen…" autocomplete="off" />
+        </div>
+      </div>
     </header>
 
-    <div class="grid" id="services"></div>
+    <main id="groups"></main>
 
-    <footer>
-      Host: <span id="host"></span> · Ports anpassbar über <code>index.html</code>.
-    </footer>
+    <div class="footer">
+      <div>Tip: Lege dir <code>manny.lan</code> als Startseite auf deinen Browser / Tablet.</div>
+      <div class="pill-row">
+        <span class="pill">linOS</span>
+        <span class="pill">Home Assistant</span>
+        <span class="pill">Zigbee2MQTT</span>
+        <span class="pill">Node-RED</span>
+        <span class="pill">AdGuard</span>
+      </div>
+    </div>
   </div>
 
   <script>
-    const host = window.location.hostname || "192.168.2.31";
+    const groupsEl = document.getElementById('groups');
+    const searchEl = document.getElementById('search');
+    const subtitleEl = document.getElementById('subtitle');
+    let state = { groups: [] };
 
-    const services = [
-      {
-        name: "Home Assistant",
-        icon: "🏠",
-        tag: "Smart Home Zentrale",
-        port: 8123,
-        path: "/",
-        desc: "Alle Geräte, Szenen und Automationen."
-      },
-      {
-        name: "Node-RED",
-        icon: "🧠",
-        tag: "Flows & Logik",
-        port: 1880,
-        path: "/",
-        desc: "Komplexe Automationen und Integrationen."
-      },
-      {
-        name: "AdGuard Home",
-        icon: "🛡️",
-        tag: "DNS & Filter",
-        port: 3000,
-        path: "/",
-        desc: "Werbeblocker / DNS-Filter für dein Netz."
-      },
-      {
-        name: "Plane",
-        icon: "📋",
-        tag: "Projektmanagement",
-        port: 8080,
-        path: "/",
-        desc: "Epics, Backlog und Sprints (falls angebunden)."
-      },
-      {
-        name: "MinIO",
-        icon: "🗄️",
-        tag: "Storage UI",
-        port: 9090,
-        path: "/",
-        desc: "S3-kompatibler Storage (UI, wenn Port gemappt)."
-      },{name: "Zigbee", icon: ":)", tag: "Infra", port: 8082, path: "/", desc: "Zigbee2MQTT connector für Zigbee Geräte"}
-    ];
+    function render(filterText = "") {
+      const q = filterText.trim().toLowerCase();
+      groupsEl.innerHTML = "";
 
-    const container = document.getElementById("services");
-    document.getElementById("host").textContent = host;
+      state.groups.forEach(group => {
+        const filtered = group.services.filter(s => {
+          if (!q) return true;
+          return (
+            s.name.toLowerCase().includes(q) ||
+            (s.url && s.url.toLowerCase().includes(q)) ||
+            (s.description && s.description.toLowerCase().includes(q))
+          );
+        });
+        if (!filtered.length) return;
 
-    services.forEach(s => {
-      const url = `http://${host}:${s.port}${s.path}`;
-      const card = document.createElement("article");
-      card.className = "card";
-      card.innerHTML = `
-        <div class="card-header">
-          <div class="icon">${s.icon}</div>
-          <div>
-            <div class="name">${s.name}</div>
-            <div class="tag">${s.tag}</div>
-          </div>
-        </div>
-        <div class="desc">${s.desc}</div>
-        <div class="link">
-          <a href="${url}" target="_blank" rel="noopener noreferrer">Öffnen →</a>
-          <span class="url">${url}</span>
-        </div>
-      `;
-      container.appendChild(card);
+        const groupEl = document.createElement('section');
+        groupEl.className = 'group';
+
+        const headerEl = document.createElement('div');
+        headerEl.className = 'group-header';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'group-title';
+        titleEl.textContent = group.name;
+
+        const countEl = document.createElement('div');
+        countEl.className = 'group-count';
+        countEl.textContent = filtered.length + " Dienste";
+
+        headerEl.appendChild(titleEl);
+        headerEl.appendChild(countEl);
+
+        const gridEl = document.createElement('div');
+        gridEl.className = 'services-grid';
+
+        filtered.forEach(service => {
+          const a = document.createElement('a');
+          a.className = 'card';
+          a.href = service.url || '#';
+          a.target = '_blank';
+          a.rel = 'noreferrer';
+
+          const titleRow = document.createElement('div');
+          titleRow.className = 'card-title-row';
+
+          const title = document.createElement('div');
+          title.className = 'card-title';
+          title.textContent = service.name;
+
+          const tag = document.createElement('div');
+          tag.className = 'card-tag';
+          tag.textContent = group.name;
+
+          titleRow.appendChild(title);
+          titleRow.appendChild(tag);
+
+          const desc = document.createElement('div');
+          desc.className = 'card-desc';
+          desc.textContent = service.description || "";
+
+          const urlRow = document.createElement('div');
+          urlRow.className = 'card-url';
+          const urlText = document.createElement('span');
+          const url = service.url || "";
+          urlText.textContent = url.replace(/^https?:\/\//, '');
+          urlRow.innerHTML = "↗ ";
+          urlRow.appendChild(urlText);
+
+          a.appendChild(titleRow);
+          a.appendChild(desc);
+          a.appendChild(urlRow);
+
+          gridEl.appendChild(a);
+        });
+
+        groupEl.appendChild(headerEl);
+        groupEl.appendChild(gridEl);
+        groupsEl.appendChild(groupEl);
+      });
+
+      if (!groupsEl.children.length) {
+        groupsEl.innerHTML = '<p style="color:#9ca3af;font-size:.85rem;">Keine Dienste gefunden, Filter anpassen.</p>';
+      }
+    }
+
+    fetch('services.json')
+      .then(r => r.json())
+      .then(data => {
+        state.groups = data.groups || [];
+        if (data.subtitle) subtitleEl.textContent = data.subtitle;
+        render();
+      })
+      .catch(err => {
+        console.error('Fehler beim Laden von services.json:', err);
+        subtitleEl.textContent = 'Fehler beim Laden der Dienste.';
+        groupsEl.innerHTML = '<p style="color:#f97373;font-size:.85rem;">services.json konnte nicht geladen werden.</p>';
+      });
+
+    searchEl.addEventListener('input', (e) => {
+      render(e.target.value);
     });
   </script>
 </body>
 </html>
-EOF

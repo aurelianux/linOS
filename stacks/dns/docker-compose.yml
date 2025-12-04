@@ -4,12 +4,7 @@ services:
     container_name: adguard
     network_mode: host
     restart: unless-stopped
-    networks:
-      - proxy
     volumes:
       - ./work:/opt/adguardhome/work
       - ./conf:/opt/adguardhome/conf
 
-networks:
-  proxy:
-    external: true

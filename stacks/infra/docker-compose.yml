@@ -3,7 +3,9 @@ services:
     image: eclipse-mosquitto
     container_name: mosquitto
     restart: unless-stopped
-    ports: ["1883:1883","9001:9001"]
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+      - "${MQTT_WS_PORT:-9001}:9001"
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
@@ -13,7 +15,10 @@ services:
     image: nodered/node-red
     container_name: nodered
     restart: unless-stopped
-    ports: ["1880:1880"]
-    environment: ["TZ=Europe/Berlin"]
-    volumes: ["./nodered:/data"]
+    ports:
+      - "${NODE_RED_PORT:-1880}:1880"
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+    volumes:
+      - ./nodered:/data
 

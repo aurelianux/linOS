@@ -1,0 +1,51 @@
+{
+  "title": "linOS – Service Index",
+  "subtitle": "Dein Einstieg in Manny / Smart Home",
+  "groups": [
+    {
+      "name": "Smart Home",
+      "services": [
+        {
+          "name": "Home Assistant",
+          "url": "http://ha.manny.lan",
+          "description": "Zentrale Steuerung von Licht, Sensoren, Automationen und mehr."
+        },
+        {
+          "name": "Zigbee2MQTT",
+          "url": "http://192.168.2.31:8082",
+          "description": "Zigbee Geräteverwaltung und Debug UI."
+        },
+        {
+          "name": "Flows / Node-RED",
+          "url": "http://flow.manny.lan",
+          "description": "Low-Code Automationen und Integrationen."
+        }
+      ]
+    },
+    {
+      "name": "Infrastruktur",
+      "services": [
+        {
+          "name": "DNS / AdGuard Home",
+          "url": "http://dns.manny.lan:3000",
+          "description": "DNS-Filter, Blocklisten und Netzwerk-DNS-Übersicht."
+        },
+        {
+          "name": "Service Index (dieses Panel)",
+          "url": "http://manny.lan",
+          "description": "Übersicht über alle linOS Services."
+        }
+      ]
+    },
+    {
+      "name": "Projekte",
+      "services": [
+        {
+          "name": "Plane",
+          "url": "http://plane.manny.lan",
+          "description": "Projekt- und Issues-Management für dein Smart-Home-Projekt."
+        }
+      ]
+    }
+  ]
+}
