@@ -1,41 +1,14 @@
-- id: sz_wohnzimmer_chill
-  name: Wohnzimmer Chill
-  entities:
-    light.bidschirm:
-      state: 'on'
-      brightness_pct: 30
-      color_temp: 380
-    light.klavier:
-      state: 'on'
-      brightness_pct: 30
-      color_temp: 390
-    light.links:
-      state: 'on'
-      brightness_pct: 40
-      hs_color:
-      - 30
-      - 70
-    light.rechts:
-      state: 'on'
-      brightness_pct: 40
-      hs_color:
-      - 30
-      - 70
-    light.notenschlussel:
-      state: 'on'
-      brightness_pct: 20
-    light.flur:
-      state: 'on'
-      brightness_pct: 20
-      hs_color:
-      - 27
-      - 50
-    light.kuche:
-      state: 'on'
-      brightness_pct: 20
-      hs_color:
-      - 27
-      - 50
+# scenes.yaml
+
+# Farb-Referenz (nur Kommentar, zur Orientierung):
+# WW       → color_temp: 380
+# hOrange  → hs_color: [25, 70]
+# dOrange  → hs_color: [25, 90]
+# lBlau    → hs_color: [210, 25]
+# dBlau    → hs_color: [210, 60]
+
+# ───── Wohnzimmer ──────────────────────────────────────────────
+
 - id: sz_wohnzimmer_aus
   name: Wohnzimmer Aus
   entities:
@@ -47,8 +20,139 @@
       state: 'off'
     light.rechts:
       state: 'off'
-    light.notenschluessel:
+    light.notenschlussel:
       state: 'off'
+
+- id: sz_wohnzimmer_chill
+  name: Wohnzimmer Chill
+  entities:
+    light.bidschirm:
+      state: 'on'
+      brightness_pct: 20
+      hs_color:
+        - 25   # hOrange
+        - 70
+    light.links:
+      state: 'on'
+      brightness_pct: 10
+      color_temp: 380   # WW
+    light.rechts:
+      state: 'on'
+      brightness_pct: 10
+      color_temp: 380
+    light.notenschlussel:
+      state: 'on'
+      brightness_pct: 10
+      color_temp: 380
+    light.klavier:
+      state: 'off'
+
+- id: sz_wohnzimmer_hell
+  name: Wohnzimmer Hell
+  entities:
+    light.bidschirm:
+      state: 'on'
+      brightness_pct: 70
+      color_temp: 380   # WW
+    light.links:
+      state: 'on'
+      brightness_pct: 70
+      color_temp: 380
+    light.rechts:
+      state: 'on'
+      brightness_pct: 70
+      color_temp: 380
+    light.notenschlussel:
+      state: 'on'
+      brightness_pct: 50
+      hs_color:
+        - 210  # lBlau
+        - 25
+    light.klavier:
+      state: 'on'
+      brightness_pct: 60
+      color_temp: 380
+
+# ───── Küche ──────────────────────────────────────────────────
+
+- id: sz_kuche_aus
+  name: Küche Aus
+  entities:
+    light.kuche:
+      state: 'off'
+
+- id: sz_kuche_chill
+  name: Küche Chill
+  entities:
+    light.kuche:
+      state: 'on'
+      brightness_pct: 30
+      color_temp: 380   # WW
+
+- id: sz_kuche_hell
+  name: Küche Hell
+  entities:
+    light.kuche:
+      state: 'on'
+      brightness_pct: 70
+      color_temp: 380   # WW
+
+# ───── Flur ───────────────────────────────────────────────────
+
+- id: sz_flur_aus
+  name: Flur Aus
+  entities:
+    light.flur:
+      state: 'off'
+
+- id: sz_flur_chill
+  name: Flur Chill
+  entities:
+    light.flur:
+      state: 'on'
+      brightness_pct: 30
+      hs_color:
+        - 210  # lBlau
+        - 25
+
+- id: sz_flur_hell
+  name: Flur Hell
+  entities:
+    light.flur:
+      state: 'on'
+      brightness_pct: 70
+      hs_color:
+        - 25   # hOrange
+        - 70
+
+# ───── Schlafzimmer ───────────────────────────────────────────
+
+- id: sz_schlafzimmer_aus
+  name: Schlafzimmer Aus
+  entities:
+    light.nachttisch:
+      state: 'off'
+
+- id: sz_schlafzimmer_chill
+  name: Schlafzimmer Chill
+  entities:
+    light.nachttisch:
+      state: 'on'
+      brightness_pct: 20
+      hs_color:
+        - 25   # dOrange-ish
+        - 90
+
+- id: sz_schlafzimmer_hell
+  name: Schlafzimmer Hell
+  entities:
+    light.nachttisch:
+      state: 'on'
+      brightness_pct: 70
+      color_temp: 380   # WW
+
+# ───── Wohnung global (bestehende Szenen beibehalten) ─────────
+
 - id: sz_wohnung_nacht
   name: Wohnung Nacht
   entities:
@@ -60,7 +164,7 @@
       state: 'off'
     light.rechts:
       state: 'off'
-    light.notenschluessel:
+    light.notenschlussel:
       state: 'off'
     light.flur:
       state: 'off'
@@ -70,6 +174,7 @@
       state: 'on'
       brightness_pct: 8
       color_temp: 420
+
 - id: sz_wohnung_away
   name: Wohnung Abwesend
   entities:
@@ -81,7 +186,7 @@
       state: 'off'
     light.rechts:
       state: 'off'
-    light.notenschluessel:
+    light.notenschlussel:
       state: 'off'
     light.flur:
       state: 'off'
@@ -89,6 +194,7 @@
       state: 'off'
     light.nachttisch:
       state: 'off'
+
 - id: sz_filmabend
   name: Filmabend
   entities:
@@ -96,32 +202,33 @@
       state: 'on'
       brightness_pct: 15
       hs_color:
-      - 25
-      - 70
+        - 25
+        - 70
     light.klavier:
       state: 'off'
     light.links:
       state: 'on'
       brightness_pct: 18
       hs_color:
-      - 25
-      - 60
+        - 25
+        - 60
     light.rechts:
       state: 'on'
       brightness_pct: 18
       hs_color:
-      - 25
-      - 60
-    light.notenschluessel:
+        - 25
+        - 60
+    light.notenschlussel:
       state: 'on'
       brightness_pct: 10
       hs_color:
-      - 20
-      - 40
+        - 20
+        - 40
     light.flur:
       state: 'off'
     light.kuche:
       state: 'off'
+
 - id: sz_lofi_fokus
   name: Lofi Fokus
   entities:
@@ -137,15 +244,15 @@
       state: 'on'
       brightness_pct: 20
       hs_color:
-      - 210
-      - 25
+        - 210
+        - 25
     light.rechts:
       state: 'on'
       brightness_pct: 20
       hs_color:
-      - 210
-      - 25
-    light.notenschluessel:
+        - 210
+        - 25
+    light.notenschlussel:
       state: 'off'
     light.flur:
       state: 'off'
@@ -153,3 +260,4 @@
       state: 'off'
     light.nachttisch:
       state: 'off'
+

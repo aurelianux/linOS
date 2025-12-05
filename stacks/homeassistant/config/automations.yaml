@@ -1,5 +1,5 @@
 - id: auto_sunset_chill
-  alias: Wohnzimmer – Chill ab Sonnenuntergang
+  alias: Wohnung – Chill ab Sonnenuntergang
   trigger:
     - platform: sun
       event: sunset
@@ -12,9 +12,7 @@
       entity_id: input_select.house_mode
       state: "home"
   action:
-    - service: scene.turn_on
-      target:
-        entity_id: scene.wohnzimmer_chill
+    - service: script.wohnung_chill
   mode: single
 
 - id: auto_away_phone_leaves
@@ -32,10 +30,20 @@
       data:
         option: "away"
 
-    # 2) Szene "Wohnung Abwesend"
-    - service: scene.turn_on
-      target:
-        entity_id: scene.wohnung_abwesend
+    # 2) Wohnung auf Away oder "Charlie alleine"
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: input_boolean.dog_is_home
+              state: "on"
+          sequence:
+            - service: script.wohnung_charlie_alleine
+        - conditions:
+            - condition: state
+              entity_id: input_boolean.dog_is_home
+              state: "off"
+          sequence:
+            - service: script.wohnung_abwesend
 
     # 3) Fire TV aus
     - service: media_player.turn_off
@@ -149,7 +157,7 @@
       target:
         entity_id: scene.filmabend
 
-      # 3) Fire TV einschalten
+    # 3) Fire TV einschalten
     - service: media_player.turn_on
       target:
         entity_id: media_player.fire_tv
@@ -158,10 +166,47 @@
     - service: androidtv.adb_command
       target:
         entity_id: media_player.fire_tv
-        data:
-          command: "HOME"
+      data:
+        command: "HOME"
 
   mode: single
 
-  
+
+# ───────── Webhooks für Service-Index Quick Controls ─────────
+
+- id: wh_wohnung_abwesend
+  alias: Webhook – Wohnung Abwesend
+  trigger:
+    - platform: webhook
+      webhook_id: linos_wohnung_abwesend
+  action:
+    - service: script.wohnung_abwesend
+  mode: single
+
+- id: wh_wohnung_charlie_alleine
+  alias: Webhook – Charlie alleine
+  trigger:
+    - platform: webhook
+      webhook_id: linos_wohnung_charlie_alleine
+  action:
+    - service: script.wohnung_charlie_alleine
+  mode: single
+
+- id: wh_wohnung_chill
+  alias: Webhook – Wohnung Chill
+  trigger:
+    - platform: webhook
+      webhook_id: linos_wohnung_chill
+  action:
+    - service: script.wohnung_chill
+  mode: single
+
+- id: wh_wohnung_hell
+  alias: Webhook – Wohnung Hell
+  trigger:
+    - platform: webhook
+      webhook_id: linos_wohnung_hell
+  action:
+    - service: script.wohnung_hell
+  mode: single
 

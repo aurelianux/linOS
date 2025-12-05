@@ -32,20 +32,51 @@
         },
         {
           "name": "Service Index (dieses Panel)",
-          "url": "http://manny.lan",
+          "url": "http://192.168.2.31:8081",
           "description": "Übersicht über alle linOS Services."
+        },
+        {
+          "name": "Tailscale – Machines",
+          "url": "https://login.tailscale.com/admin/machines",
+          "description": "Verwaltung deines Tailnets und der verbundenen Geräte."
         }
       ]
     },
     {
-      "name": "Projekte",
+      "name": "Projekte & Doku",
       "services": [
         {
-          "name": "Plane",
+          "name": "Plane – Smart-Home-Projekt",
           "url": "http://plane.manny.lan",
-          "description": "Projekt- und Issues-Management für dein Smart-Home-Projekt."
+          "description": "Projekt- und Issues-Management für Smart Home & linOS."
+        },
+        {
+          "name": "linOS Repository (Codeberg)",
+          "url": "https://codeberg.org/lianux/linOS",
+          "description": "Git-Repo mit Stacks, Configs und Dokumentation."
+        }
+      ]
+    },
+    {
+      "name": "Tools & Accounts",
+      "services": [
+        {
+          "name": "Padloc",
+          "url": "https://web.padloc.app/",
+          "description": "Passwort-Manager."
+        },
+        {
+          "name": "mailbox.org Suite",
+          "url": "https://app.mailbox.org/appsuite",
+          "description": "Mail, Kalender & Kontakte."
+        },
+        {
+          "name": "MuseScore",
+          "url": "https://musescore.com",
+          "description": "Notensatz und Noten-Plattform."
         }
       ]
     }
   ]
 }
+

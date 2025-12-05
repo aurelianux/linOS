@@ -1,0 +1,92 @@
+# scripts.yaml
+
+wohnung_abwesend:
+  alias: Wohnung Abwesend (Licht + Heizung + Sound)
+  mode: single
+  variables:
+    speaker_main: &speaker_main media_player.arbeitszimmer
+    thermostats_all: &thermostats_all
+      - climate.thermostat_wz
+      - climate.thermostat_bad
+  sequence:
+    - service: scene.turn_on
+      target:
+        entity_id: scene.wohnung_abwesend
+
+    - service: climate.set_temperature
+      target:
+        entity_id: *thermostats_all
+      data:
+        temperature: 18
+
+    - service: media_player.media_pause
+      target:
+        entity_id: *speaker_main
+
+wohnung_charlie_alleine:
+  alias: Charlie alleine (Flurlicht + 20°C)
+  mode: single
+  sequence:
+    - service: scene.turn_on
+      target:
+        entity_id: scene.wohnung_abwesend
+
+    - service: light.turn_on
+      target:
+        entity_id: light.flur
+      data:
+        brightness_pct: 10
+        color_temp: 380   # WW
+
+    - service: climate.set_temperature
+      target:
+        entity_id: *thermostats_all
+      data:
+        temperature: 20
+
+    - service: media_player.media_pause
+      target:
+        entity_id: *speaker_main
+
+wohnung_chill:
+  alias: Chill – ganze Wohnung
+  mode: single
+  sequence:
+    - service: scene.turn_on
+      target:
+        entity_id:
+          - scene.wohnzimmer_chill
+          - scene.kuche_chill
+          - scene.flur_chill
+          - scene.schlafzimmer_chill
+
+    - service: climate.set_temperature
+      target:
+        entity_id: *thermostats_all
+      data:
+        temperature: 22
+
+    # Keine Audio-Aktion → Musik läuft weiter
+
+wohnung_hell:
+  alias: Hell – ganze Wohnung
+  mode: single
+  sequence:
+    - service: scene.turn_on
+      target:
+        entity_id:
+          - scene.wohnzimmer_hell
+          - scene.kuche_hell
+          - scene.flur_hell
+          - scene.schlafzimmer_hell
+
+    - service: climate.set_temperature
+      target:
+        entity_id: *thermostats_all
+      data:
+        temperature: 22
+
+    - service: media_player.media_pause
+      target:
+        entity_id: *speaker_main
+

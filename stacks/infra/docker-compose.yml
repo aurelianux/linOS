@@ -22,3 +22,27 @@ services:
     volumes:
       - ./nodered:/data
 
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    hostname: ${TS_HOSTNAME:-manny}
+    environment:
+      # aus deiner .env.linos:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_ACCEPT_DNS: "false"
+      TS_HOSTNAME: ${TS_HOSTNAME:-manny}
+      TS_EXTRA_ARGS: "--advertise-routes=${TS_ADVERTISE_ROUTES}"
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    network_mode: "host"
+    restart: unless-stopped
+
+volumes:
+  tailscale-state:
+
