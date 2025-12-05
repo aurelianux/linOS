@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>linOS – Service Index</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
       color-scheme: dark;
@@ -158,8 +158,20 @@
       font-size: .9rem;
       font-weight: 600;
     }
+    .card-desc {
+      font-size: .8rem;
+      color: var(--text-muted);
+      margin-bottom: .35rem;
+    }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .3rem;
+      font-size: .75rem;
+    }
     .card-tag {
-      font-size: .65rem;
+      font-size: .7rem;
       padding: .12rem .45rem;
       border-radius: 999px;
       background: var(--accent-soft);
@@ -168,10 +180,28 @@
       letter-spacing: .07em;
       white-space: nowrap;
     }
-    .card-desc {
-      font-size: .8rem;
+    .card-status {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
       color: var(--text-muted);
-      margin-bottom: .35rem;
+    }
+    .card-status-dot {
+      width: .45rem;
+      height: .45rem;
+      border-radius: 999px;
+      background: #6b7280;
+    }
+    .card-status-up .card-status-dot {
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34,197,94,0.25);
+    }
+    .card-status-down .card-status-dot {
+      background: #f97373;
+      box-shadow: 0 0 0 4px rgba(248,113,113,0.2);
+    }
+    .card-status-unknown .card-status-dot {
+      background: #6b7280;
     }
     .card-url {
       font-size: .75rem;
@@ -232,7 +262,7 @@
         <label for="search">Filter</label>
         <div class="search-input">
           <span>🔍</span>
-          <input id="search" type="text" placeholder="Nach Dienst oder URL suchen…" autocomplete="off" />
+          <input id="search" type="text" placeholder="Nach Dienst oder URL suchen…" autocomplete="off">
         </div>
       </div>
     </header>
@@ -240,7 +270,7 @@
     <main id="groups"></main>
 
     <div class="footer">
-      <div>Tip: Lege dir <code>manny.lan</code> als Startseite auf deinen Browser / Tablet.</div>
+      <div>Tip: Lege dir <code>manny.lan:8080</code> als Startseite auf Browser / Tablet.</div>
       <div class="pill-row">
         <span class="pill">linOS</span>
         <span class="pill">Home Assistant</span>
@@ -255,7 +285,9 @@
     const groupsEl = document.getElementById('groups');
     const searchEl = document.getElementById('search');
     const subtitleEl = document.getElementById('subtitle');
+
     let state = { groups: [] };
+    const statusCache = {};
 
     function render(filterText = "") {
       const q = filterText.trim().toLowerCase();
@@ -305,17 +337,37 @@
           const title = document.createElement('div');
           title.className = 'card-title';
           title.textContent = service.name;
+          titleRow.appendChild(title);
+
+          const desc = document.createElement('div');
+          desc.className = 'card-desc';
+          desc.textContent = service.description || "";
+
+          const meta = document.createElement('div');
+          meta.className = 'card-meta';
 
           const tag = document.createElement('div');
           tag.className = 'card-tag';
           tag.textContent = group.name;
 
-          titleRow.appendChild(title);
-          titleRow.appendChild(tag);
+          const status = service.status || 'unknown';
+          const statusWrap = document.createElement('div');
+          statusWrap.className = 'card-status card-status-' + status;
 
-          const desc = document.createElement('div');
-          desc.className = 'card-desc';
-          desc.textContent = service.description || "";
+          const dot = document.createElement('span');
+          dot.className = 'card-status-dot';
+
+          const label = document.createElement('span');
+          label.textContent =
+            status === 'up' ? 'Online' :
+            status === 'down' ? 'Offline' :
+            'Unbekannt';
+
+          statusWrap.appendChild(dot);
+          statusWrap.appendChild(label);
+
+          meta.appendChild(tag);
+          meta.appendChild(statusWrap);
 
           const urlRow = document.createElement('div');
           urlRow.className = 'card-url';
@@ -327,6 +379,7 @@
 
           a.appendChild(titleRow);
           a.appendChild(desc);
+          a.appendChild(meta);
           a.appendChild(urlRow);
 
           gridEl.appendChild(a);
@@ -342,12 +395,46 @@
       }
     }
 
-    fetch('services.json')
+    function checkStatuses() {
+      const services = [];
+      state.groups.forEach(g => g.services.forEach(s => services.push(s)));
+
+      services.forEach(service => {
+        const key = service.url || service.name;
+        if (!key || statusCache[key]) return;
+
+        statusCache[key] = 'pending';
+        const url = service.healthUrl || service.url;
+        if (!url) {
+          service.status = 'unknown';
+          return;
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+
+        fetch(url, { mode: 'no-cors', signal: controller.signal })
+          .then(() => {
+            service.status = 'up';
+          })
+          .catch(() => {
+            service.status = 'down';
+          })
+          .finally(() => {
+            clearTimeout(timeout);
+            statusCache[key] = service.status;
+            render(searchEl.value);
+          });
+      });
+    }
+
+    fetch('services.json?v=2')
       .then(r => r.json())
       .then(data => {
         state.groups = data.groups || [];
         if (data.subtitle) subtitleEl.textContent = data.subtitle;
         render();
+        checkStatuses();
       })
       .catch(err => {
         console.error('Fehler beim Laden von services.json:', err);
@@ -361,3 +448,4 @@
   </script>
 </body>
 </html>
+
