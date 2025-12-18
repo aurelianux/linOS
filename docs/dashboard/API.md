@@ -2,14 +2,15 @@
 
 ## Overview
 
-The dashboard API (`apps/dashboard-api`) is the Backend-for-Frontend (BFF) that powers the linOS dashboard web interface. It's built with **Express + TypeScript** and designed for production deployment.
+The dashboard API (`apps/dashboard-api`) is the Backend-for-Frontend (BFF) that powers the linOS dashboard web interface. It's built with **Express + TypeScript** and designed for production deployment with structured logging, configuration management, and error handling.
 
-### Current Stack
-- **Framework**: Express 5.2 (HTTP server)
-- **Language**: TypeScript 5.9 (strict mode)
-- **Logging**: Pino + pino-http (structured, JSON in prod)
-- **Config**: Zod (validation + type safety)
-- **Port**: `process.env.PORT` (default 4001)
+### Tech Stack
+- **Framework**: Express (HTTP server)
+- **Language**: TypeScript (strict mode)
+- **Logging**: Pino + pino-http (structured JSON logs in production)
+- **Validation**: Zod (type-safe environment variables)
+- **Port**: Configured via `process.env.PORT` (default: 4001)
+- **Styling** (frontend): Tailwind CSS + shadcn/ui
 
 ---
 
@@ -27,7 +28,7 @@ apps/dashboard-api/
 │   │   └── app-config.ts     # Optional JSON config loader (rooms, favorites, actions)
 │   ├── middleware/
 │   │   ├── headers.ts        # Security headers (nosniff, referrer-policy, frame-options)
-│   │   ├── cors.ts           # CORS middleware (LAN-first allowlist)
+│   │   ├── cors.ts           # CORS middleware (dev-friendly, LAN-first)
 │   │   └── errors.ts         # Global error handler + 404 handler
 │   ├── routes/
 │   │   ├── index.ts          # Main router aggregator
@@ -35,7 +36,7 @@ apps/dashboard-api/
 │   └── services/
 │       └── index.ts          # Placeholder for future services (HA, MQTT, etc.)
 ├── dist/                     # Compiled JS (production output)
-├── Dockerfile                # Multistage build (dev → prod)
+├── Dockerfile                # Multistage build
 ├── package.json
 ├── tsconfig.json
 └── eslint.config.js
@@ -45,15 +46,15 @@ apps/dashboard-api/
 
 ## Key Concepts
 
-### 1. Response Format
+### 1. Response Envelope
 
-All API responses follow a standardized envelope format:
+All API responses follow a standardized envelope format for consistency:
 
 **Success:**
 ```json
 {
   "ok": true,
-  "data": { /* ... */ }
+  "data": { }
 }
 ```
 
@@ -62,7 +63,7 @@ All API responses follow a standardized envelope format:
 {
   "ok": false,
   "error": {
-    "message": "Description of what went wrong",
+    "message": "Human-readable error description",
     "code": "ERROR_CODE"
   }
 }
@@ -72,40 +73,44 @@ All API responses follow a standardized envelope format:
 
 - **Route**: `GET /health`
 - **Response**: `{ ok: true, data: { status: "ok" } }`
-- **Purpose**: Liveness probe for Caddy / Kubernetes / monitoring
-- **Special**: Excluded from request logging (no spam)
+- **Purpose**: Liveness probe for Caddy / monitoring / container orchestration
+- **Special**: Excluded from request logging to avoid noise
 
 ### 3. Logging
 
-Uses **Pino** with two modes:
+Uses **Pino** with environment-aware configuration:
 
-| Environment | Output | Format |
-|-------------|--------|--------|
-| `development` | stdout | Pretty-printed with colors |
-| `production` | stdout | JSON (structured logs for parsing) |
+| Environment | Output | Format | Purpose |
+|-------------|--------|--------|---------|
+| `development` | stdout | Pretty-printed + colors | Human-readable in dev |
+| `production` | stdout | JSON (structured) | Machine-parseable for log aggregation |
 
-**Request logs** are added via `pino-http` middleware, excluding `/health`.
+**Request logs** include timing, method, status, and headers. `/health` is excluded to reduce noise.
 
-### 4. Configuration
+### 4. Environment Configuration
 
-#### Environment Variables (Zod Schema)
+#### Environment Variables (Zod Validation)
 
-Loaded from `process.env` at startup:
+All env vars are validated at startup via Zod schema (`src/config/env.ts`):
 
 | Variable | Type | Default | Purpose |
 |----------|------|---------|---------|
-| `NODE_ENV` | `development \| production` | `development` | Affects logging, error verbosity |
-| `PORT` | number | `4001` | Server port |
-| `LOG_LEVEL` | `fatal \| error \| warn \| info \| debug \| trace` | `info` | Pino log level |
-| `CORS_ALLOW_ORIGINS` | string (comma-separated) | `http://localhost:4000,http://dashboard.lan` | CORS allowlist |
-| `LINOS_DASHBOARD_HOST` | string | `dashboard.lan` | Canonical dashboard hostname |
-| `CONFIG_PATH` | string (optional) | — | Path to JSON app config file |
+| `NODE_ENV` | `development \| production` | `development` | Affects logging format, error verbosity |
+| `PORT` | number | `4001` | API server port |
+| `LOG_LEVEL` | `fatal\|error\|warn\|info\|debug\|trace` | `info` | Pino log level |
+| `CORS_ALLOW_ORIGINS` | string (CSV) | `http://localhost:4000,http://dashboard.lan` | CORS allowlist (dev-friendly) |
+| `LINOS_DASHBOARD_HOST` | string | `dashboard.lan` | Dashboard hostname (used in config/docs) |
+| `CONFIG_PATH` | string (optional) | — | Path to optional JSON config file |
 
-#### App Config File (Optional)
+**Notes:**
+- All vars are loaded from `process.env` (via Docker env_file or direct export)
+- Validation errors cause immediate startup failure with clear error message
+- Defaults are sensible for LAN deployment
 
-If `CONFIG_PATH` is set, the API attempts to load a JSON file with `rooms`, `favorites`, `actions`, etc.
+#### Application Configuration (JSON)
 
-Example (`config/app-config.json`):
+If `CONFIG_PATH` is set, the API attempts to load a JSON file at startup:
+
 ```json
 {
   "rooms": ["kitchen", "bedroom", "living_room"],
@@ -114,53 +119,113 @@ Example (`config/app-config.json`):
 }
 ```
 
-If the file is missing or unparseable, the API logs a warning and continues with `{}`.
+**Behavior:**
+- File is optional; if missing, API logs warning and continues with `{}`
+- Parse errors are logged as warnings; API continues
+- Type: `AppConfig` with `rooms`, `favorites`, `actions` as `unknown` (schema defined later)
 
-### 5. CORS & Headers
+### 5. Security Headers
 
-**CORS (LAN-First Approach):**
-- Allowlist configured via `CORS_ALLOW_ORIGINS` env var
-- Default allows `localhost:4000` (dev) and `dashboard.lan`
-- Blocks external origins by default
+The `headers` middleware sets standard HTTP security headers:
 
-**Security Headers:**
-- `X-Powered-By`: Removed
-- `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `X-Frame-Options: DENY`
+| Header | Value | Rationale |
+|--------|-------|-----------|
+| `X-Powered-By` | (removed) | Don't leak tech stack |
+| `X-Content-Type-Options` | `nosniff` | Prevent MIME type confusion attacks |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Privacy: share origin only for same-origin requests |
+| `X-Frame-Options` | `SAMEORIGIN` | Allow same-origin embeds (LAN kiosks); block external |
+
+### 6. CORS Policy
+
+**Intent**: CORS is primarily for **development** (Vite on localhost:4000). In production, the same-origin policy is enforced via Caddy routing (API under `/api` prefix on same host).
+
+**Development Allowlist** (via `CORS_ALLOW_ORIGINS`):
+- `http://localhost:4000` (local dev)
+- `http://dashboard.lan` (LAN default)
+- Configurable via env var (comma-separated origins)
+
+**Production** (via Caddy):
+- Web UI served from `dashboard.lan:/`
+- API served from `dashboard.lan:/api/` → automatic same-origin, no browser CORS check needed
+
+**Implementation** (`src/middleware/cors.ts`):
+- Checks incoming `Origin` header against allowlist
+- Returns `Access-Control-Allow-*` headers only if origin matches
+- Preflight requests (OPTIONS) return 200 if origin allowed
 
 ---
 
-## Local Development
+## Routing & Deployment
 
-### Start API Only (Isolated)
+### Local Development
+
+Both services run standalone:
+- **Web**: http://localhost:4000 (Vite dev server)
+- **API**: http://localhost:4001 (Express + tsx watch)
+
+```bash
+cd apps
+pnpm dev  # Both concurrently
+```
+
+CORS allows cross-origin requests between web (4000) and api (4001) for dev convenience.
+
+### Production (Caddy Reverse Proxy)
+
+**Single Host**: `dashboard.lan`
+
+```
+Caddy (Reverse Proxy on :80)
+├─ GET / → dashboard-web:4000 (web UI)
+└─ GET /api/* → dashboard-api:4001 (API, path stripped)
+```
+
+**Caddy Config** (`stacks/proxy/Caddyfile`):
+```plaintext
+{$LINOS_DASHBOARD_HOST}:{$PROXY_HTTP_PORT} {
+    # Web UI (root)
+    reverse_proxy / 127.0.0.1:{$DASHBOARD_WEB_PORT}
+
+    # API on /api prefix (strip /api from path before proxying)
+    handle_path /api/* {
+        reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
+    }
+}
+```
+
+**Benefits**:
+- Single hostname for users
+- Same-origin policy satisfied naturally (no CORS needed in prod)
+- Cleaner architecture
+
+---
+
+## Local Testing
+
+### 1. Start API in Dev Mode
 
 ```bash
 cd apps/dashboard-api
-NODE_ENV=development PORT=4001 pnpm dev
+pnpm dev
 ```
 
 Output:
 ```
-✓ Dashboard API listening on http://localhost:4001
+[HH:MM:SS.sss] INFO (PID): Starting dashboard-api
+    port: 4001
+    env: "development"
+    logLevel: "info"
+    corsOrigins: "http://localhost:4000,http://dashboard.lan"
+[HH:MM:SS.sss] INFO (PID): ✓ Dashboard API listening on http://localhost:4001
 ```
 
-### Start Full Dashboard (Web + API)
-
-```bash
-cd apps
-pnpm dev
-```
-
-This runs both web (Vite on 4000) and API (tsx watch on 4001) concurrently.
-
-### Test /health Endpoint
+### 2. Health Check Endpoint
 
 ```bash
 curl http://localhost:4001/health
 ```
 
-Response:
+Response (standardized envelope):
 ```json
 {
   "ok": true,
@@ -170,23 +235,15 @@ Response:
 }
 ```
 
-### Test CORS
+✅ Request is NOT logged (clean logs).
 
-```bash
-curl -H "Origin: http://localhost:4000" \
-     -H "Access-Control-Request-Method: GET" \
-     -X OPTIONS http://localhost:4001/health -v
-```
-
-Should include `Access-Control-Allow-Origin: http://localhost:4000`.
-
-### Test Error Handler
+### 3. 404 Error Response
 
 ```bash
 curl http://localhost:4001/nonexistent
 ```
 
-Response:
+Response (standardized error envelope):
 ```json
 {
   "ok": false,
@@ -197,112 +254,186 @@ Response:
 }
 ```
 
----
+✅ Standard error format.
 
-## Scripts
-
-### Available pnpm Commands
+### 4. CORS Preflight (Dev)
 
 ```bash
-# Development: auto-reload on file changes
-pnpm -C dashboard-api dev
-
-# TypeScript check (no emit)
-pnpm -C dashboard-api typecheck
-
-# ESLint
-pnpm -C dashboard-api lint
-
-# Prettier format
-pnpm -C dashboard-api format
-
-# Build (compile TS to dist/)
-pnpm -C dashboard-api build
-
-# Full dashboard (web + api)
-cd apps && pnpm dev
-cd apps && pnpm typecheck
-cd apps && pnpm lint
-cd apps && pnpm format
-cd apps && pnpm build
+curl -X OPTIONS \
+  -H "Origin: http://localhost:4000" \
+  -H "Access-Control-Request-Method: GET" \
+  http://localhost:4001/health -v 2>&1 | grep -i "access-control"
 ```
+
+Output:
+```
+< Access-Control-Allow-Origin: http://localhost:4000
+< Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+< Access-Control-Allow-Headers: Content-Type, Authorization
+< Access-Control-Max-Age: 86400
+```
+
+✅ CORS headers present (dev origin allowed).
+
+### 5. Request Logging (Dev vs Prod)
+
+**Dev (pretty colors):**
+```bash
+NODE_ENV=development PORT=4001 pnpm dev
+curl http://localhost:4001/health
+```
+
+Logs (human-readable):
+```
+[HH:MM:SS.sss] GET /health 200 5ms
+```
+
+**Prod (JSON):**
+```bash
+NODE_ENV=production PORT=4001 pnpm dev
+curl http://localhost:4001/health
+```
+
+Logs (structured JSON):
+```json
+{
+  "level": 30,
+  "msg": "GET /health 200 5ms",
+  "req": { "method": "GET", "url": "/health", ... },
+  "res": { "statusCode": 200, ... },
+  "responseTime": 5,
+  "timestamp": "2025-12-18T..."
+}
+```
+
+✅ Request is excluded from logging for `/health`.
 
 ---
 
-## Production Deployment
+## Docker Deployment
 
-### Docker
-
-Build and run using Docker Compose:
+### Build & Run
 
 ```bash
 cd stacks/applications/dashboard
 docker compose up --build
 ```
 
-Environment is loaded from `../../.env.linos` (shared across all stacks).
-
-### Environment Setup
-
-Ensure `.env.linos` includes:
+**Environment** is loaded from `../../.env.linos` (shared linOS config):
 
 ```env
-# Dashboard
+# Example .env.linos
 DASHBOARD_WEB_PORT=4000
 DASHBOARD_API_PORT=4001
 LINOS_DASHBOARD_HOST=dashboard.lan
-
-# API-specific (optional)
+PROXY_HTTP_PORT=80
+NODE_ENV=production
 LOG_LEVEL=info
-CORS_ALLOW_ORIGINS=http://localhost:4000,http://dashboard.lan
-CONFIG_PATH=/etc/linos/app-config.json  # optional
 ```
 
-### Caddy Reverse Proxy
+### Docker Compose Config
 
-The Caddy config (`stacks/proxy/Caddyfile`) exposes the dashboard:
+**File**: `stacks/applications/dashboard/docker-compose.yml`
 
-```plaintext
-{$LINOS_DASHBOARD_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$DASHBOARD_WEB_PORT}
-}
+```yaml
+services:
+  dashboard-web:
+    build:
+      context: ../../..
+      dockerfile: apps/dashboard-web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_WEB_PORT:-4000}:4000"
 
-{$LINOS_DASHBOARD_API_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
-}
+  dashboard-api:
+    build:
+      context: ../../..
+      dockerfile: apps/dashboard-api/Dockerfile
+    env_file:
+      - ../../.env.linos
+    environment:
+      PORT: ${DASHBOARD_API_PORT:-4001}
+      NODE_ENV: production
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_API_PORT:-4001}:4001"
 ```
 
 ---
 
-## Future: Integration Points
+## Quality & Testing
+
+### Type Checking
+
+```bash
+cd apps
+pnpm typecheck
+```
+
+### Linting
+
+```bash
+cd apps
+pnpm lint
+```
+
+### Build
+
+```bash
+cd apps
+pnpm build
+```
+
+---
+
+## Future Integration Points
 
 The API is designed to integrate with:
 
-- **Home Assistant** (REST API or direct socket)
-- **MQTT** (Mosquitto - via mqtt.js or similar)
-- **Node-RED** (webhooks)
-- **Zigbee2MQTT** (MQTT topics)
+- **Home Assistant** (REST API or WebSocket)
+- **MQTT** (Mosquitto topics for Zigbee, climate, lights)
+- **Node-RED** (webhooks & flows)
+- **Zigbee2MQTT** (device discovery via MQTT)
 
-Services will be added to `src/services/` as needed. Example:
+Services will be added to `src/services/` as needed:
 
 ```typescript
+// Example (not yet implemented)
 // src/services/home-assistant.ts
 export class HomeAssistantService {
   async getRooms() { /* ... */ }
   async getEntities() { /* ... */ }
 }
+
+// src/services/mqtt.ts
+export class MqttService {
+  subscribe(topic: string, callback: (msg: string) => void) { /* ... */ }
+}
 ```
 
 ---
 
-## Checklist for Future Work
+## Checklist: What's Ready
 
-- [ ] Add room management endpoints (`GET /rooms`, `POST /rooms`, etc.)
-- [ ] Add favorites endpoints (`GET /favorites`, etc.)
-- [ ] Add actions/automation endpoints
-- [ ] Integrate with Home Assistant API
-- [ ] Integrate with MQTT topics
-- [ ] Add WebSocket for real-time updates
-- [ ] Add authentication/authorization layer
-- [ ] Add database layer (if needed)
-- [ ] Add more comprehensive error codes
+- ✅ Express + TypeScript base
+- ✅ Pino logging (dev: pretty, prod: JSON)
+- ✅ Zod env validation
+- ✅ Standardized response envelope
+- ✅ Error handling (global + 404)
+- ✅ Security headers (nosniff, referrer-policy, SAMEORIGIN)
+- ✅ CORS (dev-friendly, LAN-first)
+- ✅ /health endpoint (excluded from logging)
+- ✅ Optional JSON config loader
+- ✅ Folder structure for routes/services/config
+
+## Checklist: Future Work
+
+- [ ] Home Assistant integration endpoints
+- [ ] MQTT topics listener
+- [ ] WebSocket for real-time updates
+- [ ] Authentication / authorization layer
+- [ ] More error codes + status mapping
+- [ ] Rate limiting (if needed)
+- [ ] Request validation middleware (Zod schemas for each endpoint)
+- [ ] Database layer (if needed)
+

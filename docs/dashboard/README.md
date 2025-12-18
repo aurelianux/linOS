@@ -3,9 +3,11 @@
 ## Overview
 
 The dashboard is a full-stack application built with:
-- **Frontend**: React 19 + TypeScript + Vite (port 4000)
-- **Backend**: Express 5.2 + TypeScript (port 4001)
+- **Frontend**: React + TypeScript + Vite (port 4000)
+- **Backend**: Express + TypeScript (port 4001)
 - **Manager**: pnpm workspaces
+
+For exact versions, see [apps/package.json](../../apps/package.json) and individual package.json files.
 
 ## Prerequisites
 

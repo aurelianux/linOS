@@ -5,7 +5,7 @@ import { type Request, type Response, type NextFunction } from "express";
  * - X-Powered-By disabled (better security)
  * - X-Content-Type-Options: nosniff (prevent MIME sniffing)
  * - Referrer-Policy: strict-origin-when-cross-origin (privacy-aware)
- * - X-Frame-Options: DENY (prevent clickjacking)
+ * - X-Frame-Options: SAMEORIGIN (allow same-origin embeds; LAN-first approach)
  */
 export function headersMiddleware(
   _req: Request,
@@ -21,8 +21,8 @@ export function headersMiddleware(
   // Privacy: send referrer only for same-origin or more secure contexts
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // Prevent embedding in iframes
-  res.setHeader("X-Frame-Options", "DENY");
+  // Allow same-origin embeds (LAN kiosks/dashboards)
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
 
   next();
 }
