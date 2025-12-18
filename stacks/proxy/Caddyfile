@@ -22,12 +22,16 @@
     reverse_proxy 127.0.0.1:{$DNS_WEB_PORT}
 }
 
+# Dashboard: single host, web on root + API on /api prefix
 {$LINOS_DASHBOARD_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$DASHBOARD_WEB_PORT}
-}
+    # Web UI (root)
+    reverse_proxy / 127.0.0.1:{$DASHBOARD_WEB_PORT}
 
-{$LINOS_DASHBOARD_API_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
+    # API on /api prefix (strip /api from path before proxying to API server)
+    handle_path /api/* {
+        reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
+    }
+}
 }
 
 
