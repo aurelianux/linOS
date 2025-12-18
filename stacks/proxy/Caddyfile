@@ -1,6 +1,6 @@
-{
-    # globale Optionen, falls du magst
-}
+# linOS Caddy Reverse Proxy Configuration
+# All services routed through Caddy on {$PROXY_HTTP_PORT} (default 80)
+# Each service is accessible via a unique hostname defined in .env.linos
 
 {$LINOS_SERVICE_INDEX_HOST}:{$PROXY_HTTP_PORT} {
     reverse_proxy 127.0.0.1:{$SERVICE_INDEX_PORT}
@@ -21,4 +21,13 @@
 {$LINOS_DNS_HOST}:{$PROXY_HTTP_PORT} {
     reverse_proxy 127.0.0.1:{$DNS_WEB_PORT}
 }
+
+{$LINOS_DASHBOARD_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$DASHBOARD_WEB_PORT}
+}
+
+{$LINOS_DASHBOARD_API_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
+}
+
 

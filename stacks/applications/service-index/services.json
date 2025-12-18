@@ -27,7 +27,7 @@
       "services": [
         {
           "name": "DNS / AdGuard Home",
-          "url": "http://dns.manny.lan:3000",
+          "url": "http://192.168.2.31:3000",
           "description": "DNS-Filter, Blocklisten und Netzwerk-DNS-Übersicht."
         },
         {
@@ -47,7 +47,7 @@
       "services": [
         {
           "name": "Plane – Smart-Home-Projekt",
-          "url": "http://plane.manny.lan",
+          "url": "http://192.168.2.31:8080",
           "description": "Projekt- und Issues-Management für Smart Home & linOS."
         },
         {
@@ -71,8 +71,8 @@
           "description": "Mail, Kalender & Kontakte."
         },
         {
-          "name": "MuseScore",
-          "url": "https://musescore.com",
+          "name": "Tomplay",
+          "url": "https://tomplay.com/de/my-account/purchases",
           "description": "Notensatz und Noten-Plattform."
         }
       ]
