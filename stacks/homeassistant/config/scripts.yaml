@@ -65,8 +65,7 @@ wohnung_chill:
         entity_id: *thermostats_all
       data:
         temperature: 22
-
-    # Keine Audio-Aktion → Musik läuft weiter
+    - service: media_player.media_play
 
 wohnung_hell:
   alias: Hell – ganze Wohnung

@@ -1,0 +1,20 @@
+{
+  "private": true,
+  "name": "linos",
+  "packageManager": "pnpm@10.25.0",
+  "workspaces": [
+    "dashboard-web",
+    "dashboard-api"
+  ],
+  "scripts": {
+    "dev": "concurrently \"pnpm -C dashboard-web dev\" \"pnpm -C dashboard-api dev\"",
+    "build": "pnpm -C dashboard-web build && pnpm -C dashboard-api build",
+    "typecheck": "pnpm -C dashboard-web typecheck && pnpm -C dashboard-api typecheck",
+    "lint": "pnpm -C dashboard-web lint && pnpm -C dashboard-api lint",
+    "format": "pnpm -C dashboard-web format && pnpm -C dashboard-api format"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.7.4"
+  }
+}
