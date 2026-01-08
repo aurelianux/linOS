@@ -12,8 +12,8 @@ scene: !include scenes.yaml
 helpers: !include helpers.yaml
 
 homeassistant:
-  internal_url: "http://ha.manny.lan"
-  external_url: "http://ha.manny.lan"
+  packages: !include_dir_named packages
+
 
 http:
   use_x_forwarded_for: true
