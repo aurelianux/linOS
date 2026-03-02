@@ -35,3 +35,46 @@ export class ApiErrorException extends Error {
     this.name = "ApiErrorException";
   }
 }
+
+/**
+ * Home Assistant entity state
+ */
+export interface HaEntityAttributes {
+  friendly_name?: string;
+  unit_of_measurement?: string;
+  device_class?: string;
+  icon?: string;
+  // Lights
+  brightness?: number;           // 0-255
+  color_temp?: number;
+  rgb_color?: [number, number, number];
+  // Climate
+  current_temperature?: number;
+  temperature?: number;
+  hvac_mode?: string;
+  hvac_modes?: string[];
+  // Allow extra attributes
+  [key: string]: unknown;
+}
+
+export interface HaState {
+  entity_id: string;
+  state: string;
+  attributes: HaEntityAttributes;
+  last_changed: string;
+  last_updated: string;
+}
+
+/** Entity domains that support a binary on/off toggle */
+export const TOGGLEABLE_DOMAINS = new Set([
+  "light",
+  "switch",
+  "input_boolean",
+  "fan",
+  "automation",
+]);
+
+/** Returns the domain part of an entity_id, e.g. "light" from "light.living_room" */
+export function entityDomain(entityId: string): string {
+  return entityId.split(".")[0] ?? "";
+}

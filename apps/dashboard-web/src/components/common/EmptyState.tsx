@@ -1,7 +1,11 @@
+export interface EmptyStateProps {
+  message?: string;
+}
+
 /**
  * Empty state component - placeholder
  */
-export function EmptyState() {
+export function EmptyState({ message = "No items to display" }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center p-8 space-y-4">
       <div className="text-slate-500">
@@ -19,7 +23,7 @@ export function EmptyState() {
           />
         </svg>
       </div>
-      <p className="text-slate-400">No items to display</p>
+      <p className="text-slate-400">{message}</p>
     </div>
   );
 }

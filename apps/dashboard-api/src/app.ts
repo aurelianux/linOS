@@ -6,6 +6,7 @@ import { headersMiddleware } from "./middleware/headers.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/errors.js";
 import { createRouter } from "./routes/index.js";
+import { HomeAssistantService } from "./services/home-assistant.js";
 
 /**
  * Create and configure Express application
@@ -29,6 +30,16 @@ export function createApp(env: Env): { app: Express; logger: pino.Logger } {
   const app = express();
 
   // ─────────────────────────────────────
+  // Services
+  // ─────────────────────────────────────
+  const ha = HomeAssistantService.fromEnv(env);
+  if (ha) {
+    logger.info("✓ Home Assistant service configured");
+  } else {
+    logger.info("ℹ Home Assistant not configured (HA_URL / HA_TOKEN not set)");
+  }
+
+  // ─────────────────────────────────────
   // Request logging (exclude /health)
   // ─────────────────────────────────────
   app.use((req: Request, res, next) => {
@@ -50,7 +61,7 @@ export function createApp(env: Env): { app: Express; logger: pino.Logger } {
   // ─────────────────────────────────────
   // Routes
   // ─────────────────────────────────────
-  app.use(createRouter());
+  app.use(createRouter({ ha }));
 
   // ─────────────────────────────────────
   // Error handling (must be last)

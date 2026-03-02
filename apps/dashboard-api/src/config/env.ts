@@ -20,6 +20,10 @@ const envSchema = z.object({
 
   // Optional path to JSON app config file (rooms, favorites, actions)
   CONFIG_PATH: z.string().optional(),
+
+  // Home Assistant integration (optional)
+  HA_URL: z.string().url().optional(),   // e.g. http://homeassistant.local:8123
+  HA_TOKEN: z.string().optional(),       // Long-Lived Access Token
 });
 
 export type Env = z.infer<typeof envSchema>;

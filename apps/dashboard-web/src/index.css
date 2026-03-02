@@ -8,7 +8,7 @@
 }
 
 html {
-  @apply dark;
+  /* dark class applied via AppShell component */
 }
 
 body {
