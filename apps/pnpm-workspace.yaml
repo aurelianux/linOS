@@ -1,4 +1,3 @@
 packages:
-  - "dashboard-web/*"
-  - "dashboard-api/*"
- 
+  - "dashboard-web"
+  - "dashboard-api"
