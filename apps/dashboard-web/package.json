@@ -13,6 +13,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@hakit/core": "^6.0.2",
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
     "clsx": "^2.1.1",

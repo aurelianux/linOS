@@ -6,9 +6,14 @@ import { LoadingState } from "../components/common/LoadingState";
 import { ErrorState } from "../components/common/ErrorState";
 import { fetchJson, ApiErrorException } from "../lib/api/client";
 import type { HealthResponse } from "../lib/api/types";
+import { HaStatusCard } from "../components/ha/HaStatusCard";
+
+const HA_CONFIGURED = !!(
+  import.meta.env.VITE_HA_URL && import.meta.env.VITE_HA_TOKEN
+);
 
 /**
- * Overview page - demonstrates API integration
+ * Overview page – shows API health and HA connection status.
  */
 export function OverviewPage() {
   const [loading, setLoading] = useState(true);
@@ -66,6 +71,8 @@ export function OverviewPage() {
           )}
         </CardContent>
       </Card>
+
+      <HaStatusCard haConfigured={HA_CONFIGURED} />
     </div>
   );
 }

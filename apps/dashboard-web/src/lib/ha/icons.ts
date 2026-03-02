@@ -1,36 +1,3 @@
-/**
- * Converts a Home Assistant icon string (e.g. "mdi:lightbulb") to the
- * corresponding MDI SVG path from @mdi/js.
- *
- * Uses a dynamic import to avoid bloating the initial bundle with all 7500+ icons.
- * Returns null if the icon string is invalid or the icon cannot be found.
- */
-export async function haIconToMdiPathAsync(
-  haIcon: string
-): Promise<string | null> {
-  if (!haIcon.startsWith("mdi:")) return null;
-
-  const iconName = haIcon
-    .slice(4) // remove "mdi:" prefix
-    .replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()); // kebab-case → camelCase
-
-  const mdiKey = `mdi${iconName.charAt(0).toUpperCase()}${iconName.slice(1)}`;
-
-  try {
-    const icons = await import("@mdi/js");
-    const path = (icons as Record<string, string | undefined>)[mdiKey];
-    return path ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Synchronous version using a pre-built lookup map for common HA icons.
- * Falls back to null for unknown icons.
- * Use this in render paths where async is not possible.
- */
-
 import {
   mdiLightbulb,
   mdiLightbulbOutline,
@@ -63,9 +30,32 @@ import {
   mdiBattery,
   mdiWifi,
   mdiDevices,
+  mdiCog,
+  mdiAlert,
+  mdiCheckCircle,
+  mdiClockOutline,
+  mdiMapMarker,
+  mdiAccount,
+  mdiCar,
+  mdiEye,
+  mdiEyeOff,
+  mdiSunglasses,
+  mdiMusicNote,
+  mdiVolumeHigh,
+  mdiVolumeMedium,
+  mdiVolumeLow,
+  mdiVolumeMute,
 } from "@mdi/js";
 
-// Direct mapping: HA icon string → MDI SVG path (single source of truth)
+/**
+ * Direct mapping of Home Assistant icon strings (e.g. "mdi:lightbulb")
+ * to their MDI SVG path from @mdi/js.
+ *
+ * Only named imports are used here – tree-shaking ensures unused paths
+ * are not included in the bundle.
+ *
+ * For icons not in this map, EntityIcon falls back to mdiDevices.
+ */
 const HA_ICON_TO_PATH: Record<string, string> = {
   "mdi:lightbulb": mdiLightbulb,
   "mdi:lightbulb-outline": mdiLightbulbOutline,
@@ -98,8 +88,29 @@ const HA_ICON_TO_PATH: Record<string, string> = {
   "mdi:battery": mdiBattery,
   "mdi:wifi": mdiWifi,
   "mdi:devices": mdiDevices,
+  "mdi:cog": mdiCog,
+  "mdi:alert": mdiAlert,
+  "mdi:check-circle": mdiCheckCircle,
+  "mdi:clock-outline": mdiClockOutline,
+  "mdi:map-marker": mdiMapMarker,
+  "mdi:account": mdiAccount,
+  "mdi:car": mdiCar,
+  "mdi:eye": mdiEye,
+  "mdi:eye-off": mdiEyeOff,
+  "mdi:sunglasses": mdiSunglasses,
+  "mdi:music-note": mdiMusicNote,
+  "mdi:volume-high": mdiVolumeHigh,
+  "mdi:volume-medium": mdiVolumeMedium,
+  "mdi:volume-low": mdiVolumeLow,
+  "mdi:volume-mute": mdiVolumeMute,
 };
 
+/**
+ * Converts a Home Assistant icon string (e.g. "mdi:lightbulb") to its
+ * corresponding MDI SVG path. Returns null for unknown icons –
+ * callers should fall back to mdiDevices.
+ */
 export function haIconToMdiPath(haIcon: string): string | null {
   return HA_ICON_TO_PATH[haIcon] ?? null;
 }
+
