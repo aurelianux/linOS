@@ -10,6 +10,11 @@ services:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   nodered:
     image: nodered/node-red
@@ -21,6 +26,11 @@ services:
       - TZ=${TZ:-Europe/Berlin}
     volumes:
       - ./nodered:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:1880"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   tailscale:
     image: tailscale/tailscale:latest

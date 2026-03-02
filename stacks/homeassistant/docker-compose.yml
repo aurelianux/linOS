@@ -17,4 +17,10 @@ services:
     privileged: true
     devices:
       - /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_5041dd7c9d80ef119b3e201cedd322a4-if00-port0
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8123"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
