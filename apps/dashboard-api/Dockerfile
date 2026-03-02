@@ -5,7 +5,9 @@ RUN corepack enable && pnpm install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/dashboard-api/node_modules ./dashboard-api/node_modules
 COPY . .
 RUN pnpm -C dashboard-api build
 
