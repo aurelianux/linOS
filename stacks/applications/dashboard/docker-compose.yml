@@ -1,8 +1,8 @@
 services:
   dashboard-web:
     build:
-      context: ../../..
-      dockerfile: apps/dashboard-web/Dockerfile
+      context: ../../../apps
+      dockerfile: dashboard-web/Dockerfile
     restart: unless-stopped
     ports:
       - "${DASHBOARD_WEB_PORT:-4000}:4000"
@@ -14,10 +14,10 @@ services:
 
   dashboard-api:
     build:
-      context: ../../..
-      dockerfile: apps/dashboard-api/Dockerfile
+      context: ../../../apps
+      dockerfile: dashboard-api/Dockerfile
     env_file:
-      - ../../.env.linos
+      - ../../../.env.linos
     environment:
       PORT: ${DASHBOARD_API_PORT:-4001}
       NODE_ENV: production
