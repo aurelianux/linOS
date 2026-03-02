@@ -101,19 +101,19 @@ scene:
     entities:
       light.bidschirm:
         state: "on"
-        brightness_pct: 20
+        brightness: 40
         hs_color: [25, 70]
       light.links:
         state: "on"
-        brightness_pct: 10
-        color_temp: 380
+        brightness: 10
+        effect: "Rainbow"
       light.rechts:
         state: "on"
-        brightness_pct: 10
+        brightness: 20
         color_temp: 380
       light.notenschlussel:
         state: "on"
-        brightness_pct: 10
+        brightness: 10
         color_temp: 380
       light.klavier:
         state: "off"
@@ -123,23 +123,23 @@ scene:
     entities:
       light.bidschirm:
         state: "on"
-        brightness_pct: 70
+        brightness: 255
         color_temp: 380
       light.links:
         state: "on"
-        brightness_pct: 70
+        brightness: 255
         color_temp: 380
       light.rechts:
         state: "on"
-        brightness_pct: 70
+        brightness: 255
         color_temp: 380
       light.notenschlussel:
         state: "on"
-        brightness_pct: 50
+        brightness: 50
         hs_color: [210, 25]
       light.klavier:
-        state: "on"
-        brightness_pct: 60
+        state: "off"
+        brightness: 60
         color_temp: 380
 
   - id: sz_kuche_aus
@@ -152,9 +152,7 @@ scene:
     name: Küche Chill
     entities:
       light.kuche:
-        state: "on"
-        brightness_pct: 30
-        color_temp: 380
+        state: "off"
 
   - id: sz_kuche_hell
     name: Küche Hell
@@ -196,9 +194,7 @@ scene:
     name: Schlafzimmer Chill
     entities:
       light.nachttisch:
-        state: "on"
-        brightness_pct: 20
-        hs_color: [25, 90]
+        state: "off"
 
   - id: sz_schlafzimmer_hell
     name: Schlafzimmer Hell
@@ -213,6 +209,17 @@ scene:
     entities:
       group.lights_all:
         state: "off"
+
+  - id: sz_wohnung_nacht
+    name: Wohnung Nacht
+    entities:
+      group.lights_wohnzimmer:
+        state: "off"
+      group.lights_kuche:
+        state: "off"
+      group.lights_schlafzimmer:
+        state: "on"
+        brightness_pct: 10
 
   # Beispiel: Govee "Feuer" als Scene auf dem Notenschlüssel
   # (funktioniert nur, wenn dein Light in HA ein effect/effect_list hat)
@@ -400,6 +407,24 @@ script:
         target:
           entity_id: vacuum.s7_max_ultra
 
+  wohnung_awake:
+    alias: Wohnung – Awake (Morgenroutine)
+    mode: single
+    sequence:
+      - service: script.set_house_mode
+        data:
+          mode: home
+      - service: light.turn_on
+        target:
+          entity_id: light.nachttisch
+        data:
+          brightness_pct: 30
+          hs_color: [25, 90]
+      - service: climate.set_temperature
+        target:
+          entity_id: group.thermostats_all
+        data:   
+          temperature: 22
 
 ########################################
 # AUTOMATIONS (Presence/Webhooks -> set mode, Router führt aus)
@@ -432,6 +457,8 @@ automation:
             sequence:
               - service: script.wohnung_sleep
     mode: restart
+
+  
 
   # Sunset -> Chill (nur wenn wirklich "home")
   - id: auto_sunset_chill

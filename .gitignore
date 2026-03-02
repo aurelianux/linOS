@@ -47,4 +47,4 @@ apps/*/dist/
 # Environment variables (use .env.linos at root for all services)
 .env
 .env.local
-
+.env.linos
