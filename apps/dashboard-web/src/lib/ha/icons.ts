@@ -12,7 +12,7 @@ export async function haIconToMdiPathAsync(
 
   const iconName = haIcon
     .slice(4) // remove "mdi:" prefix
-    .replace(/-([a-z])/g, (_, c: string) => (c as string).toUpperCase()); // kebab-case → camelCase
+    .replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()); // kebab-case → camelCase
 
   const mdiKey = `mdi${iconName.charAt(0).toUpperCase()}${iconName.slice(1)}`;
 
@@ -30,41 +30,6 @@ export async function haIconToMdiPathAsync(
  * Falls back to null for unknown icons.
  * Use this in render paths where async is not possible.
  */
-
-// Common HA icon → MDI camelCase key mappings (subset for sync use)
-const COMMON_HA_ICONS: Record<string, string> = {
-  "mdi:lightbulb": "mdiLightbulb",
-  "mdi:lightbulb-outline": "mdiLightbulbOutline",
-  "mdi:thermometer": "mdiThermometer",
-  "mdi:water-percent": "mdiWaterPercent",
-  "mdi:home": "mdiHome",
-  "mdi:power": "mdiPower",
-  "mdi:television": "mdiTelevision",
-  "mdi:speaker": "mdiSpeaker",
-  "mdi:fan": "mdiFan",
-  "mdi:air-conditioner": "mdiAirConditioner",
-  "mdi:door": "mdiDoor",
-  "mdi:door-open": "mdiDoorOpen",
-  "mdi:window-open": "mdiWindowOpen",
-  "mdi:window-closed": "mdiWindowClosed",
-  "mdi:lock": "mdiLock",
-  "mdi:lock-open": "mdiLockOpen",
-  "mdi:motion-sensor": "mdiMotionSensor",
-  "mdi:smoke-detector": "mdiSmokeDetector",
-  "mdi:water-boiler": "mdiWaterBoiler",
-  "mdi:robot-vacuum": "mdiRobotVacuum",
-  "mdi:blinds": "mdiBlinds",
-  "mdi:blinds-open": "mdiBlindsOpen",
-  "mdi:garage": "mdiGarage",
-  "mdi:garage-open": "mdiGarageOpen",
-  "mdi:weather-sunny": "mdiWeatherSunny",
-  "mdi:weather-rainy": "mdiWeatherRainy",
-  "mdi:weather-cloudy": "mdiWeatherCloudy",
-  "mdi:flash": "mdiFlash",
-  "mdi:battery": "mdiBattery",
-  "mdi:wifi": "mdiWifi",
-  "mdi:devices": "mdiDevices",
-};
 
 import {
   mdiLightbulb,
@@ -100,42 +65,41 @@ import {
   mdiDevices,
 } from "@mdi/js";
 
-const ICON_PATHS: Record<string, string> = {
-  mdiLightbulb,
-  mdiLightbulbOutline,
-  mdiThermometer,
-  mdiWaterPercent,
-  mdiHome,
-  mdiPower,
-  mdiTelevision,
-  mdiSpeaker,
-  mdiFan,
-  mdiAirConditioner,
-  mdiDoor,
-  mdiDoorOpen,
-  mdiWindowOpen,
-  mdiWindowClosed,
-  mdiLock,
-  mdiLockOpen,
-  mdiMotionSensor,
-  mdiSmokeDetector,
-  mdiWaterBoiler,
-  mdiRobotVacuum,
-  mdiBlinds,
-  mdiBlindsOpen,
-  mdiGarage,
-  mdiGarageOpen,
-  mdiWeatherSunny,
-  mdiWeatherRainy,
-  mdiWeatherCloudy,
-  mdiFlash,
-  mdiBattery,
-  mdiWifi,
-  mdiDevices,
+// Direct mapping: HA icon string → MDI SVG path (single source of truth)
+const HA_ICON_TO_PATH: Record<string, string> = {
+  "mdi:lightbulb": mdiLightbulb,
+  "mdi:lightbulb-outline": mdiLightbulbOutline,
+  "mdi:thermometer": mdiThermometer,
+  "mdi:water-percent": mdiWaterPercent,
+  "mdi:home": mdiHome,
+  "mdi:power": mdiPower,
+  "mdi:television": mdiTelevision,
+  "mdi:speaker": mdiSpeaker,
+  "mdi:fan": mdiFan,
+  "mdi:air-conditioner": mdiAirConditioner,
+  "mdi:door": mdiDoor,
+  "mdi:door-open": mdiDoorOpen,
+  "mdi:window-open": mdiWindowOpen,
+  "mdi:window-closed": mdiWindowClosed,
+  "mdi:lock": mdiLock,
+  "mdi:lock-open": mdiLockOpen,
+  "mdi:motion-sensor": mdiMotionSensor,
+  "mdi:smoke-detector": mdiSmokeDetector,
+  "mdi:water-boiler": mdiWaterBoiler,
+  "mdi:robot-vacuum": mdiRobotVacuum,
+  "mdi:blinds": mdiBlinds,
+  "mdi:blinds-open": mdiBlindsOpen,
+  "mdi:garage": mdiGarage,
+  "mdi:garage-open": mdiGarageOpen,
+  "mdi:weather-sunny": mdiWeatherSunny,
+  "mdi:weather-rainy": mdiWeatherRainy,
+  "mdi:weather-cloudy": mdiWeatherCloudy,
+  "mdi:flash": mdiFlash,
+  "mdi:battery": mdiBattery,
+  "mdi:wifi": mdiWifi,
+  "mdi:devices": mdiDevices,
 };
 
 export function haIconToMdiPath(haIcon: string): string | null {
-  const key = COMMON_HA_ICONS[haIcon];
-  if (!key) return null;
-  return ICON_PATHS[key] ?? null;
+  return HA_ICON_TO_PATH[haIcon] ?? null;
 }
