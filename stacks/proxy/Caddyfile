@@ -1,40 +1,47 @@
 # linOS Caddy Reverse Proxy Configuration
 # All services routed through Caddy on {$PROXY_HTTP_PORT} (default 80)
 # Each service is accessible via a unique hostname defined in .env.linos
+{
+	auto_https off
+}
 
 {$LINOS_SERVICE_INDEX_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$SERVICE_INDEX_PORT}
+	reverse_proxy 127.0.0.1:{$SERVICE_INDEX_PORT}
 }
 
 {$LINOS_HA_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$HA_PORT}
+	reverse_proxy 127.0.0.1:{$HA_PORT}
 }
 
 {$LINOS_PLANE_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$PLANE_PROXY_PORT}
+	reverse_proxy 127.0.0.1:{$PLANE_PROXY_PORT}
 }
 
 {$LINOS_FLOW_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$NODE_RED_PORT}
+	reverse_proxy 127.0.0.1:{$NODE_RED_PORT}
 }
 
 {$LINOS_DNS_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$DNS_WEB_PORT}
+	reverse_proxy 127.0.0.1:{$DNS_WEB_PORT}
 }
 
 {$LINOS_Z2M_HOST}:{$PROXY_HTTP_PORT} {
-    reverse_proxy 127.0.0.1:{$Z2M_WEB_PORT}
+	reverse_proxy 127.0.0.1:{$Z2M_WEB_PORT}
 }
 
 # Dashboard: single host, web on root + API on /api prefix
 {$LINOS_DASHBOARD_HOST}:{$PROXY_HTTP_PORT} {
-    # Web UI (root)
-    reverse_proxy / 127.0.0.1:{$DASHBOARD_WEB_PORT}
+	# API on /api prefix (strip /api from path before proxying to API server)
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
+	}
 
-    # API on /api prefix (strip /api from path before proxying to API server)
-    handle_path /api/* {
-        reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
-    }
+	# Web UI (catch-all)
+	handle {
+		reverse_proxy 127.0.0.1:{$DASHBOARD_WEB_PORT}
+	}
 }
 
-
+{$OPENCLAW_HOST}:{$PROXY_HTTP_PORT} {
+	reverse_proxy 127.0.0.1:{$OPENCLAW_GATEWAY_PORT}
+}
