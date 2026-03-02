@@ -49,14 +49,17 @@ export function loadAppConfig(configPath?: string): AppConfig {
 }
 
 /**
- * A single monitored service definition.
- * healthUrl is probed via HTTP GET; any 2xx/3xx response counts as "ok".
+ * A single service/stack definition.
+ * healthUrl (optional) is probed via HTTP GET; any 2xx/3xx response counts as "ok".
+ * stackPath (optional) is the relative path to the Docker Compose stack directory.
+ * Services without healthUrl are skipped during health monitoring.
  */
 export interface ServiceEntry {
   id: string;
   label: string;
   category: string;
-  healthUrl: string;
+  healthUrl?: string | undefined;
+  stackPath?: string | undefined;
 }
 
 export interface ServicesConfig {
@@ -67,7 +70,8 @@ const serviceEntrySchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   category: z.string().min(1),
-  healthUrl: z.string().url(),
+  healthUrl: z.string().url().optional(),
+  stackPath: z.string().optional(),
 });
 
 const servicesConfigSchema = z.object({
