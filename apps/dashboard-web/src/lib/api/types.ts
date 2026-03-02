@@ -24,6 +24,18 @@ export interface HealthResponse {
 }
 
 /**
+ * A single monitored service and its current probe result.
+ * Returned by GET /api/services/status
+ */
+export interface ServiceStatus {
+  id: string;
+  label: string;
+  category: string;
+  status: "ok" | "error" | "unknown";
+  latencyMs: number | null;
+}
+
+/**
  * API error class for typed error handling
  */
 export class ApiErrorException extends Error {

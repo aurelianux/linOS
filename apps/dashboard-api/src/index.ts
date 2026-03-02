@@ -1,12 +1,13 @@
 import { loadEnv } from "./config/env.js";
-import { loadAppConfig } from "./config/app-config.js";
+import { loadAppConfig, loadServicesConfig } from "./config/app-config.js";
 import { createApp } from "./app.js";
 
 /**
  * Bootstrap the dashboard API
  * 1. Load environment variables (with validation)
  * 2. Load app configuration (rooms, favorites, actions)
- * 3. Create and start Express app
+ * 3. Load services monitoring configuration
+ * 4. Create and start Express app
  */
 async function main() {
   // Load and validate environment
@@ -15,8 +16,11 @@ async function main() {
   // Load app configuration
   const appConfig = loadAppConfig(env.CONFIG_PATH);
 
+  // Load services monitoring configuration
+  const servicesConfig = loadServicesConfig(env.SERVICES_CONFIG_PATH);
+
   // Create app
-  const { app, logger } = createApp(env);
+  const { app, logger } = createApp(env, servicesConfig);
 
   // Log startup info
   logger.info(
@@ -25,6 +29,7 @@ async function main() {
       env: env.NODE_ENV,
       logLevel: env.LOG_LEVEL,
       corsOrigins: env.CORS_ALLOW_ORIGINS,
+      monitoredServices: servicesConfig.services.length,
     },
     "Starting dashboard-api"
   );

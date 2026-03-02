@@ -20,6 +20,10 @@ const envSchema = z.object({
 
   // Optional path to JSON app config file (rooms, favorites, actions)
   CONFIG_PATH: z.string().optional(),
+
+  // Optional path to services monitoring config file
+  // Defaults to config/services.json at the repo root
+  SERVICES_CONFIG_PATH: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
