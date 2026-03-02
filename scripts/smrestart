@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # smrestart – Restart all linOS Docker Compose stacks.
 #
-# Reads stack definitions from config/manny-shell.json.
+# Reads stack definitions from config/services.json (stackPath field).
 # Logs are written to logs/smrestart_<timestamp>.log.
 #
 # Usage:
@@ -12,7 +12,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CONFIG="$REPO_ROOT/config/manny-shell.json"
+CONFIG="$REPO_ROOT/config/services.json"
 LOGS_DIR="$REPO_ROOT/logs"
 TS=$(date +%Y%m%d_%H%M%S)
 LOGFILE="$LOGS_DIR/smrestart_${TS}.log"
@@ -30,11 +30,20 @@ _run() {
 
     echo "=== linOS Stacks ==="
     python3 - "$CONFIG" <<'PYEOF'
-import json, sys
+import json, os, sys
 with open(sys.argv[1]) as f:
     data = json.load(f)
-for s in data["stacks"]:
-    print(f"{s['name']:<14} {s['path']:<50} {s['label']}")
+seen = {}
+for s in data["services"]:
+    sp = s.get("stackPath")
+    if not sp:
+        continue
+    if sp not in seen:
+        seen[sp] = []
+    seen[sp].append(s["label"])
+for path, labels in seen.items():
+    name = os.path.basename(path.rstrip("/"))
+    print(f"{name:<20} {path:<55} {', '.join(labels)}")
 PYEOF
 
     echo ""
@@ -43,15 +52,30 @@ PYEOF
 
     python3 - "$CONFIG" "$REPO_ROOT" <<'PYEOF'
 import json, os, subprocess, sys
+
+def collect_stacks(services):
+    """Return ordered dict of stackPath -> list of service labels."""
+    seen = {}
+    for s in services:
+        sp = s.get("stackPath")
+        if not sp:
+            continue
+        if sp not in seen:
+            seen[sp] = []
+        seen[sp].append(s["label"])
+    return seen
+
 with open(sys.argv[1]) as f:
     data = json.load(f)
 repo = sys.argv[2]
+stacks = collect_stacks(data["services"])
 errors = []
-for s in data["stacks"]:
-    name, label, path = s["name"], s["label"], os.path.join(repo, s["path"])
-    print(f"### {name} – {label}")
-    print(f"→ {path}")
-    r = subprocess.run(["docker", "compose", "up", "-d"], cwd=path, capture_output=True, text=True)
+for path, labels in stacks.items():
+    name = os.path.basename(path.rstrip("/"))
+    full_path = os.path.join(repo, path)
+    print(f"### {name} – {', '.join(labels)}")
+    print(f"→ {full_path}")
+    r = subprocess.run(["docker", "compose", "up", "-d"], cwd=full_path, capture_output=True, text=True)
     if r.stdout:
         print(r.stdout, end="")
     if r.stderr:

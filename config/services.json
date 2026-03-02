@@ -1,34 +1,72 @@
 {
   "services": [
     {
-      "id": "dashboard-api",
-      "label": "Dashboard API",
-      "category": "dashboard",
-      "healthUrl": "http://localhost:4001/health"
-    },
-    {
-      "id": "homeassistant",
-      "label": "Home Assistant",
-      "category": "smarthome",
-      "healthUrl": "http://localhost:8123"
-    },
-    {
-      "id": "zigbee2mqtt",
-      "label": "Zigbee2MQTT",
-      "category": "smarthome",
-      "healthUrl": "http://localhost:8082"
+      "id": "caddy",
+      "label": "Caddy Reverse Proxy",
+      "category": "network",
+      "stackPath": "stacks/proxy"
     },
     {
       "id": "adguard",
       "label": "AdGuard Home",
       "category": "network",
-      "healthUrl": "http://localhost:3000"
+      "healthUrl": "http://localhost:3000",
+      "stackPath": "stacks/dns"
+    },
+    {
+      "id": "homeassistant",
+      "label": "Home Assistant",
+      "category": "smarthome",
+      "healthUrl": "http://localhost:8123",
+      "stackPath": "stacks/homeassistant"
+    },
+    {
+      "id": "zigbee2mqtt",
+      "label": "Zigbee2MQTT",
+      "category": "smarthome",
+      "healthUrl": "http://localhost:8082",
+      "stackPath": "stacks/zigbee2mqtt"
+    },
+    {
+      "id": "mosquitto",
+      "label": "Mosquitto MQTT",
+      "category": "automation",
+      "stackPath": "stacks/infra"
     },
     {
       "id": "nodered",
       "label": "Node-RED",
       "category": "automation",
-      "healthUrl": "http://localhost:1880"
+      "healthUrl": "http://localhost:1880",
+      "stackPath": "stacks/infra"
+    },
+    {
+      "id": "service-index",
+      "label": "Service Index",
+      "category": "dashboard",
+      "healthUrl": "http://localhost:8081",
+      "stackPath": "stacks/applications/service-index"
+    },
+    {
+      "id": "dashboard-web",
+      "label": "Dashboard Web",
+      "category": "dashboard",
+      "healthUrl": "http://localhost:4000",
+      "stackPath": "stacks/applications/dashboard"
+    },
+    {
+      "id": "dashboard-api",
+      "label": "Dashboard API",
+      "category": "dashboard",
+      "healthUrl": "http://localhost:4001/health",
+      "stackPath": "stacks/applications/dashboard"
+    },
+    {
+      "id": "plane",
+      "label": "Plane App",
+      "category": "apps",
+      "healthUrl": "http://localhost:8080",
+      "stackPath": "stacks/applications/plane/plane-app"
     }
   ]
 }
