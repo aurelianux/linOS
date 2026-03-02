@@ -2,13 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark mode is default */
 :root {
   color-scheme: dark;
-}
-
-html {
-  @apply dark;
 }
 
 body {
