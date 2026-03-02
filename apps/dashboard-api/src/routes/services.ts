@@ -17,8 +17,19 @@ export interface ServiceStatus {
  * Probe a single service by sending a GET to its healthUrl.
  * Any HTTP response with status < 400 is considered "ok" (service reachable).
  * Timeouts and connection errors map to "error".
+ * Services without a healthUrl are returned with status "unknown".
  */
 async function probeService(entry: ServiceEntry): Promise<ServiceStatus> {
+  if (!entry.healthUrl) {
+    return {
+      id: entry.id,
+      label: entry.label,
+      category: entry.category,
+      status: "unknown",
+      latencyMs: null,
+    };
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
   const start = Date.now();
