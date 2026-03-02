@@ -1,0 +1,34 @@
+{
+  "services": [
+    {
+      "id": "dashboard-api",
+      "label": "Dashboard API",
+      "category": "dashboard",
+      "healthUrl": "http://localhost:4001/health"
+    },
+    {
+      "id": "homeassistant",
+      "label": "Home Assistant",
+      "category": "smarthome",
+      "healthUrl": "http://localhost:8123"
+    },
+    {
+      "id": "zigbee2mqtt",
+      "label": "Zigbee2MQTT",
+      "category": "smarthome",
+      "healthUrl": "http://localhost:8082"
+    },
+    {
+      "id": "adguard",
+      "label": "AdGuard Home",
+      "category": "network",
+      "healthUrl": "http://localhost:3000"
+    },
+    {
+      "id": "nodered",
+      "label": "Node-RED",
+      "category": "automation",
+      "healthUrl": "http://localhost:1880"
+    }
+  ]
+}
