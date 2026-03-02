@@ -67,6 +67,33 @@ Plane:
 - Zigbee2MQTT Daten: `stacks/zigbee2mqtt/data/`
 - Caddy Zertifikate/Daten: `stacks/proxy/data/` (Docker Volume `caddy_data`)
 
+## Scripts & Shell-Konfiguration für Manny
+
+### scripts/
+
+| Skript | Beschreibung |
+|---|---|
+| `scripts/smrestart` | Alle Stacks per `docker compose up -d` neu starten (liest `config/manny-shell.json`). Log → `logs/` |
+| `scripts/smstatus` | Aktuellen Container-Status anzeigen. Log → `logs/` |
+| `scripts/update_index.py` | `services.json` für den Service-Index neu generieren. |
+
+Skripte können direkt aus dem Repo ausgeführt werden – der Pfad zum Repo-Root wird automatisch aufgelöst:
+
+```bash
+~/linOS/scripts/smrestart
+~/linOS/scripts/smstatus
+```
+
+### shell/manny.zshrc
+
+`shell/manny.zshrc` enthält alle Manny-spezifischen Aliases und Funktionen (Docker-Shortcuts, `smrestart`, `smstatus`, `updateindex` usw.). Einbindung in `~/.zshrc`:
+
+```zsh
+[[ -f ~/linOS/shell/manny.zshrc ]] && source ~/linOS/shell/manny.zshrc
+```
+
+Nach einem `git pull` stehen die Änderungen in der nächsten Shell-Session automatisch zur Verfügung.
+
 ## Troubleshooting (Kurz)
 
 - Logs ansehen: im jeweiligen Stack-Ordner `docker compose logs`
