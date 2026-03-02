@@ -319,10 +319,10 @@ cd stacks/applications/dashboard
 docker compose up --build
 ```
 
-**Environment** is loaded from `../../.env.linos` (shared linOS config):
+**Environment** is loaded from `../../.env.linos` (copy from `.env.linos.example`):
 
 ```env
-# Example .env.linos
+# .env.linos (relevant dashboard vars)
 DASHBOARD_WEB_PORT=4000
 DASHBOARD_API_PORT=4001
 LINOS_DASHBOARD_HOST=dashboard.lan
@@ -344,6 +344,11 @@ services:
     restart: unless-stopped
     ports:
       - "${DASHBOARD_WEB_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   dashboard-api:
     build:
@@ -357,6 +362,11 @@ services:
     restart: unless-stopped
     ports:
       - "${DASHBOARD_API_PORT:-4001}:4001"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 ```
 
 ---

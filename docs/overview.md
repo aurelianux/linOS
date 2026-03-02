@@ -11,6 +11,7 @@ linOS bündelt mehrere Docker-Stacks zu einem homogenen Homelab- und Smart-Home-
   - Zigbee2MQTT
   - Node-RED Flows
 - Node-RED für Automationen, Integrationen, HTTP-Endpoints usw.
+- Tailscale VPN-Client für sicheren Remote-Zugriff auf das LAN.
 
 ### proxy
 
@@ -23,7 +24,14 @@ linOS bündelt mehrere Docker-Stacks zu einem homogenen Homelab- und Smart-Home-
 ### dns
 
 - AdGuard Home als lokaler DNS-Server und Werbe-/Tracker-Filter.
-- Optional: Überschreibt lokale Hostnamen (zum Beispiel `plane.lan`, `homeassistant.lan`, `manny.lan`).
+- Überschreibt lokale Hostnamen, z. B.:
+  - `manny.lan` → Service-Index
+  - `ha.manny.lan` → Home Assistant
+  - `dns.manny.lan` → AdGuard Web UI
+  - `flow.manny.lan` → Node-RED
+  - `plane.manny.lan` → Plane
+  - `z2m.manny.lan` → Zigbee2MQTT
+  - `dashboard.lan` → linBoard Dashboard
 
 ### homeassistant
 
@@ -41,12 +49,9 @@ linOS bündelt mehrere Docker-Stacks zu einem homogenen Homelab- und Smart-Home-
 
 ### applications
 
-- plane:
-  - Plane App für Projekt- und Aufgabenmanagement.
-  - Läuft im Ordner `stacks/applications/plane/plane-app`.
-- service-index:
-  - Statische HTML-Seite, die Links auf alle relevanten Dienste im Netzwerk sammelt.
-  - Wird typischerweise über den Proxy unter der IP des Hosts angeboten.
+- **plane**: Plane App für Projekt- und Aufgabenmanagement. Läuft im Ordner `stacks/applications/plane/plane-app`.
+- **service-index**: Statische HTML-Seite, die Links auf alle relevanten Dienste sammelt. Erreichbar über den Proxy unter `manny.lan`.
+- **dashboard**: linBoard – Full-Stack-Dashboard (React + Express + TypeScript). Erreichbar über `dashboard.lan`. Quellcode in `apps/dashboard-web` und `apps/dashboard-api`.
 
 ## Datenhaltung
 
@@ -56,7 +61,7 @@ Persistente Daten liegen in:
 - Zigbee2MQTT: `stacks/zigbee2mqtt/data/`
 - MQTT (Mosquitto): `stacks/infra/mosquitto/data/`
 - AdGuard: `stacks/dns/work/`
-- Caddy: `stacks/proxy/data/`
+- Caddy: `stacks/proxy/data/` (Docker Volume `caddy_data`)
 
 Diese Verzeichnisse werden nicht in Git versioniert und sollten in ein Backup einfließen.
 

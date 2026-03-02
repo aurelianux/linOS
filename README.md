@@ -6,14 +6,15 @@ Opinionated Homelab / Smart-Home-Stack auf dem Host "Manny".
 
 Dieses Repository geht davon aus, dass alles unter dem Ordner `stacks/` liegt:
 
-- stacks/infra/ – Basisdienste wie MQTT (Mosquitto) und Node-RED
-- stacks/proxy/ – Caddy Reverse-Proxy vor allen Web-UIs
-- stacks/dns/ – AdGuard Home als lokaler DNS / Filter
-- stacks/homeassistant/ – Home Assistant Core und Konfiguration
-- stacks/zigbee2mqtt/ – Zigbee2MQTT und Koordinator
-- stacks/applications/
-  - plane/ – Plane Projektmanagement
-  - service-index/ – einfache HTML-Übersichtsseite für alle Dienste
+- `stacks/infra/` – MQTT (Mosquitto), Node-RED und Tailscale-VPN
+- `stacks/proxy/` – Caddy Reverse-Proxy vor allen Web-UIs
+- `stacks/dns/` – AdGuard Home als lokaler DNS / Filter
+- `stacks/homeassistant/` – Home Assistant Core und Konfiguration
+- `stacks/zigbee2mqtt/` – Zigbee2MQTT und Koordinator
+- `stacks/applications/`
+  - `plane/` – Plane Projektmanagement
+  - `service-index/` – HTML-Übersichtsseite aller Dienste (erreichbar unter `manny.lan`)
+  - `dashboard/` – linBoard Dashboard (Web + API, erreichbar unter `dashboard.lan`)
 
 Runtime-Daten (Datenbanken, Logs, Caddy-ACME, Zigbee-DB usw.) sind über `.gitignore` ausgeschlossen und werden nicht committet.
 
@@ -49,6 +50,10 @@ Service-Index (Landingpage):
 
 - `cd stacks/applications/service-index && docker compose up -d`
 
+Dashboard (linBoard):
+
+- `cd stacks/applications/dashboard && docker compose up --build -d`
+
 Plane:
 
 - `cd stacks/applications/plane/plane-app && docker compose up -d`
@@ -60,9 +65,11 @@ Plane:
 - Mosquitto Daten: `stacks/infra/mosquitto/data/`
 - AdGuard Daten: `stacks/dns/work/`
 - Zigbee2MQTT Daten: `stacks/zigbee2mqtt/data/`
+- Caddy Zertifikate/Daten: `stacks/proxy/data/` (Docker Volume `caddy_data`)
 
 ## Troubleshooting (Kurz)
 
 - Logs ansehen: im jeweiligen Stack-Ordner `docker compose logs`
 - Caddy neu starten: `cd stacks/proxy && docker compose restart`
 - Home Assistant neu starten: `cd stacks/homeassistant && docker compose restart`
+- Dashboard neu starten: `cd stacks/applications/dashboard && docker compose restart`
