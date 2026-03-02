@@ -2,199 +2,147 @@
 
 ## Was ist linBoard?
 
-linBoard ist das zentrale Dashboard für **linOS** – ein minimalistisches, Linux-zentriertes Homelab-Betriebssystem. Das Dashboard dient als Single-Pane-of-Glass für:
-
-- Smart-Home-Geräte via Home Assistant (Real-Time via WebSocket)
-- Server- und Netzwerk-Monitoring
-- Schnellaktionen und Automationen
-- Konfigurationsübersicht
+linBoard ist das zentrale Dashboard für **linOS** – ein minimalistisches, Linux-zentriertes Homelab-Betriebssystem auf einem Dell Wyse 5070 ("Manny", Arch Linux). Single-Pane-of-Glass für Smart-Home, Monitoring und Schnellaktionen.
 
 ## Tech Stack
 
 | Layer | Technologie |
 |---|---|
-| Frontend Framework | React 19+, TypeScript, Vite (rolldown-vite) |
+| Frontend | React 19+, TypeScript, Vite |
 | Styling | Tailwind CSS (slate palette), shadcn/ui |
-| HA-Integration | @hakit/core (WebSocket, Hooks, Real-Time) |
-| Icons | @mdi/react + @mdi/js (Material Design Icons, HA-kompatibel) |
-| Charts | Recharts |
-| Color Picker | react-colorful |
+| HA-Integration | @hakit/core v6 (WebSocket, Real-Time Hooks) |
+| Icons | @mdi/react + @mdi/js (MDI, HA-kompatibel) |
 | State | Zustand v5 (Client-State: Layout, Favorites, Prefs) |
-| Grid Layout | react-grid-layout (Drag & Drop) |
 | Backend | Express 5, Zod, Pino |
 | Package Manager | pnpm (Workspaces) |
+| Zukünftig | Recharts, react-colorful, react-grid-layout |
+
+## Architektur
+
+```
+Browser → @hakit/core WebSocket → Home Assistant (Real-Time State + Control)
+Browser → Vite Dev Proxy /api   → Express BFF → System-Monitoring, Config
+```
+
+- **@hakit/core** ist die einzige Datenschicht für HA. Kein REST-Polling, kein BFF-Proxy für HA.
+- **BFF** nur für: Health Check (`GET /health`), Stack Status Monitoring (`GET /services/status`), zukünftig Config-Persistenz.
+- **Graceful Degradation**: Dashboard muss ohne HA-Verbindung starten. `HaProvider` rendert children ohne Provider wenn Env-Vars fehlen.
+- **Security**: HA Long-Lived Access Token im Frontend ist akzeptabel (Dashboard nur in LAN/Tailscale VPN).
 
 ## Repo-Struktur
 
 ```
 ├── apps/
-│   ├── dashboard-api/          # Express BFF (TypeScript)
+│   ├── dashboard-api/          # Express BFF
 │   │   └── src/
-│   │       ├── config/         # Zod-validated env + JSON app config
-│   │       ├── middleware/      # cors, headers, errors
-│   │       ├── routes/         # health + future BFF routes
-│   │       └── services/       # placeholder for system monitoring
-│   └── dashboard-web/          # React Frontend (Vite + TypeScript)
+│   │       ├── config/         # Zod env + services.json loader
+│   │       ├── routes/         # health, services/status
+│   │       └── middleware/
+│   └── dashboard-web/          # React Frontend
 │       └── src/
 │           ├── components/
-│           │   ├── common/     # CardErrorBoundary, StatusBadge, etc.
-│           │   ├── ha/         # HA-spezifische Komponenten
+│           │   ├── common/     # CardErrorBoundary, ServiceStatusCard
+│           │   ├── ha/         # ConnectionStatus, EntityIcon, HaStatusCard, HaStatusIndicator
+│           │   │               # LightCard, SwitchCard, SensorCard
 │           │   ├── layout/     # AppShell, Header, SidebarNav, BottomNav
-│           │   └── ui/         # shadcn/ui Basis-Komponenten
+│           │   └── ui/         # shadcn/ui Basis (badge, button, card, switch, slider)
+│           ├── hooks/          # useServiceStatuses
 │           ├── lib/
 │           │   ├── api/        # Typed fetch client (BFF)
-│           │   ├── ha/         # icons.ts, provider.tsx
-│           │   └── utils.ts    # cn() helper
+│           │   └── ha/         # icons.ts, provider.tsx, config.ts
 │           ├── pages/          # OverviewPage, RoomsPage, PanelsPage
 │           └── stores/         # layoutStore, favoritesStore (Zustand)
-├── docker-compose.yml
-├── .env.linos.example
+├── config/
+│   └── services.json           # Stack health monitoring config
 ├── PROMPT.md                   # Dieses Dokument
-└── AGENT.md                    # Agent System Prompt
+└── AGENT.md                    # → Wird in GitHub Copilot Instructions migriert
 ```
-
-## Architektur-Entscheidungen
-
-### Frontend ↔ Home Assistant: WebSocket (kein REST-Polling)
-
-Das Frontend kommuniziert **direkt** mit Home Assistant via WebSocket – vermittelt durch `@hakit/core`. Der BFF (Express) ist **nicht** der Proxy für HA-Daten.
-
-```
-Browser → @hakit/core WebSocket → Home Assistant
-Browser → Vite Dev Proxy /api   → Express BFF → (System-Monitoring, Config)
-```
-
-**Warum WebSocket statt REST-Polling?**
-- Real-Time Updates: State-Änderungen kommen in <100ms (kein 10s Polling-Delay)
-- Kein globaler pending-State der alle Buttons disabled
-- Native HA-Protokoll (Home Assistant WebSocket API)
-- @hakit/core abstrahiert Auth, Reconnect, State-Management
-
-### BFF (Express) bleibt für
-
-- `GET /health` – Health Check
-- Zukünftig: System-Monitoring (Docker, Netzwerk)
-- Zukünftig: Config-Persistenz (Rooms, Favorites als JSON)
-
-### Graceful Degradation
-
-Das Dashboard **muss** ohne HA-Verbindung starten:
-
-```tsx
-// HaProvider degradiert graceful wenn keine Env-Vars gesetzt sind
-if (!HA_URL || !HA_TOKEN) {
-  return <>{children}</>; // Kein Provider – keine Hooks – kein Crash
-}
-```
-
-Seiten und Komponenten prüfen `VITE_HA_URL && VITE_HA_TOKEN` und zeigen
-eine freundliche Meldung wenn HA nicht konfiguriert ist.
 
 ## Design System
 
-### Farben (Slate Palette – Dark-First)
+### Farben (Slate – Dark-First)
 
-| Token | Tailwind | Verwendung |
-|---|---|---|
-| Hintergrund | `slate-950` | App-Hintergrund |
-| Karten | `slate-900` | Card Background |
-| Borders | `slate-800` | Card Border |
-| Text primär | `slate-100` | Überschriften, wichtige Werte |
-| Text sekundär | `slate-400` | Labels, Beschreibungen |
-| Text tertiär | `slate-500` | Timestamps, Hints |
+| Verwendung | Tailwind |
+|---|---|
+| App-Hintergrund | `slate-950` |
+| Cards | `slate-900` |
+| Borders | `slate-800` |
+| Text primär | `slate-100` |
+| Text sekundär | `slate-400` |
+| Text tertiär | `slate-500` |
 
 ### Accent-Farben
 
-| Farbe | Tailwind | Bedeutung |
-|---|---|---|
-| Aktiv/An | `amber-400` | Licht an, aktiver Toggle |
-| Fehler | `red-400` | Fehler, Unavailable |
-| Erfolg | `emerald-400` | Verbunden, OK |
-| Info | `sky-400` | Informationen |
+| Bedeutung | Tailwind |
+|---|---|
+| Aktiv/An | `amber-400` |
+| Fehler | `red-400` |
+| Erfolg | `emerald-400` |
+| Info | `sky-400` |
 
-### Grundregeln
+### Regeln
 
 - Nur Tailwind Utility Classes – kein inline `style={}`, keine CSS-Module
-- Slate-Palette + definierte Accent-Farben – keine random Hex-Codes
-- Animationen via CSS Transitions (`transition-all duration-200`) – kein framer-motion
+- Animationen via CSS Transitions – kein framer-motion
+- Icons aus `@mdi/js` via `haIconToMdiPath()` – nie Emojis, nie Lucide
 
 ## Env-Variablen
 
 ### Frontend (`apps/dashboard-web/.env`)
 
-| Variable | Beschreibung | Beispiel |
-|---|---|---|
-| `VITE_API_BASE` | Vite Proxy-Prefix zum BFF | `/api` |
-| `VITE_HA_URL` | Home Assistant URL (vom Browser erreichbar) | `http://192.168.2.31:8123` |
-| `VITE_HA_TOKEN` | HA Long-Lived Access Token | `eyJ...` |
+| Variable | Beispiel |
+|---|---|
+| `VITE_API_BASE` | `/api` |
+| `VITE_HA_URL` | `http://192.168.2.31:8123` |
+| `VITE_HA_TOKEN` | `eyJ...` |
 
-### Backend (`apps/dashboard-api/.env` / Docker)
+### Backend (`apps/dashboard-api/.env`)
 
-| Variable | Beschreibung | Default |
-|---|---|---|
-| `NODE_ENV` | Umgebung | `development` |
-| `PORT` | API Server Port | `4001` |
-| `LOG_LEVEL` | Pino Log Level | `info` |
-| `CORS_ALLOW_ORIGINS` | Erlaubte Origins | `http://localhost:4000,http://dashboard.lan` |
-| `LINOS_DASHBOARD_HOST` | Dashboard Hostname | `dashboard.lan` |
-| `CONFIG_PATH` | Pfad zur JSON-Konfigurationsdatei | – |
+| Variable | Default |
+|---|---|
+| `NODE_ENV` | `development` |
+| `PORT` | `4001` |
+| `LOG_LEVEL` | `info` |
+| `CORS_ALLOW_ORIGINS` | `http://localhost:4000,http://dashboard.lan` |
+| `SERVICES_CONFIG_PATH` | `config/services.json` |
 
 ## Roadmap
 
-### Phase 1 – Fundament ✅
+### ✅ Phase 1 – Fundament (abgeschlossen)
 
-- [x] Monorepo Setup (pnpm workspaces)
-- [x] Express BFF mit Health-Endpoint
-- [x] React Frontend mit Routing und Layout
-- [x] TypeScript, ESLint, Prettier, Tailwind
-- [x] Storybook für Component Library
-- [x] MDI Icons Integration (`@mdi/react`, `@mdi/js`)
-- [x] Zustand Stores (layoutStore, favoritesStore)
-- [x] CardErrorBoundary
-- [x] Path Aliases (`@/*`)
-- [x] @hakit/core Integration
-- [x] HaProvider mit graceful Degradation
-- [x] ConnectionStatus Komponente
+Monorepo, Express BFF, React mit Routing/Layout, TypeScript/ESLint/Tailwind, Storybook, MDI Icons, Zustand Stores, CardErrorBoundary, Path Aliases, @hakit/core mit HaProvider + ConnectionStatus, Config-driven Stack Status Monitoring.
 
-### Phase 2 – Smart Home Cards
+### 🔨 Phase 2 – Smart Home Cards (AKTIV)
 
-- [ ] LightCard (Toggle + Brightness Slider)
-- [ ] ClimateCard (Temperatur anzeigen + Modus-Selector)
-- [ ] MediaCard (Player Controls: Play/Pause, Volume)
-- [ ] SensorCard (Numerische Werte + Einheit)
+- [x] `lib/ha/config.ts` – Shared `HA_CONFIGURED` Utility
+- [x] **LightCard** – Toggle (Switch) + Brightness Slider (0-255), Amber-Glow wenn an, EntityIcon
+- [x] **SwitchCard** – Toggle für switch/input_boolean/fan/automation Domains
+- [x] **SensorCard** – Read-only: Wert + Einheit + EntityIcon
+- [x] **OverviewPage Quick Controls** – Grid mit LightCards/SwitchCards für konfigurierte Entities
 - [ ] SceneCard (Szene aktivieren)
+- [ ] ClimateCard (Temperatur + Modus-Selector)
+- [ ] MediaCard (Player Controls)
 - [ ] CoverCard (Rolladen/Jalousien)
 
 ### Phase 3 – Dashboard Grid
 
-- [ ] react-grid-layout Integration
-- [ ] Drag & Drop Layout
-- [ ] Layout-Persistenz (layoutStore)
-- [ ] Widget-Konfigurator Dialog (AddWidgetDialog)
-- [ ] Breakpoint-spezifische Layouts (lg, md, sm)
+react-grid-layout, Drag & Drop, Layout-Persistenz (layoutStore), Widget-Konfigurator, Breakpoint-Layouts.
 
 ### Phase 4 – System Monitoring
 
-- [ ] Server-Status via BFF
-- [ ] Container-Übersicht (Docker API)
-- [ ] Netzwerk-Ping Status
-- [ ] Recharts für historische Daten
+Server-Status via BFF, Container-Übersicht (Docker API), Netzwerk-Ping, Recharts für historische Daten.
 
 ### Phase 5 – Rooms & Areas
 
-- [ ] useAreas() für HA-basierte Raumaufteilung
-- [ ] RoomCard mit Entity-Liste
-- [ ] Raum-spezifische Quick Controls
+useAreas() für HA-basierte Raumaufteilung, RoomCard mit Entity-Liste, Raum-spezifische Quick Controls.
 
-## Coding-Standards
-
-Alle Details in `AGENT.md`. Kurzfassung:
+## Coding-Standards (Kurzfassung)
 
 - TypeScript strict – kein `any`
-- @hakit/core Hooks für alle HA-Daten
-- MDI Icons via `haIconToMdiPath()` aus `@mdi/js` named imports
+- @hakit/core Hooks für alle HA-Daten (`useEntity`, `useAreas`, `useService`)
+- MDI Icons via `haIconToMdiPath()` mit named imports aus `@mdi/js`
 - Zustand für Client-State (Layout, Favorites)
 - CardErrorBoundary um jede HA-Karte
-- Slate-Palette + Accent-Farben
 - Graceful handling von `unavailable`/`unknown` Entity States
-
+- Conventional Commits auf Englisch
+- Vollständige Standards: siehe GitHub Copilot Instructions
