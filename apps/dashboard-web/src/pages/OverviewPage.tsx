@@ -1,41 +1,44 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { StatusBadge } from "../components/common/StatusBadge";
-import { LoadingState } from "../components/common/LoadingState";
-import { ErrorState } from "../components/common/ErrorState";
-import { fetchJson, ApiErrorException } from "../lib/api/client";
-import type { HealthResponse } from "../lib/api/types";
+import { ServiceStatusCard } from "../components/common/ServiceStatusCard";
+import { HaStatusCard } from "../components/ha/HaStatusCard";
+import { LightCard } from "../components/ha/LightCard";
+import { SwitchCard } from "../components/ha/SwitchCard";
+import { SensorCard } from "../components/ha/SensorCard";
+import { CardErrorBoundary } from "../components/common/CardErrorBoundary";
+import { HA_CONFIGURED } from "@/lib/ha/config";
 
 /**
- * Overview page - demonstrates API integration
+ * Entity IDs to show in the Quick Controls section.
+ * Edit this list to configure which entities appear on the Overview page.
+ * Will be driven by a config file in a future iteration.
+ */
+const QUICK_CONTROL_LIGHTS: Array<`light.${string}`> = [
+  // "light.wohnzimmer",
+  // "light.schlafzimmer",
+];
+
+const QUICK_CONTROL_SWITCHES: Array<
+  | `switch.${string}`
+  | `input_boolean.${string}`
+  | `fan.${string}`
+  | `automation.${string}`
+> = [
+  // "switch.steckdose_buero",
+];
+
+const QUICK_CONTROL_SENSORS: Array<`sensor.${string}`> = [
+  // "sensor.temperatur_wohnzimmer",
+];
+
+const HAS_QUICK_CONTROLS =
+  QUICK_CONTROL_LIGHTS.length > 0 ||
+  QUICK_CONTROL_SWITCHES.length > 0 ||
+  QUICK_CONTROL_SENSORS.length > 0;
+
+/**
+ * Overview page – shows all stack statuses, HA connection state,
+ * and Quick Controls for configured entities.
  */
 export function OverviewPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-
-  const fetchHealth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchJson<HealthResponse>("/health");
-      setHealth(data);
-    } catch (err) {
-      if (err instanceof ApiErrorException) {
-        setError(err.message);
-      } else {
-        setError("Unknown error");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHealth();
-  }, []);
-
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -43,29 +46,35 @@ export function OverviewPage() {
         <p className="text-slate-400">Welcome to linBoard v0.1</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>API Health</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loading && <LoadingState />}
-          {error && <ErrorState message={error} onRetry={fetchHealth} />}
-          {health && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300">API Status</span>
-                <StatusBadge status="ok" />
-              </div>
-              <div className="text-sm text-slate-400">
-                <p>Status: {health.status}</p>
-              </div>
-              <Button onClick={fetchHealth} variant="secondary">
-                Refresh
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Quick Controls – only shown when HA is configured and entities are listed */}
+      {HA_CONFIGURED && HAS_QUICK_CONTROLS && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-slate-200">
+            Quick Controls
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {QUICK_CONTROL_LIGHTS.map((id) => (
+              <CardErrorBoundary key={id} entityId={id}>
+                <LightCard entityId={id} />
+              </CardErrorBoundary>
+            ))}
+            {QUICK_CONTROL_SWITCHES.map((id) => (
+              <CardErrorBoundary key={id} entityId={id}>
+                <SwitchCard entityId={id} />
+              </CardErrorBoundary>
+            ))}
+            {QUICK_CONTROL_SENSORS.map((id) => (
+              <CardErrorBoundary key={id} entityId={id}>
+                <SensorCard entityId={id} />
+              </CardErrorBoundary>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <ServiceStatusCard />
+
+      <HaStatusCard haConfigured={HA_CONFIGURED} />
     </div>
   );
 }
