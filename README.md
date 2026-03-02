@@ -22,6 +22,17 @@ Runtime-Daten (Datenbanken, Logs, Caddy-ACME, Zigbee-DB usw.) sind über `.gitig
 - Linux Host mit Docker und Docker Compose
 - Zugriff per SSH auf den Host (z. B. 192.168.2.31)
 
+## Erstkonfiguration
+
+```bash
+# Kopiere die Beispielkonfiguration und passe sie an:
+cp .env.linos.example .env.linos
+# Trage deinen Tailscale Auth-Key und Host-IP ein.
+```
+
+> **Hinweis:** `.env.linos` enthält Secrets und wird nicht versioniert.  
+> Commit nie `.env.linos` direkt – nutze ausschließlich `.env.linos.example` als Vorlage.
+
 ## Basis-Stack starten
 
 Aus dem Repo-Root (Ordner `linOS`):
