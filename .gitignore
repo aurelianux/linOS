@@ -22,6 +22,8 @@ stacks/infra/mosquitto/log/
 # Node-RED runtime files
 stacks/infra/nodered/.config.*.json
 stacks/infra/nodered/node_modules/
+stacks/infra/nodered/flows_cred.json
+stacks/infra/nodered/*.backup
 
 # Caddy runtime & TLS certificates
 stacks/proxy/data/
@@ -43,6 +45,9 @@ stacks/applications/plane/plane-app/plane-debug.log
 apps/node_modules/
 apps/*/node_modules/
 apps/*/dist/
+
+# Accidental debug output from watch(1)
+stacks/watch_*
 
 # Environment variables (use .env.linos at root for all services)
 .env

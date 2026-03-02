@@ -12,7 +12,7 @@
         },
         {
           "name": "Zigbee2MQTT",
-          "url": "http://192.168.2.31:8082",
+          "url": "http://z2m.manny.lan",
           "description": "Zigbee Geräteverwaltung und Debug UI."
         },
         {
@@ -27,12 +27,12 @@
       "services": [
         {
           "name": "DNS / AdGuard Home",
-          "url": "http://192.168.2.31:3000",
+          "url": "http://dns.manny.lan",
           "description": "DNS-Filter, Blocklisten und Netzwerk-DNS-Übersicht."
         },
         {
           "name": "Service Index (dieses Panel)",
-          "url": "http://192.168.2.31:8081",
+          "url": "http://manny.lan",
           "description": "Übersicht über alle linOS Services."
         },
         {
@@ -47,7 +47,7 @@
       "services": [
         {
           "name": "Plane – Smart-Home-Projekt",
-          "url": "http://192.168.2.31:8080",
+          "url": "http://plane.manny.lan",
           "description": "Projekt- und Issues-Management für Smart Home & linOS."
         },
         {

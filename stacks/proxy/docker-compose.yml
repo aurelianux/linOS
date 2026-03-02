@@ -12,6 +12,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_config:/config
       - caddy_data:/data
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
 
 volumes:
   caddy_config:

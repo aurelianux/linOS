@@ -22,6 +22,10 @@
     reverse_proxy 127.0.0.1:{$DNS_WEB_PORT}
 }
 
+{$LINOS_Z2M_HOST}:{$PROXY_HTTP_PORT} {
+    reverse_proxy 127.0.0.1:{$Z2M_WEB_PORT}
+}
+
 # Dashboard: single host, web on root + API on /api prefix
 {$LINOS_DASHBOARD_HOST}:{$PROXY_HTTP_PORT} {
     # Web UI (root)
@@ -31,7 +35,6 @@
     handle_path /api/* {
         reverse_proxy 127.0.0.1:{$DASHBOARD_API_PORT}
     }
-}
 }
 
 

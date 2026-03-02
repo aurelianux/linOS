@@ -69,4 +69,3 @@ Diese Verzeichnisse werden nicht in Git versioniert und sollten in ein Backup ei
 - Caddy und AdGuard sorgen dafür, dass die Web-UIs unter sinnvollen Adressen im LAN erreichbar sind.
 
 Dieses Dokument fixiert das Big Picture, Details zu einzelnen Stacks stehen in deren `docker-compose.yml` und in der Home Assistant Konfiguration.
-EOF
