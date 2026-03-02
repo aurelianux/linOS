@@ -42,6 +42,3 @@
 	}
 }
 
-{$OPENCLAW_HOST}:{$PROXY_HTTP_PORT} {
-	reverse_proxy 127.0.0.1:{$OPENCLAW_GATEWAY_PORT}
-}
