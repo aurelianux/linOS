@@ -1,6 +1,4 @@
-const HA_CONFIGURED = !!(
-  import.meta.env.VITE_HA_URL && import.meta.env.VITE_HA_TOKEN
-);
+import { HA_CONFIGURED } from "@/lib/ha/config";
 
 /**
  * Rooms page – will display HA areas/rooms once @hakit/core is fully wired.

@@ -16,7 +16,7 @@ export interface UseServiceStatusesReturn {
 /**
  * Fetches and polls GET /api/services/status every 30 seconds.
  *
- * `loading` is true only during the initial fetch (no data yet).
+ * `loading` is true only until the first response arrives (initial state).
  * Subsequent background polls update data silently to avoid UI flicker.
  */
 export function useServiceStatuses(): UseServiceStatusesReturn {
@@ -25,15 +25,12 @@ export function useServiceStatuses(): UseServiceStatusesReturn {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Track whether we've received the first response so subsequent polls
-  // don't re-trigger the full loading state.
   const hasData = useRef(false);
 
-  const poll = useCallback(() => {
-    if (!hasData.current) {
-      setLoading(true);
-    }
-
+  // fetchOnce wraps the async fetch; setLoading(true) is never called
+  // synchronously inside the effect – only setLoading(false) fires in .finally()
+  // which is always asynchronous.
+  const fetchOnce = useCallback(() => {
     fetchJson<ServiceStatus[]>("/services/status")
       .then((data) => {
         hasData.current = true;
@@ -54,10 +51,18 @@ export function useServiceStatuses(): UseServiceStatusesReturn {
   }, []);
 
   useEffect(() => {
-    poll();
-    const id = setInterval(poll, POLL_INTERVAL_MS);
+    fetchOnce();
+    const id = setInterval(fetchOnce, POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [poll]);
+  }, [fetchOnce]);
 
-  return { statuses, loading, error, lastUpdated, refresh: poll };
+  // For manual refresh: show loading only if we already have data
+  const refresh = useCallback(() => {
+    if (hasData.current) {
+      setLoading(false); // keep showing stale data while refreshing
+    }
+    fetchOnce();
+  }, [fetchOnce]);
+
+  return { statuses, loading, error, lastUpdated, refresh };
 }

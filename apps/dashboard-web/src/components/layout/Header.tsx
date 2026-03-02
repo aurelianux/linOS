@@ -1,8 +1,5 @@
 import { HaStatusIndicator } from "@/components/ha/HaStatusIndicator";
-
-const HA_CONFIGURED = !!(
-  import.meta.env.VITE_HA_URL && import.meta.env.VITE_HA_TOKEN
-);
+import { HA_CONFIGURED } from "@/lib/ha/config";
 
 /**
  * Header component - app title and top-level branding
