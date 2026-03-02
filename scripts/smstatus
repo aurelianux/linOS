@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# smstatus – Show the current status of all linOS Docker containers.
+#
+# Usage:
+#   ./scripts/smstatus
+#
+# Logs are written to logs/smstatus_<timestamp>.log.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+LOGS_DIR="$REPO_ROOT/logs"
+TS=$(date +%Y%m%d_%H%M%S)
+LOGFILE="$LOGS_DIR/smstatus_${TS}.log"
+
+mkdir -p "$LOGS_DIR"
+
+_run() {
+    echo "=== linOS Container Status @ $(date) ==="
+    docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || true
+}
+
+_run 2>&1 | tee "$LOGFILE"
+
+echo ""
+echo "✔ Log: $LOGFILE"
