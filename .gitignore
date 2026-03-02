@@ -53,3 +53,6 @@ stacks/watch_*
 .env
 .env.local
 .env.linos
+
+# Runtime logs (written by smrestart / smstatus)
+logs/*.log
