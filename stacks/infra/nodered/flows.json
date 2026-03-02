@@ -11,7 +11,7 @@
         "id": "39fc8a3614dd37f9",
         "type": "mqtt-broker",
         "name": "",
-        "broker": "192.168.2.31",
+        "broker": "mosquitto",
         "port": "1883",
         "clientid": "node-red-1",
         "autoConnect": true,
