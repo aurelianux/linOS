@@ -2,6 +2,7 @@ import express, { type Express, type Request } from "express";
 import pinoHttp from "pino-http";
 import pino from "pino";
 import { type Env } from "./config/env.js";
+import { type ServicesConfig } from "./config/app-config.js";
 import { headersMiddleware } from "./middleware/headers.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/errors.js";
@@ -11,7 +12,10 @@ import { createRouter } from "./routes/index.js";
  * Create and configure Express application
  * Handles middleware setup, routing, logging, error handling
  */
-export function createApp(env: Env): { app: Express; logger: pino.Logger } {
+export function createApp(
+  env: Env,
+  servicesConfig: ServicesConfig
+): { app: Express; logger: pino.Logger } {
   // Initialize logger (dev: pretty colors, prod: JSON)
   const isDev = env.NODE_ENV === "development";
   const logger = isDev
@@ -50,7 +54,7 @@ export function createApp(env: Env): { app: Express; logger: pino.Logger } {
   // ─────────────────────────────────────
   // Routes
   // ─────────────────────────────────────
-  app.use(createRouter());
+  app.use(createRouter(servicesConfig));
 
   // ─────────────────────────────────────
   // Error handling (must be last)
