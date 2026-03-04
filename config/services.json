@@ -4,6 +4,7 @@
       "id": "caddy",
       "label": "Caddy Reverse Proxy",
       "category": "network",
+      "healthUrl": "http://192.168.2.31:2019/config/",
       "stackPath": "stacks/proxy"
     },
     {
@@ -31,6 +32,9 @@
       "id": "mosquitto",
       "label": "Mosquitto MQTT",
       "category": "automation",
+      "healthType": "tcp",
+      "healthHost": "192.168.2.31",
+      "healthPort": 1883,
       "stackPath": "stacks/infra"
     },
     {
@@ -51,7 +55,7 @@
       "id": "dashboard-web",
       "label": "Dashboard Web",
       "category": "dashboard",
-      "healthUrl": "http://localhost:4000",
+      "healthUrl": "http://dashboard-web:4000",
       "stackPath": "stacks/applications/dashboard"
     },
     {
@@ -65,7 +69,7 @@
       "id": "plane",
       "label": "Plane App",
       "category": "apps",
-      "healthUrl": "http://localhost:8080",
+      "healthUrl": "http://192.168.2.31:8080",
       "stackPath": "stacks/applications/plane/plane-app"
     }
   ]
