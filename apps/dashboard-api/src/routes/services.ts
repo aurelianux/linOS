@@ -1,3 +1,4 @@
+import net from "net";
 import { Router, type Request, type Response } from "express";
 import { type ServiceEntry } from "../config/app-config.js";
 import { type ApiResponse } from "../middleware/errors.js";
@@ -14,12 +15,71 @@ export interface ServiceStatus {
 }
 
 /**
+ * Probe a single service by TCP socket connect.
+ * Resolves "ok" if connection succeeds within timeout, "error" otherwise.
+ */
+async function probeTcp(
+  id: string,
+  label: string,
+  category: string,
+  host: string,
+  port: number
+): Promise<ServiceStatus> {
+  const start = Date.now();
+  return new Promise<ServiceStatus>((resolve) => {
+    const socket = new net.Socket();
+    let settled = false;
+
+    const finish = (status: "ok" | "error") => {
+      if (settled) return;
+      settled = true;
+      if (!socket.destroyed) socket.destroy();
+      resolve({
+        id,
+        label,
+        category,
+        status,
+        latencyMs: status === "ok" ? Date.now() - start : null,
+      });
+    };
+
+    socket.setTimeout(PROBE_TIMEOUT_MS);
+    socket.connect(port, host, () => finish("ok"));
+    socket.on("error", () => finish("error"));
+    socket.on("timeout", () => finish("error"));
+  });
+}
+
+/**
  * Probe a single service by sending a GET to its healthUrl.
  * Any HTTP response with status < 400 is considered "ok" (service reachable).
  * Timeouts and connection errors map to "error".
  * Services without a healthUrl are returned with status "unknown".
  */
 async function probeService(entry: ServiceEntry): Promise<ServiceStatus> {
+  // TCP health check for non-HTTP services
+  if (entry.healthType === "tcp") {
+    if (!entry.healthHost || !entry.healthPort) {
+      console.warn(
+        `⚠️  TCP health check for "${entry.id}" is missing healthHost or healthPort — skipping probe`
+      );
+      return {
+        id: entry.id,
+        label: entry.label,
+        category: entry.category,
+        status: "unknown",
+        latencyMs: null,
+      };
+    }
+    return probeTcp(
+      entry.id,
+      entry.label,
+      entry.category,
+      entry.healthHost,
+      entry.healthPort
+    );
+  }
+
   if (!entry.healthUrl) {
     return {
       id: entry.id,
