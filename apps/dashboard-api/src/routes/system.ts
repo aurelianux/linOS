@@ -1,0 +1,178 @@
+import os from "os";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import { Router, type Request, type Response } from "express";
+import { type ApiResponse } from "../middleware/errors.js";
+
+const execFileAsync = promisify(execFile);
+
+// ─── Response types ────────────────────────────────────────────────────────
+
+export interface SystemInfo {
+  hostname: string;
+  uptimeSeconds: number;
+  /** e.g. "Linux 5.15.0-91-generic" */
+  platform: string;
+  arch: string;
+  /** Approximate CPU load % — 1-min load average normalized per logical CPU */
+  cpuLoadPercent: number;
+  totalMemoryBytes: number;
+  freeMemoryBytes: number;
+  diskTotalBytes: number | null;
+  diskUsedBytes: number | null;
+}
+
+export interface ContainerInfo {
+  id: string;
+  name: string;
+  image: string;
+  /** Human-readable status string, e.g. "Up 2 hours" */
+  status: string;
+  /** Machine-readable state: "running" | "exited" | "paused" | … */
+  state: string;
+}
+
+export interface ContainersData {
+  available: boolean;
+  containers: ContainerInfo[];
+  /** Set when available is false */
+  unavailableReason: string | null;
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * Run `df -k /` and return root filesystem total + used in bytes.
+ * Returns null on any failure so callers can show "–" gracefully.
+ */
+async function getDiskInfo(): Promise<{ total: number; used: number } | null> {
+  try {
+    const { stdout } = await execFileAsync("df", ["-k", "/"], {
+      timeout: 3000,
+    });
+
+    // Join all lines after the header to handle long filesystem-name wrapping
+    const combined = stdout.trim().split("\n").slice(1).join(" ").trim();
+    const parts = combined.split(/\s+/);
+
+    // Expected columns: Filesystem 1K-blocks Used Available Use% Mounted
+    const totalKb = parts[1];
+    const usedKb = parts[2];
+
+    if (totalKb === undefined || usedKb === undefined) return null;
+
+    const total = Number(totalKb) * 1024;
+    const used = Number(usedKb) * 1024;
+
+    if (Number.isNaN(total) || Number.isNaN(used)) return null;
+
+    return { total, used };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Run `docker ps --format '{{json .}}'` and parse running containers.
+ *
+ * Returns available=false with an actionable message when Docker is not
+ * reachable (socket not mounted / daemon not running / binary not found).
+ *
+ * Volume mount needed in docker-compose:
+ *   /var/run/docker.sock:/var/run/docker.sock:ro
+ */
+async function fetchContainers(): Promise<ContainersData> {
+  let stdout: string;
+
+  try {
+    const result = await execFileAsync(
+      "docker",
+      ["ps", "--format", "{{json .}}"],
+      { timeout: 5000 }
+    );
+    stdout = result.stdout;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const reason = msg.includes("ENOENT")
+      ? "Docker binary not found. Install Docker or add it to PATH."
+      : "Docker socket not accessible. Mount /var/run/docker.sock:/var/run/docker.sock:ro in the container.";
+    return { available: false, containers: [], unavailableReason: reason };
+  }
+
+  const containers: ContainerInfo[] = [];
+
+  for (const line of stdout.trim().split("\n")) {
+    if (!line.trim()) continue;
+
+    try {
+      const raw = JSON.parse(line) as Record<string, unknown>;
+      containers.push({
+        // `docker ps --format '{{json .}}'` uses uppercase "ID" for the container ID
+        id: String(raw["ID"] ?? "").slice(0, 12),
+        // Names may be prefixed with "/" — strip it
+        name: String(raw["Names"] ?? "").replace(/^\//, ""),
+        image: String(raw["Image"] ?? ""),
+        status: String(raw["Status"] ?? ""),
+        state: String(raw["State"] ?? ""),
+      });
+    } catch {
+      // Skip malformed NDJSON lines
+    }
+  }
+
+  return { available: true, containers, unavailableReason: null };
+}
+
+// ─── Router ────────────────────────────────────────────────────────────────
+
+/**
+ * System information router.
+ *
+ * GET /system/info        – Host metrics via Node.js `os` module + `df -k /`
+ * GET /system/containers  – Running Docker containers via `docker ps`
+ */
+export function systemRouter(): Router {
+  const router = Router();
+
+  router.get(
+    "/system/info",
+    async (_req: Request, res: Response): Promise<void> => {
+      const disk = await getDiskInfo();
+      const cpus = os.cpus();
+      const load1 = os.loadavg()[0] ?? 0;
+      const cpuLoadPercent =
+        cpus.length > 0
+          ? Math.min(100, Math.round((load1 / cpus.length) * 100))
+          : 0;
+
+      const info: SystemInfo = {
+        hostname: os.hostname(),
+        uptimeSeconds: Math.floor(os.uptime()),
+        platform: `${os.type()} ${os.release()}`,
+        arch: os.arch(),
+        cpuLoadPercent,
+        totalMemoryBytes: os.totalmem(),
+        freeMemoryBytes: os.freemem(),
+        diskTotalBytes: disk !== null ? disk.total : null,
+        diskUsedBytes: disk !== null ? disk.used : null,
+      };
+
+      const response: ApiResponse<SystemInfo> = { ok: true, data: info };
+      res.json(response);
+    }
+  );
+
+  router.get(
+    "/system/containers",
+    async (_req: Request, res: Response): Promise<void> => {
+      const containersData = await fetchContainers();
+      const response: ApiResponse<ContainersData> = {
+        ok: true,
+        data: containersData,
+      };
+      res.json(response);
+    }
+  );
+
+  return router;
+}
