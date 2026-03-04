@@ -11,21 +11,21 @@
       "id": "adguard",
       "label": "AdGuard Home",
       "category": "network",
-      "healthUrl": "http://localhost:3000",
+      "healthUrl": "http://192.168.2.31:3000",
       "stackPath": "stacks/dns"
     },
     {
       "id": "homeassistant",
       "label": "Home Assistant",
       "category": "smarthome",
-      "healthUrl": "http://localhost:8123",
+      "healthUrl": "http://192.168.2.31:8123",
       "stackPath": "stacks/homeassistant"
     },
     {
       "id": "zigbee2mqtt",
       "label": "Zigbee2MQTT",
       "category": "smarthome",
-      "healthUrl": "http://localhost:8082",
+      "healthUrl": "http://192.168.2.31:8082",
       "stackPath": "stacks/zigbee2mqtt"
     },
     {
@@ -41,28 +41,28 @@
       "id": "nodered",
       "label": "Node-RED",
       "category": "automation",
-      "healthUrl": "http://localhost:1880",
+      "healthUrl": "http://192.168.2.31:1880",
       "stackPath": "stacks/infra"
     },
     {
       "id": "service-index",
       "label": "Service Index",
       "category": "dashboard",
-      "healthUrl": "http://localhost:8081",
+      "healthUrl": "http://192.168.2.31:8081",
       "stackPath": "stacks/applications/service-index"
     },
     {
       "id": "dashboard-web",
       "label": "Dashboard Web",
       "category": "dashboard",
-      "healthUrl": "http://dashboard-web:4000",
+      "healthUrl": "http://192.168.2.31:4000",
       "stackPath": "stacks/applications/dashboard"
     },
     {
       "id": "dashboard-api",
       "label": "Dashboard API",
       "category": "dashboard",
-      "healthUrl": "http://localhost:4001/health",
+      "healthUrl": "http://192.168.2.31:4001/health",
       "stackPath": "stacks/applications/dashboard"
     },
     {
