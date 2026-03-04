@@ -24,6 +24,10 @@ services:
     restart: unless-stopped
     ports:
       - "${DASHBOARD_API_PORT:-4001}:4001"
+    volumes:
+      # Read-only Docker socket access for the GET /api/system/containers endpoint.
+      # Remove this mount if Docker container listing is not needed.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:4001/health"]
       interval: 30s

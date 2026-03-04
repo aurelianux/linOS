@@ -36,6 +36,48 @@ export interface ServiceStatus {
 }
 
 /**
+ * Host system information.
+ * Returned by GET /api/system/info
+ */
+export interface SystemInfo {
+  hostname: string;
+  uptimeSeconds: number;
+  /** e.g. "Linux 5.15.0-91-generic" */
+  platform: string;
+  arch: string;
+  /** Approximate CPU load % — 1-min load average normalized per logical CPU */
+  cpuLoadPercent: number;
+  totalMemoryBytes: number;
+  freeMemoryBytes: number;
+  diskTotalBytes: number | null;
+  diskUsedBytes: number | null;
+}
+
+/**
+ * A single Docker container.
+ * Returned inside GET /api/system/containers
+ */
+export interface ContainerInfo {
+  id: string;
+  name: string;
+  image: string;
+  /** Human-readable status string, e.g. "Up 2 hours" */
+  status: string;
+  /** Machine-readable state: "running" | "exited" | "paused" | … */
+  state: string;
+}
+
+/**
+ * Response envelope for GET /api/system/containers
+ */
+export interface ContainersData {
+  available: boolean;
+  containers: ContainerInfo[];
+  /** Set when available is false — explains why Docker is unreachable */
+  unavailableReason: string | null;
+}
+
+/**
  * API error class for typed error handling
  */
 export class ApiErrorException extends Error {
