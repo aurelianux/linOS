@@ -51,14 +51,19 @@ export function loadAppConfig(configPath?: string): AppConfig {
 /**
  * A single service/stack definition.
  * healthUrl (optional) is probed via HTTP GET; any 2xx/3xx response counts as "ok".
+ * healthType (optional) defaults to "http". Use "tcp" for non-HTTP services (e.g. MQTT).
+ * healthHost + healthPort (optional) are required when healthType is "tcp".
  * stackPath (optional) is the relative path to the Docker Compose stack directory.
- * Services without healthUrl are skipped during health monitoring.
+ * Services without healthUrl (and without healthType "tcp") are skipped during health monitoring.
  */
 export interface ServiceEntry {
   id: string;
   label: string;
   category: string;
   healthUrl?: string | undefined;
+  healthType?: "http" | "tcp" | undefined;
+  healthHost?: string | undefined;
+  healthPort?: number | undefined;
   stackPath?: string | undefined;
 }
 
@@ -71,6 +76,9 @@ const serviceEntrySchema = z.object({
   label: z.string().min(1),
   category: z.string().min(1),
   healthUrl: z.string().url().optional(),
+  healthType: z.enum(["http", "tcp"]).optional(),
+  healthHost: z.string().optional(),
+  healthPort: z.number().int().positive().optional(),
   stackPath: z.string().optional(),
 });
 
