@@ -3,6 +3,10 @@ services:
     build:
       context: ../../../apps
       dockerfile: dashboard-web/Dockerfile
+      args:
+        VITE_HA_URL: "http://${LINOS_HOST_IP}:${HA_PORT}"
+        VITE_HA_TOKEN: "${LINOS_HA_TOKEN}"
+        VITE_API_BASE: "http://${LINOS_HOST_IP}:${DASHBOARD_API_PORT:-4001}"
     restart: unless-stopped
     networks:
       - dashboard-net
@@ -23,6 +27,9 @@ services:
     environment:
       PORT: ${DASHBOARD_API_PORT:-4001}
       NODE_ENV: production
+      SERVICES_CONFIG_PATH: /app/config/services.json   # ← Pfad IM Container
+    volumes:
+      - ../../../config/services.json:/app/config/services.json:ro   # ← Mount
     restart: unless-stopped
     networks:
       - dashboard-net

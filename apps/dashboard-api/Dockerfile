@@ -4,7 +4,7 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY dashboard-api/package.json ./dashboard-api/
 COPY dashboard-web/package.json ./dashboard-web/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --shamefully-hoist
 COPY . .
 RUN pnpm -C dashboard-api build
 
