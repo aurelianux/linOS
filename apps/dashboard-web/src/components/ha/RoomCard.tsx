@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { mdiHome, mdiChevronDown, mdiChevronUp } from "@mdi/js";
 import Icon from "@mdi/react";
+import { cn } from "@/lib/utils";
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { getCardForDomain } from "./domainCards";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export interface RoomConfig {
   /** Display name of the room */
@@ -32,8 +34,10 @@ interface RoomCardProps {
  */
 export function RoomCard({ room, defaultExpanded = true }: RoomCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const { t } = useTranslation();
 
   const count = room.entityIds.length;
+  const entityLabel = count === 1 ? t("rooms.entitySingular") : t("rooms.entityPlural");
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900 overflow-hidden">
@@ -54,7 +58,7 @@ export function RoomCard({ room, defaultExpanded = true }: RoomCardProps) {
             {room.name}
           </span>
           <span className="text-xs text-slate-500">
-            ({count} {count === 1 ? "entity" : "entities"})
+            ({count} {entityLabel})
           </span>
         </div>
         <Icon
@@ -66,14 +70,14 @@ export function RoomCard({ room, defaultExpanded = true }: RoomCardProps) {
 
       {/* Collapsible content */}
       <div
-        className={[
+        className={cn(
           "overflow-hidden transition-all duration-300 ease-in-out",
-          expanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0",
-        ].join(" ")}
+          expanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+        )}
       >
         {count === 0 ? (
           <p className="px-4 pb-4 text-sm text-slate-500">
-            No entities assigned to this room.
+            {t("rooms.noEntities")}
           </p>
         ) : (
           <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

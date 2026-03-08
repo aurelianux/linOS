@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchJson, ApiErrorException } from "@/lib/api/client";
+import { POLL_INTERVAL_MS } from "@/lib/api/endpoints";
 
 export interface PolledDataState<T> {
   data: T | null;
@@ -20,7 +21,7 @@ export interface PolledDataState<T> {
  *   export const useSystemInfo = createPollingHook<SystemInfo>("/system/info");
  *   export const useDockerContainers = createPollingHook<ContainersData>("/system/containers");
  */
-export function createPollingHook<T>(url: string, intervalMs = 30_000) {
+export function createPollingHook<T>(url: string, intervalMs = POLL_INTERVAL_MS) {
   return function usePolledData(): PolledDataState<T> {
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(true);

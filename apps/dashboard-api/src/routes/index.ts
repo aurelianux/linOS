@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type pino from "pino";
 import { type ServicesConfig } from "../config/app-config.js";
 import { healthRouter } from "./health.js";
 import { servicesRouter } from "./services.js";
@@ -7,16 +8,11 @@ import { systemRouter } from "./system.js";
 /**
  * Main router that aggregates all API routes
  */
-export function createRouter(servicesConfig: ServicesConfig): Router {
+export function createRouter(servicesConfig: ServicesConfig, logger: pino.Logger): Router {
   const router = Router();
 
-  // Health check endpoint
   router.use(healthRouter());
-
-  // Stack status monitoring endpoint
-  router.use(servicesRouter(servicesConfig.services));
-
-  // System info + Docker containers endpoints
+  router.use(servicesRouter(servicesConfig.services, logger));
   router.use(systemRouter());
 
   return router;

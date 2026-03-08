@@ -6,7 +6,7 @@ import { useServiceStatuses } from "@/hooks/useServiceStatuses";
 import type { ServiceStatus } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
-// ─── Status dot ────────────────────────────────────────────────────────────
+// ─── Status mappings ────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<ServiceStatus["status"], string> = {
   ok: "bg-emerald-400",
@@ -23,49 +23,76 @@ const BADGE_VARIANT: Record<
   unknown: "secondary",
 };
 
-function StatusDot({ status }: { status: ServiceStatus["status"] }) {
-  return (
-    <span
-      className={`h-2 w-2 rounded-full shrink-0 ${STATUS_DOT[status]}`}
-      aria-hidden="true"
-    />
-  );
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatLatency(ms: number | null): string {
   return ms !== null ? `${ms} ms` : "–";
 }
 
-/** Group services by their category field, preserving insertion order. */
-function groupByCategory(
-  statuses: ServiceStatus[]
-): Map<string, ServiceStatus[]> {
+function groupByCategory(statuses: ServiceStatus[]): Map<string, ServiceStatus[]> {
   return statuses.reduce((map, svc) => {
     const list = map.get(svc.category);
-    if (list) {
-      list.push(svc);
-    } else {
-      map.set(svc.category, [svc]);
-    }
+    if (list) list.push(svc);
+    else map.set(svc.category, [svc]);
     return map;
   }, new Map<string, ServiceStatus[]>());
 }
 
-// ─── Component ─────────────────────────────────────────────────────────────
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+function StatusDot({ status }: { status: ServiceStatus["status"] }) {
+  return (
+    <span className={`h-2 w-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} aria-hidden="true" />
+  );
+}
+
+function ServiceRow({ svc }: { svc: ServiceStatus }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <StatusDot status={svc.status} />
+        <span className="text-sm text-slate-200">{svc.label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-500">{formatLatency(svc.latencyMs)}</span>
+        <Badge variant={BADGE_VARIANT[svc.status]}>{svc.status}</Badge>
+      </div>
+    </div>
+  );
+}
+
+function ServiceList({ statuses }: { statuses: ServiceStatus[] }) {
+  const groups = groupByCategory(statuses);
+  return (
+    <div className="space-y-5">
+      {[...groups.entries()].map(([category, services]) => (
+        <div key={category}>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+            {category}
+          </p>
+          <div className="space-y-2">
+            {services.map((svc) => (
+              <ServiceRow key={svc.id} svc={svc} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 
 /**
  * Generic stack-status card.
  *
  * Reads the list of monitored services from GET /api/services/status (polled
- * every 30 s) and renders them grouped by category.  The service list is
- * configured in config/services.json – no code change required when adding
- * a new stack.
+ * every 30 s) and renders them grouped by category. The service list is
+ * configured in config/services.json — no code change required when adding a
+ * new stack.
  */
 export function ServiceStatusCard() {
-  const { data: statuses, loading, error, lastUpdated, refresh } =
-    useServiceStatuses();
+  const { data: statuses, loading, error, lastUpdated, refresh } = useServiceStatuses();
   const { t } = useTranslation();
 
   return (
@@ -79,11 +106,7 @@ export function ServiceStatusCard() {
                 {t("serviceStatus.updated")}{lastUpdated.toLocaleTimeString()}
               </span>
             )}
-            <Button
-              variant="secondary"
-              onClick={refresh}
-              disabled={loading}
-            >
+            <Button variant="secondary" onClick={refresh} disabled={loading}>
               {t("serviceStatus.refresh")}
             </Button>
           </div>
@@ -92,53 +115,11 @@ export function ServiceStatusCard() {
 
       <CardContent>
         {loading && !statuses && <LoadingState />}
-
-        {error && !statuses && (
-          <p className="text-sm text-red-400">{error}</p>
-        )}
-
+        {error && !statuses && <p className="text-sm text-red-400">{error}</p>}
         {statuses !== null && statuses.length === 0 && (
-          <p className="text-sm text-slate-400">
-            {t("serviceStatus.noServices")}
-          </p>
+          <p className="text-sm text-slate-400">{t("serviceStatus.noServices")}</p>
         )}
-
-        {statuses !== null && statuses.length > 0 && (
-          <div className="space-y-5">
-            {[...groupByCategory(statuses).entries()].map(
-              ([category, services]) => (
-                <div key={category}>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
-                    {category}
-                  </p>
-                  <div className="space-y-2">
-                    {services.map((svc) => (
-                      <div
-                        key={svc.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-2">
-                          <StatusDot status={svc.status} />
-                          <span className="text-sm text-slate-200">
-                            {svc.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500">
-                            {formatLatency(svc.latencyMs)}
-                          </span>
-                          <Badge variant={BADGE_VARIANT[svc.status]}>
-                            {svc.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        )}
+        {statuses !== null && statuses.length > 0 && <ServiceList statuses={statuses} />}
       </CardContent>
     </Card>
   );
