@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { mdiRefresh } from "@mdi/js";
 import Icon from "@mdi/react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface PanelProps {
   title: string;
@@ -32,6 +33,8 @@ export function Panel({
   lastUpdated,
   className = "",
 }: PanelProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       className={[
@@ -48,7 +51,7 @@ export function Panel({
         <div className="flex items-center gap-3">
           {lastUpdated && (
             <span className="text-xs text-slate-500">
-              Updated {lastUpdated.toLocaleTimeString()}
+              {t("panel.updated")}{lastUpdated.toLocaleTimeString()}
             </span>
           )}
           {onRefresh && (
@@ -57,10 +60,10 @@ export function Panel({
               size="sm"
               onClick={onRefresh}
               disabled={loading}
-              aria-label={`Refresh ${title}`}
+              aria-label={t("panel.refreshLabel", { title })}
             >
               <Icon path={mdiRefresh} size={0.8} className="mr-1" />
-              Refresh
+              {t("panel.refresh")}
             </Button>
           )}
         </div>

@@ -2,6 +2,7 @@ import { mdiHomeVariant, mdiSofa, mdiBed, mdiOfficeBuilding } from "@mdi/js";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { RoomCard, type RoomConfig } from "@/components/ha/RoomCard";
 import { HaStatusCard } from "@/components/ha/HaStatusCard";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 /**
  * Room-to-entity mapping.
@@ -57,14 +58,13 @@ const ROOM_CONFIG: RoomConfig[] = [
  */
 export function RoomsPage() {
   const hasRooms = ROOM_CONFIG.some((r) => r.entityIds.length > 0);
+  const { t } = useTranslation();
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-slate-100 mb-2">Rooms</h2>
-        <p className="text-slate-400">
-          Spatial overview of your smart home entities.
-        </p>
+        <h2 className="text-3xl font-bold text-slate-100 mb-2">{t("rooms.title")}</h2>
+        <p className="text-slate-400">{t("rooms.subtitle")}</p>
       </div>
 
       {/* HA not configured – show hint card */}
@@ -75,17 +75,9 @@ export function RoomsPage() {
         <>
           {!hasRooms ? (
             <div className="rounded-lg border border-slate-800 bg-slate-900 px-6 py-8 text-center space-y-2">
-              <p className="text-slate-300 font-medium">No rooms configured</p>
+              <p className="text-slate-300 font-medium">{t("rooms.noRooms")}</p>
               <p className="text-sm text-slate-500">
-                Add entity IDs to{" "}
-                <code className="bg-slate-800 px-1 rounded text-xs text-slate-300">
-                  ROOM_CONFIG
-                </code>{" "}
-                in{" "}
-                <code className="bg-slate-800 px-1 rounded text-xs text-slate-300">
-                  src/pages/RoomsPage.tsx
-                </code>{" "}
-                to populate this view.
+                {t("rooms.noRoomsHint")}
               </p>
             </div>
           ) : (

@@ -5,6 +5,7 @@ import { SwitchCard } from "../components/ha/SwitchCard";
 import { SensorCard } from "../components/ha/SensorCard";
 import { CardErrorBoundary } from "../components/common/CardErrorBoundary";
 import { HA_CONFIGURED } from "@/lib/ha/config";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 /**
  * Entity IDs to show in the Quick Controls section.
@@ -39,18 +40,19 @@ const HAS_QUICK_CONTROLS =
  * and Quick Controls for configured entities.
  */
 export function OverviewPage() {
+  const { t } = useTranslation();
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-slate-100 mb-2">Overview</h2>
-        <p className="text-slate-400">Welcome to linBoard v0.1</p>
+        <h2 className="text-3xl font-bold text-slate-100 mb-2">{t("overview.title")}</h2>
+        <p className="text-slate-400">{t("overview.subtitle")}</p>
       </div>
 
       {/* Quick Controls – only shown when HA is configured and entities are listed */}
       {HA_CONFIGURED && HAS_QUICK_CONTROLS && (
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-slate-200">
-            Quick Controls
+            {t("overview.quickControls")}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {QUICK_CONTROL_LIGHTS.map((id) => (

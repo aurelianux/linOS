@@ -7,6 +7,7 @@ import { haIconToMdiPath } from "@/lib/ha/icons";
 import { cn } from "@/lib/utils";
 import Icon from "@mdi/react";
 import type { ChangeEvent } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface LightCardProps {
   entityId: `light.${string}`;
@@ -24,6 +25,7 @@ interface LightCardProps {
  */
 export function LightCard({ entityId }: LightCardProps) {
   const entity = useEntity(entityId, { returnNullIfNotFound: true });
+  const { t } = useTranslation();
 
   const isUnavailable =
     !entity ||
@@ -108,7 +110,7 @@ export function LightCard({ entityId }: LightCardProps) {
 
         {/* Unavailable state */}
         {isUnavailable && (
-          <p className="text-xs text-slate-500">Unavailable</p>
+          <p className="text-xs text-slate-500">{t("entity.unavailable")}</p>
         )}
       </CardContent>
     </Card>
