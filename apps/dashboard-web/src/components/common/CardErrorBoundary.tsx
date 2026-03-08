@@ -29,7 +29,7 @@ export class CardErrorBoundary extends Component<Props, State> {
         <Card className="bg-slate-900 border-red-900/50">
           <CardContent className="p-4 flex items-center gap-2">
             <Icon path={mdiAlertCircle} size={0.8} className="text-red-400" />
-            <p className="text-sm text-red-400">Fehler beim Laden</p>
+            <p className="text-sm text-red-400">Failed to load</p>
           </CardContent>
         </Card>
       );
