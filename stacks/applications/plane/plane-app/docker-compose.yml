@@ -116,9 +116,12 @@ services:
     environment:
       <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
     depends_on:
-      - plane-db
-      - plane-redis
-      - plane-mq
+      plane-db:
+        condition: service_healthy
+      plane-redis:
+        condition: service_healthy
+      plane-mq:
+        condition: service_healthy
 
   worker:
     image: artifacts.plane.so/makeplane/plane-backend:${APP_RELEASE:-stable}
@@ -132,10 +135,12 @@ services:
     environment:
       <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
     depends_on:
-      - api
-      - plane-db
-      - plane-redis
-      - plane-mq
+      plane-db:
+        condition: service_healthy
+      plane-redis:
+        condition: service_healthy
+      plane-mq:
+        condition: service_healthy
 
   beat-worker:
     image: artifacts.plane.so/makeplane/plane-backend:${APP_RELEASE:-stable}
@@ -149,10 +154,12 @@ services:
     environment:
       <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
     depends_on:
-      - api
-      - plane-db
-      - plane-redis
-      - plane-mq
+      plane-db:
+        condition: service_healthy
+      plane-redis:
+        condition: service_healthy
+      plane-mq:
+        condition: service_healthy
 
   migrator:
     image: artifacts.plane.so/makeplane/plane-backend:${APP_RELEASE:-stable}
@@ -166,8 +173,10 @@ services:
     environment:
       <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
     depends_on:
-      - plane-db
-      - plane-redis
+      plane-db:
+        condition: service_healthy
+      plane-redis:
+        condition: service_healthy
 
   # Comment this if you already have a database running
   plane-db:
@@ -181,6 +190,12 @@ services:
       <<: *db-env
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-plane} -d $${POSTGRES_DB:-plane}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   plane-redis:
     image: valkey/valkey:7.2.11-alpine
@@ -190,6 +205,12 @@ services:
         condition: any
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   plane-mq:
     image: rabbitmq:3.13.6-management-alpine
@@ -201,6 +222,12 @@ services:
       <<: *mq-env
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # Comment this if you using any external s3 compatible storage
   plane-minio:
