@@ -62,7 +62,7 @@ export function createApp(
   // ─────────────────────────────────────
   // Routes
   // ─────────────────────────────────────
-  app.use(createRouter(servicesConfig));
+  app.use(createRouter(servicesConfig, logger));
 
   // ─────────────────────────────────────
   // Error handling (must be last)

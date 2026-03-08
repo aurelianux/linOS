@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { mdiRefresh } from "@mdi/js";
 import Icon from "@mdi/react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface PanelProps {
@@ -36,14 +37,7 @@ export function Panel({
   const { t } = useTranslation();
 
   return (
-    <div
-      className={[
-        "rounded-lg border border-slate-800 bg-slate-900 flex flex-col",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <div className={cn("rounded-lg border border-slate-800 bg-slate-900 flex flex-col", className)}>
       {/* Title bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
         <h3 className="text-lg font-semibold text-slate-100">{title}</h3>

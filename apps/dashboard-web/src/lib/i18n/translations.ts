@@ -21,8 +21,12 @@ export const translations = {
     "rooms.noRooms": "Keine Räume konfiguriert",
     "rooms.noRoomsHint":
       "Füge Entity-IDs zur ROOM_CONFIG in src/pages/RoomsPage.tsx hinzu.",
+    "rooms.noEntities": "Keine Geräte in diesem Raum.",
+    "rooms.entitySingular": "Gerät",
+    "rooms.entityPlural": "Geräte",
 
     "ha.title": "Home Assistant",
+    "ha.label": "HA",
     "ha.notConfigured":
       "HA ist nicht konfiguriert. Setze VITE_HA_URL und VITE_HA_TOKEN in .env, um die Smart-Home-Integration zu aktivieren.",
     "ha.connecting": "Verbinde…",
@@ -71,8 +75,12 @@ export const translations = {
     "rooms.noRooms": "No rooms configured",
     "rooms.noRoomsHint":
       "Add entity IDs to ROOM_CONFIG in src/pages/RoomsPage.tsx to populate this view.",
+    "rooms.noEntities": "No entities assigned to this room.",
+    "rooms.entitySingular": "entity",
+    "rooms.entityPlural": "entities",
 
     "ha.title": "Home Assistant",
+    "ha.label": "HA",
     "ha.notConfigured":
       "HA is not configured. Set VITE_HA_URL and VITE_HA_TOKEN in .env to enable real-time smart home integration.",
     "ha.connecting": "Connecting…",
