@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { haIconToMdiPath } from "@/lib/ha/icons";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type SwitchDomain =
   | `switch.${string}`
@@ -27,6 +28,7 @@ interface SwitchCardProps {
  */
 export function SwitchCard({ entityId }: SwitchCardProps) {
   const entity = useEntity(entityId, { returnNullIfNotFound: true });
+  const { t } = useTranslation();
 
   const isUnavailable =
     !entity ||
@@ -73,7 +75,7 @@ export function SwitchCard({ entityId }: SwitchCardProps) {
           />
         </div>
         {isUnavailable && (
-          <p className="text-xs text-slate-500 mt-2">Unavailable</p>
+          <p className="text-xs text-slate-500 mt-2">{t("entity.unavailable")}</p>
         )}
       </CardContent>
     </Card>

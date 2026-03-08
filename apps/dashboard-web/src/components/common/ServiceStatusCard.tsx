@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/common/LoadingState";
 import { useServiceStatuses } from "@/hooks/useServiceStatuses";
 import type { ServiceStatus } from "@/lib/api/types";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 // ─── Status dot ────────────────────────────────────────────────────────────
 
@@ -65,16 +66,17 @@ function groupByCategory(
 export function ServiceStatusCard() {
   const { data: statuses, loading, error, lastUpdated, refresh } =
     useServiceStatuses();
+  const { t } = useTranslation();
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Stack Status</CardTitle>
+          <CardTitle>{t("serviceStatus.title")}</CardTitle>
           <div className="flex items-center gap-3">
             {lastUpdated && (
               <span className="text-xs text-slate-500">
-                Updated {lastUpdated.toLocaleTimeString()}
+                {t("serviceStatus.updated")}{lastUpdated.toLocaleTimeString()}
               </span>
             )}
             <Button
@@ -82,7 +84,7 @@ export function ServiceStatusCard() {
               onClick={refresh}
               disabled={loading}
             >
-              Refresh
+              {t("serviceStatus.refresh")}
             </Button>
           </div>
         </div>
@@ -97,11 +99,7 @@ export function ServiceStatusCard() {
 
         {statuses !== null && statuses.length === 0 && (
           <p className="text-sm text-slate-400">
-            No services configured. Add entries to{" "}
-            <code className="bg-slate-800 px-1 rounded text-xs text-slate-300">
-              config/services.json
-            </code>
-            .
+            {t("serviceStatus.noServices")}
           </p>
         )}
 
