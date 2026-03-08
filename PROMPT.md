@@ -54,8 +54,8 @@ Browser → Vite Dev Proxy /api   → Express BFF → System-Monitoring, Config
 │           └── stores/         # layoutStore, favoritesStore (Zustand)
 ├── config/
 │   └── services.json           # Stack health monitoring config
-├── PROMPT.md                   # Dieses Dokument
-└── AGENT.md                    # → Wird in GitHub Copilot Instructions migriert
+├── PROMPT.md                   # Dieses Dokument (Projekt-Kontext)
+└── CLAUDE.md                   # Claude Code – vollständige Standards und Patterns
 ```
 
 ## Design System
@@ -124,13 +124,13 @@ Monorepo, Express BFF, React mit Routing/Layout, TypeScript/ESLint/Tailwind, Sto
 - [ ] MediaCard (Player Controls)
 - [ ] CoverCard (Rolladen/Jalousien)
 
+### ✅ Phase 4 – System Monitoring (abgeschlossen)
+
+SystemInfoPanel (CPU, RAM, Disk, Uptime via BFF), DockerPanel (Container-Liste via Docker Socket), ServicesPanel (Stack-Health via config/services.json).
+
 ### Phase 3 – Dashboard Grid
 
 react-grid-layout, Drag & Drop, Layout-Persistenz (layoutStore), Widget-Konfigurator, Breakpoint-Layouts.
-
-### Phase 4 – System Monitoring
-
-Server-Status via BFF, Container-Übersicht (Docker API), Netzwerk-Ping, Recharts für historische Daten.
 
 ### Phase 5 – Rooms & Areas
 
@@ -145,4 +145,4 @@ useAreas() für HA-basierte Raumaufteilung, RoomCard mit Entity-Liste, Raum-spez
 - CardErrorBoundary um jede HA-Karte
 - Graceful handling von `unavailable`/`unknown` Entity States
 - Conventional Commits auf Englisch
-- Vollständige Standards: siehe GitHub Copilot Instructions
+- Vollständige Standards und Code-Patterns: siehe `CLAUDE.md`
