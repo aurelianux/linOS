@@ -6,6 +6,28 @@ import { type ApiResponse } from "../middleware/errors.js";
 
 const execFileAsync = promisify(execFile);
 
+// ─── TTL Cache ─────────────────────────────────────────────────────────────
+
+interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+}
+
+function makeCache<T>() {
+  let entry: CacheEntry<T> | null = null;
+  return {
+    get(): T | null {
+      if (!entry || Date.now() > entry.expiresAt) return null;
+      return entry.value;
+    },
+    set(value: T, ttlMs: number): void {
+      entry = { value, expiresAt: Date.now() + ttlMs };
+    },
+  };
+}
+
+const CACHE_TTL_MS = 10_000;
+
 // ─── Response types ────────────────────────────────────────────────────────
 
 export interface SystemInfo {
@@ -39,30 +61,38 @@ export interface ContainersData {
   unavailableReason: string | null;
 }
 
+// ─── Cache instances ───────────────────────────────────────────────────────
+
+const systemInfoCache = makeCache<SystemInfo>();
+const containersCache = makeCache<ContainersData>();
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 /**
- * Run `df -k /` and return root filesystem total + used in bytes.
+ * Run `df -B1 /` and return root filesystem total + used in bytes.
+ * Uses -B1 (1-byte blocks) to get raw byte counts, avoiding locale-dependent
+ * decimal separators and the need to multiply by 1024.
  * Returns null on any failure so callers can show "–" gracefully.
  */
 async function getDiskInfo(): Promise<{ total: number; used: number } | null> {
   try {
-    const { stdout } = await execFileAsync("df", ["-k", "/"], {
+    const { stdout } = await execFileAsync("df", ["-B1", "/"], {
       timeout: 3000,
+      env: { ...process.env, LC_ALL: "C" },
     });
 
     // Join all lines after the header to handle long filesystem-name wrapping
     const combined = stdout.trim().split("\n").slice(1).join(" ").trim();
     const parts = combined.split(/\s+/);
 
-    // Expected columns: Filesystem 1K-blocks Used Available Use% Mounted
-    const totalKb = parts[1];
-    const usedKb = parts[2];
+    // Columns with -B1: Filesystem 1B-blocks Used Available Use% Mounted
+    const totalBytes = parts[1];
+    const usedBytes = parts[2];
 
-    if (totalKb === undefined || usedKb === undefined) return null;
+    if (totalBytes === undefined || usedBytes === undefined) return null;
 
-    const total = Number(totalKb) * 1024;
-    const used = Number(usedKb) * 1024;
+    const total = Number(totalBytes);
+    const used = Number(usedBytes);
 
     if (Number.isNaN(total) || Number.isNaN(used)) return null;
 
@@ -128,8 +158,11 @@ async function fetchContainers(): Promise<ContainersData> {
 /**
  * System information router.
  *
- * GET /system/info        – Host metrics via Node.js `os` module + `df -k /`
+ * GET /system/info        – Host metrics via Node.js `os` module + `df -B1 /`
  * GET /system/containers  – Running Docker containers via `docker ps`
+ *
+ * Both endpoints use a 10-second TTL cache to avoid spawning a subprocess
+ * on every request when the frontend polls every 30 seconds.
  */
 export function systemRouter(): Router {
   const router = Router();
@@ -137,6 +170,12 @@ export function systemRouter(): Router {
   router.get(
     "/system/info",
     async (_req: Request, res: Response): Promise<void> => {
+      const cached = systemInfoCache.get();
+      if (cached) {
+        res.json({ ok: true, data: cached } satisfies ApiResponse<SystemInfo>);
+        return;
+      }
+
       const disk = await getDiskInfo();
       const cpus = os.cpus();
       const load1 = os.loadavg()[0] ?? 0;
@@ -157,20 +196,23 @@ export function systemRouter(): Router {
         diskUsedBytes: disk !== null ? disk.used : null,
       };
 
-      const response: ApiResponse<SystemInfo> = { ok: true, data: info };
-      res.json(response);
+      systemInfoCache.set(info, CACHE_TTL_MS);
+      res.json({ ok: true, data: info } satisfies ApiResponse<SystemInfo>);
     }
   );
 
   router.get(
     "/system/containers",
     async (_req: Request, res: Response): Promise<void> => {
+      const cached = containersCache.get();
+      if (cached) {
+        res.json({ ok: true, data: cached } satisfies ApiResponse<ContainersData>);
+        return;
+      }
+
       const containersData = await fetchContainers();
-      const response: ApiResponse<ContainersData> = {
-        ok: true,
-        data: containersData,
-      };
-      res.json(response);
+      containersCache.set(containersData, CACHE_TTL_MS);
+      res.json({ ok: true, data: containersData } satisfies ApiResponse<ContainersData>);
     }
   );
 
