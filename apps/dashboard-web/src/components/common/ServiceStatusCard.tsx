@@ -63,7 +63,7 @@ function groupByCategory(
  * a new stack.
  */
 export function ServiceStatusCard() {
-  const { statuses, loading, error, lastUpdated, refresh } =
+  const { data: statuses, loading, error, lastUpdated, refresh } =
     useServiceStatuses();
 
   return (
