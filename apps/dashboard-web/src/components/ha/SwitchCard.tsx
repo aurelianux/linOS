@@ -4,6 +4,7 @@ import Icon from "@mdi/react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { haIconToMdiPath } from "@/lib/ha/icons";
+import { cn } from "@/lib/utils";
 
 type SwitchDomain =
   | `switch.${string}`
@@ -41,12 +42,14 @@ export function SwitchCard({ entityId }: SwitchCardProps) {
     haIconToMdiPath(entity?.attributes.icon ?? "") ?? mdiPower;
 
   const handleToggle = () => {
-    if (isUnavailable) return;
-    entity.service.toggle();
+    if (isUnavailable || !entity) return;
+    entity.service.toggle().catch((err: unknown) => {
+      console.error("Failed to toggle switch:", entityId, err);
+    });
   };
 
   return (
-    <Card className={isUnavailable ? "opacity-50" : ""}>
+    <Card className={cn(isUnavailable && "opacity-50")}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -70,7 +73,7 @@ export function SwitchCard({ entityId }: SwitchCardProps) {
           />
         </div>
         {isUnavailable && (
-          <p className="text-xs text-slate-500 mt-2">Nicht verfügbar</p>
+          <p className="text-xs text-slate-500 mt-2">Unavailable</p>
         )}
       </CardContent>
     </Card>
