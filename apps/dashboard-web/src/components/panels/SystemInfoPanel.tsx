@@ -82,7 +82,7 @@ function SystemInfoBody({ info }: { info: SystemInfo }) {
  * Auto-refreshes every 30 seconds via useSystemInfo().
  */
 export function SystemInfoPanel() {
-  const { info, loading, error, lastUpdated, refresh } = useSystemInfo();
+  const { data, loading, error, lastUpdated, refresh } = useSystemInfo();
 
   return (
     <Panel
@@ -91,16 +91,16 @@ export function SystemInfoPanel() {
       loading={loading}
       lastUpdated={lastUpdated}
     >
-      {loading && !info && <LoadingState />}
+      {loading && !data && <LoadingState />}
 
-      {error && !info && (
+      {error && !data && (
         <div className="flex items-center gap-2">
           <Icon path={mdiServer} size={1} className="text-red-400 shrink-0" />
           <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
-      {info && <SystemInfoBody info={info} />}
+      {data && <SystemInfoBody info={data} />}
     </Panel>
   );
 }
