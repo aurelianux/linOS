@@ -13,35 +13,35 @@ import { HaStatusCard } from "@/components/ha/HaStatusCard";
  */
 const ROOM_CONFIG: RoomConfig[] = [
   {
-    name: "Wohnzimmer",
+    name: "Living Room",
     icon: mdiSofa,
     entityIds: [
-      // "light.wohnzimmer",
-      // "switch.steckdose_wohnzimmer",
-      // "sensor.temperatur_wohnzimmer",
+      // "light.living_room",
+      // "switch.living_room_outlet",
+      // "sensor.living_room_temperature",
     ],
   },
   {
-    name: "Schlafzimmer",
+    name: "Bedroom",
     icon: mdiBed,
     entityIds: [
-      // "light.schlafzimmer",
-      // "sensor.temperatur_schlafzimmer",
+      // "light.bedroom",
+      // "sensor.bedroom_temperature",
     ],
   },
   {
-    name: "Büro",
+    name: "Office",
     icon: mdiOfficeBuilding,
     entityIds: [
-      // "light.buero",
-      // "switch.steckdose_buero",
+      // "light.office",
+      // "switch.office_outlet",
     ],
   },
   {
-    name: "Flur",
+    name: "Hallway",
     icon: mdiHomeVariant,
     entityIds: [
-      // "light.flur",
+      // "light.hallway",
     ],
   },
 ];
