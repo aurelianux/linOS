@@ -1,5 +1,5 @@
 import { loadEnv } from "./config/env.js";
-import { loadAppConfig, loadServicesConfig } from "./config/app-config.js";
+import { loadAppConfig, loadServicesConfig, loadDashboardConfig } from "./config/app-config.js";
 import { createApp } from "./app.js";
 
 /**
@@ -19,8 +19,11 @@ async function main() {
   // Load services monitoring configuration
   const servicesConfig = loadServicesConfig(env.SERVICES_CONFIG_PATH);
 
+  // Load dashboard entity configuration
+  const dashboardConfig = loadDashboardConfig(env.DASHBOARD_CONFIG_PATH);
+
   // Create app
-  const { app, logger } = createApp(env, servicesConfig);
+  const { app, logger } = createApp(env, servicesConfig, dashboardConfig);
 
   // Log startup info
   logger.info(

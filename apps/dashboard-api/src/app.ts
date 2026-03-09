@@ -3,7 +3,7 @@ import pinoHttp from "pino-http";
 import pino from "pino";
 import rateLimit from "express-rate-limit";
 import { type Env } from "./config/env.js";
-import { type ServicesConfig } from "./config/app-config.js";
+import { type ServicesConfig, type DashboardConfig } from "./config/app-config.js";
 import { headersMiddleware } from "./middleware/headers.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/errors.js";
@@ -23,7 +23,8 @@ const limiter = rateLimit({
  */
 export function createApp(
   env: Env,
-  servicesConfig: ServicesConfig
+  servicesConfig: ServicesConfig,
+  dashboardConfig: DashboardConfig
 ): { app: Express; logger: pino.Logger } {
   // Initialize logger (dev: pretty colors, prod: JSON)
   const isDev = env.NODE_ENV === "development";
@@ -62,7 +63,7 @@ export function createApp(
   // ─────────────────────────────────────
   // Routes
   // ─────────────────────────────────────
-  app.use(createRouter(servicesConfig, logger));
+  app.use(createRouter(servicesConfig, logger, dashboardConfig));
 
   // ─────────────────────────────────────
   // Error handling (must be last)

@@ -1,0 +1,67 @@
+{
+  "quickActions": [
+    {
+      "id": "home",
+      "label": "Home",
+      "entityId": "script.wohnung_home",
+      "icon": "mdiHome"
+    },
+    {
+      "id": "away",
+      "label": "Away",
+      "entityId": "script.wohnung_away",
+      "icon": "mdiDoorOpen"
+    },
+    {
+      "id": "sleep",
+      "label": "Sleep",
+      "entityId": "script.wohnung_sleep",
+      "icon": "mdiWeatherNight"
+    },
+    {
+      "id": "awake",
+      "label": "Awake",
+      "entityId": "script.wohnung_awake",
+      "icon": "mdiWeatherSunny"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "wohnzimmer",
+      "name": "Living Room",
+      "icon": "mdiSofa",
+      "lightGroupId": "group.lights_wohnzimmer",
+      "scenes": [
+        { "id": "hell", "label": "Bright", "entityId": "scene.wohnzimmer_hell" }
+      ]
+    },
+    {
+      "id": "kueche",
+      "name": "Kitchen",
+      "icon": "mdiKitchen",
+      "lightGroupId": "group.lights_kuche",
+      "scenes": [
+        { "id": "hell", "label": "Bright", "entityId": "scene.kuche_hell" },
+        { "id": "chill", "label": "Chill", "entityId": "scene.kuche_chill" }
+      ]
+    },
+    {
+      "id": "schlafzimmer",
+      "name": "Bedroom",
+      "icon": "mdiBed",
+      "lightGroupId": "group.lights_schlafzimmer",
+      "scenes": [
+        { "id": "hell", "label": "Bright", "entityId": "scene.schlafzimmer_hell" },
+        { "id": "chill", "label": "Chill", "entityId": "scene.schlafzimmer_chill" },
+        { "id": "aus", "label": "Off", "entityId": "scene.schlafzimmer_aus" }
+      ]
+    },
+    {
+      "id": "flur",
+      "name": "Hallway",
+      "icon": "mdiHomeVariant",
+      "lightGroupId": "group.lights_flur",
+      "scenes": []
+    }
+  ]
+}
