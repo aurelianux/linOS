@@ -53,6 +53,11 @@ export const translations = {
     "entity.unavailable": "Nicht verfügbar",
     "entity.failedToLoad": "Fehler beim Laden",
 
+    "lights.on": "An",
+    "lights.off": "Aus",
+
+    "overview.quickActions": "Modus",
+
     "lang.switch": "EN",
   },
   en: {
@@ -106,6 +111,11 @@ export const translations = {
 
     "entity.unavailable": "Unavailable",
     "entity.failedToLoad": "Failed to load",
+
+    "lights.on": "On",
+    "lights.off": "Off",
+
+    "overview.quickActions": "Mode",
 
     "lang.switch": "DE",
   },
