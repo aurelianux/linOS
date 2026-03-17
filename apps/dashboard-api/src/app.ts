@@ -1,12 +1,21 @@
 import express, { type Express, type Request } from "express";
 import pinoHttp from "pino-http";
 import pino from "pino";
+import rateLimit from "express-rate-limit";
 import { type Env } from "./config/env.js";
-import { type ServicesConfig } from "./config/app-config.js";
+import { type ServicesConfig, type DashboardConfig } from "./config/app-config.js";
 import { headersMiddleware } from "./middleware/headers.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/errors.js";
 import { createRouter } from "./routes/index.js";
+
+/** 300 req/min — generous for a local dashboard, blocks runaway pollers */
+const limiter = rateLimit({
+  windowMs: 60_000,
+  limit: 300,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
 
 /**
  * Create and configure Express application
@@ -14,7 +23,8 @@ import { createRouter } from "./routes/index.js";
  */
 export function createApp(
   env: Env,
-  servicesConfig: ServicesConfig
+  servicesConfig: ServicesConfig,
+  dashboardConfig: DashboardConfig
 ): { app: Express; logger: pino.Logger } {
   // Initialize logger (dev: pretty colors, prod: JSON)
   const isDev = env.NODE_ENV === "development";
@@ -36,11 +46,9 @@ export function createApp(
   // Request logging (exclude /health)
   // ─────────────────────────────────────
   app.use((req: Request, res, next) => {
-    // Skip logging for /health
     if (req.url === "/health") {
       return next();
     }
-    // Use pino-http for all other requests
     pinoHttp({ logger })(req, res, next);
   });
 
@@ -50,11 +58,12 @@ export function createApp(
   app.use(express.json());
   app.use(headersMiddleware);
   app.use(corsMiddleware(env));
+  app.use(limiter);
 
   // ─────────────────────────────────────
   // Routes
   // ─────────────────────────────────────
-  app.use(createRouter(servicesConfig));
+  app.use(createRouter(servicesConfig, logger, dashboardConfig));
 
   // ─────────────────────────────────────
   // Error handling (must be last)

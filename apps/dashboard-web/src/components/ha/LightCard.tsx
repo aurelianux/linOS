@@ -4,7 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { haIconToMdiPath } from "@/lib/ha/icons";
+import { cn } from "@/lib/utils";
 import Icon from "@mdi/react";
+import type { ChangeEvent } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface LightCardProps {
   entityId: `light.${string}`;
@@ -22,6 +25,7 @@ interface LightCardProps {
  */
 export function LightCard({ entityId }: LightCardProps) {
   const entity = useEntity(entityId, { returnNullIfNotFound: true });
+  const { t } = useTranslation();
 
   const isUnavailable =
     !entity ||
@@ -40,24 +44,28 @@ export function LightCard({ entityId }: LightCardProps) {
     haIconToMdiPath(entity?.attributes.icon ?? "") ?? mdiLightbulb;
 
   const handleToggle = () => {
-    if (isUnavailable) return;
-    entity.service.toggle();
+    if (isUnavailable || !entity) return;
+    entity.service.toggle().catch((err: unknown) => {
+      console.error("Failed to toggle light:", entityId, err);
+    });
   };
 
-  const handleBrightness = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isUnavailable || !isOn) return;
-    entity.service.turnOn({ serviceData: { brightness: Number(e.target.value) } });
+  const handleBrightness = (e: ChangeEvent<HTMLInputElement>) => {
+    if (isUnavailable || !entity || !isOn) return;
+    entity.service
+      .turnOn({ serviceData: { brightness: Number(e.target.value) } })
+      .catch((err: unknown) => {
+        console.error("Failed to set brightness:", entityId, err);
+      });
   };
 
   return (
     <Card
-      className={[
+      className={cn(
         "transition-colors duration-300",
-        isOn ? "bg-amber-400/5 border-amber-900/50" : "",
-        isUnavailable ? "opacity-50" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+        isOn && "bg-amber-400/5 border-amber-900/50",
+        isUnavailable && "opacity-50"
+      )}
     >
       <CardContent className="p-4 space-y-3">
         {/* Header row: icon + name + toggle */}
@@ -102,7 +110,7 @@ export function LightCard({ entityId }: LightCardProps) {
 
         {/* Unavailable state */}
         {isUnavailable && (
-          <p className="text-xs text-slate-500">Nicht verfügbar</p>
+          <p className="text-xs text-slate-500">{t("entity.unavailable")}</p>
         )}
       </CardContent>
     </Card>

@@ -1,5 +1,6 @@
 import net from "net";
 import { Router, type Request, type Response } from "express";
+import type pino from "pino";
 import { type ServiceEntry } from "../config/app-config.js";
 import { type ApiResponse } from "../middleware/errors.js";
 
@@ -56,13 +57,11 @@ async function probeTcp(
  * Timeouts and connection errors map to "error".
  * Services without a healthUrl are returned with status "unknown".
  */
-async function probeService(entry: ServiceEntry): Promise<ServiceStatus> {
+async function probeService(entry: ServiceEntry, logger: pino.Logger): Promise<ServiceStatus> {
   // TCP health check for non-HTTP services
   if (entry.healthType === "tcp") {
     if (!entry.healthHost || !entry.healthPort) {
-      console.warn(
-        `⚠️  TCP health check for "${entry.id}" is missing healthHost or healthPort — skipping probe`
-      );
+      logger.warn({ id: entry.id }, "TCP health check missing healthHost or healthPort — skipping probe");
       return {
         id: entry.id,
         label: entry.label,
@@ -127,13 +126,13 @@ async function probeService(entry: ServiceEntry): Promise<ServiceStatus> {
  *   Probes all configured services in parallel and returns their statuses.
  *   Empty array when no services are configured.
  */
-export function servicesRouter(services: ServiceEntry[]): Router {
+export function servicesRouter(services: ServiceEntry[], logger: pino.Logger): Router {
   const router = Router();
 
   router.get(
     "/services/status",
     async (_req: Request, res: Response): Promise<void> => {
-      const results = await Promise.allSettled(services.map(probeService));
+      const results = await Promise.allSettled(services.map((e) => probeService(e, logger)));
 
       const statuses: ServiceStatus[] = results.map((result, i) => {
         if (result.status === "fulfilled") {

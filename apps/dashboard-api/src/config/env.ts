@@ -24,6 +24,10 @@ const envSchema = z.object({
   // Optional path to services monitoring config file
   // Defaults to config/services.json at the repo root
   SERVICES_CONFIG_PATH: z.string().optional(),
+
+  // Optional path to dashboard entity config file
+  // Defaults to config/dashboard.json at the repo root
+  DASHBOARD_CONFIG_PATH: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

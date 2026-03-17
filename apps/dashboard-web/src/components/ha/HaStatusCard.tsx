@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConnectionStatus } from "./ConnectionStatus";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface HaStatusCardProps {
   /** Whether HA env vars (VITE_HA_URL / VITE_HA_TOKEN) are configured */
@@ -13,28 +14,18 @@ interface HaStatusCardProps {
  * configured, to avoid calling hooks outside of the HassConnect context.
  */
 export function HaStatusCard({ haConfigured }: HaStatusCardProps) {
+  const { t } = useTranslation();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Home Assistant</CardTitle>
+        <CardTitle>{t("ha.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         {haConfigured ? (
           <ConnectionStatus />
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-slate-400">
-              HA is not configured. Set{" "}
-              <code className="text-slate-300 bg-slate-800 px-1 rounded text-xs">
-                VITE_HA_URL
-              </code>{" "}
-              and{" "}
-              <code className="text-slate-300 bg-slate-800 px-1 rounded text-xs">
-                VITE_HA_TOKEN
-              </code>{" "}
-              in <code className="text-slate-300 bg-slate-800 px-1 rounded text-xs">.env</code>{" "}
-              to enable real-time smart home integration.
-            </p>
+            <p className="text-sm text-slate-400">{t("ha.notConfigured")}</p>
           </div>
         )}
       </CardContent>

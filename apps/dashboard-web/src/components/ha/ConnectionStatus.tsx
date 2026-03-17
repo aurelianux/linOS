@@ -1,5 +1,7 @@
 import { useHaStatus } from "@hakit/core";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 /**
  * Displays the current Home Assistant connection status.
@@ -8,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
  */
 export function ConnectionStatus() {
   const status = useHaStatus();
+  const { t } = useTranslation();
 
   const isConnected = status === "RUNNING";
   const isLoading = status === "LOADING";
@@ -15,21 +18,17 @@ export function ConnectionStatus() {
   return (
     <div className="flex items-center gap-2">
       <span
-        className={[
+        className={cn(
           "h-2 w-2 rounded-full",
-          isConnected
-            ? "bg-emerald-400"
-            : isLoading
-              ? "bg-amber-400 animate-pulse"
-              : "bg-red-400",
-        ].join(" ")}
+          isConnected ? "bg-emerald-400" : isLoading ? "bg-amber-400 animate-pulse" : "bg-red-400"
+        )}
         aria-hidden="true"
       />
       <Badge
         variant={isConnected ? "default" : "secondary"}
         className="text-xs"
       >
-        {isLoading ? "Connecting…" : isConnected ? "HA Connected" : "HA Offline"}
+        {isLoading ? t("ha.connecting") : isConnected ? t("ha.connected") : t("ha.offline")}
       </Badge>
     </div>
   );
