@@ -1,6 +1,6 @@
 import {
   mdiSofa,
-  mdiKitchen,
+  mdiStove,
   mdiBed,
   mdiHomeVariant,
   mdiLightbulb,
@@ -13,7 +13,7 @@ import {
  */
 const DASHBOARD_ICON_MAP: Record<string, string> = {
   mdiSofa,
-  mdiKitchen,
+  mdiStove,
   mdiBed,
   mdiHomeVariant,
   mdiLightbulb,
