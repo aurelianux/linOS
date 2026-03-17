@@ -1,13 +1,10 @@
 import {
-  mdiHome,
-  mdiDoorOpen,
-  mdiWeatherNight,
-  mdiWeatherSunny,
   mdiSofa,
   mdiKitchen,
   mdiBed,
   mdiHomeVariant,
   mdiLightbulb,
+  mdiShower,
 } from "@mdi/js";
 
 /**
@@ -15,15 +12,12 @@ import {
  * Add entries here whenever a new icon is used in config/dashboard.json.
  */
 const DASHBOARD_ICON_MAP: Record<string, string> = {
-  mdiHome,
-  mdiDoorOpen,
-  mdiWeatherNight,
-  mdiWeatherSunny,
   mdiSofa,
   mdiKitchen,
   mdiBed,
   mdiHomeVariant,
   mdiLightbulb,
+  mdiShower,
 };
 
 /** Resolve an MDI icon name from dashboard config to its SVG path. Falls back to mdiLightbulb. */
