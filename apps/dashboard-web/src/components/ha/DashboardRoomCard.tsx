@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { SceneButton } from "./SceneButton";
+import { getCardForDomain } from "./domainCards";
+import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { DashboardRoom } from "@/lib/api/types";
 
@@ -61,8 +63,9 @@ interface DashboardRoomCardProps {
 export function DashboardRoomCard({ room }: DashboardRoomCardProps) {
   const [expanded, setExpanded] = useState(true);
   const iconPath = resolveDashboardIcon(room.icon);
+  const roomEntities = room.entities ?? [];
 
-  const hasContent = !!room.lightGroupId || room.scenes.length > 0;
+  const hasContent = !!room.lightGroupId || room.scenes.length > 0 || roomEntities.length > 0;
 
   return (
     <Card className="border-slate-800 bg-slate-900">
@@ -100,6 +103,19 @@ export function DashboardRoomCard({ room }: DashboardRoomCardProps) {
                 {room.scenes.map((scene) => (
                   <SceneButton key={scene.id} scene={scene} />
                 ))}
+              </div>
+            )}
+            {roomEntities.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {roomEntities.map((entityId) => {
+                  const domain = entityId.split(".")[0] ?? "";
+                  const EntityCard = getCardForDomain(domain);
+                  return (
+                    <CardErrorBoundary key={entityId} entityId={entityId}>
+                      <EntityCard entityId={entityId} />
+                    </CardErrorBoundary>
+                  );
+                })}
               </div>
             )}
           </div>
