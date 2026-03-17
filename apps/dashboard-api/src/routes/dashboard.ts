@@ -3,7 +3,7 @@ import type { DashboardConfig } from "../config/app-config.js";
 import type { ApiResponse } from "../middleware/errors.js";
 
 /**
- * Serves the dashboard entity configuration (quick actions + rooms with scenes).
+ * Serves the dashboard entity configuration (rooms with entity IDs).
  * Config is loaded from config/dashboard.json at startup and served as-is.
  */
 export function dashboardRouter(config: DashboardConfig): Router {

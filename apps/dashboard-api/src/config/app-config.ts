@@ -50,62 +50,27 @@ export function loadAppConfig(configPath?: string): AppConfig {
 
 // ─── Dashboard entity config ─────────────────────────────────────────────────
 
-export interface DashboardScene {
-  id: string;
-  label: string;
-  entityId: string;
-}
-
 export interface DashboardRoom {
   id: string;
   name: string;
   /** MDI icon name, e.g. "mdiSofa" */
   icon: string;
-  /** HA group entity ID for the room's lights, e.g. "group.lights_wohnzimmer" */
-  lightGroupId?: string | undefined;
-  scenes: DashboardScene[];
-  /** Optional list of HA entity IDs to display as individual cards */
-  entities?: string[];
-}
-
-export interface DashboardQuickAction {
-  id: string;
-  label: string;
-  /** Script entity ID, e.g. "script.wohnung_home" */
-  entityId: string;
-  /** MDI icon name, e.g. "mdiHome" */
-  icon: string;
+  /** HA entity IDs to display as individual cards */
+  entities: string[];
 }
 
 export interface DashboardConfig {
-  quickActions: DashboardQuickAction[];
   rooms: DashboardRoom[];
 }
-
-const dashboardSceneSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  entityId: z.string().min(1),
-});
 
 const dashboardRoomSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   icon: z.string().min(1),
-  lightGroupId: z.string().optional(),
-  scenes: z.array(dashboardSceneSchema),
-  entities: z.array(z.string().min(1)).optional().default([]),
-});
-
-const dashboardQuickActionSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  entityId: z.string().min(1),
-  icon: z.string().min(1),
+  entities: z.array(z.string().min(1)).default([]),
 });
 
 const dashboardConfigSchema = z.object({
-  quickActions: z.array(dashboardQuickActionSchema),
   rooms: z.array(dashboardRoomSchema),
 });
 
@@ -127,7 +92,7 @@ export function loadDashboardConfig(configPath?: string): DashboardConfig {
       console.warn(
         `⚠️  Dashboard config not found: ${resolvedPath}, using empty config`
       );
-      return { quickActions: [], rooms: [] };
+      return { rooms: [] };
     }
 
     const content = fs.readFileSync(resolvedPath, "utf-8");
@@ -138,7 +103,7 @@ export function loadDashboardConfig(configPath?: string): DashboardConfig {
       console.warn(
         `⚠️  Dashboard config validation failed: ${result.error.message}`
       );
-      return { quickActions: [], rooms: [] };
+      return { rooms: [] };
     }
 
     console.log(`✓ Loaded dashboard config from: ${resolvedPath}`);
@@ -146,7 +111,7 @@ export function loadDashboardConfig(configPath?: string): DashboardConfig {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn(`⚠️  Failed to load dashboard config: ${message}`);
-    return { quickActions: [], rooms: [] };
+    return { rooms: [] };
   }
 }
 

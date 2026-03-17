@@ -1,20 +1,20 @@
 {
-  "quickActions": [],
   "rooms": [
     {
       "id": "wohnzimmer",
       "name": "Living Room",
       "icon": "mdiSofa",
-      "lightGroupId": "group.lights_wohnzimmer",
-      "scenes": [
-        { "id": "hell", "label": "Bright", "entityId": "scene.wohnzimmer_hell" }
-      ],
       "entities": [
         "light.bidschirm",
         "light.klavier",
         "light.links",
         "light.rechts",
         "light.notenschlussel",
+        "sensor.lufsensor_wz_temperature",
+        "sensor.lufsensor_wz_humidity",
+        "sensor.lufsensor_wz_pressure",
+        "sensor.lufsensor_wz_battery",
+        "sensor.lufsensor_wz_voltage",
         "media_player.fernseher",
         "remote.fernseher"
       ]
@@ -23,11 +23,6 @@
       "id": "kueche",
       "name": "Kitchen",
       "icon": "mdiKitchen",
-      "lightGroupId": "group.lights_kuche",
-      "scenes": [
-        { "id": "hell", "label": "Bright", "entityId": "scene.kuche_hell" },
-        { "id": "chill", "label": "Chill", "entityId": "scene.kuche_chill" }
-      ],
       "entities": [
         "light.kuche"
       ]
@@ -36,12 +31,6 @@
       "id": "schlafzimmer",
       "name": "Bedroom",
       "icon": "mdiBed",
-      "lightGroupId": "group.lights_schlafzimmer",
-      "scenes": [
-        { "id": "hell", "label": "Bright", "entityId": "scene.schlafzimmer_hell" },
-        { "id": "chill", "label": "Chill", "entityId": "scene.schlafzimmer_chill" },
-        { "id": "aus", "label": "Off", "entityId": "scene.schlafzimmer_aus" }
-      ],
       "entities": [
         "light.nachttisch"
       ]
@@ -50,8 +39,6 @@
       "id": "flur",
       "name": "Hallway",
       "icon": "mdiHomeVariant",
-      "lightGroupId": "group.lights_flur",
-      "scenes": [],
       "entities": [
         "light.flur",
         "binary_sensor.bewegungsmelder_flur_occupancy",
@@ -61,6 +48,12 @@
         "sensor.bewegungsmelder_flur_voltage",
         "switch.bewegungsmelder_flur_trigger_indicator"
       ]
+    },
+    {
+      "id": "badezimmer",
+      "name": "Bathroom",
+      "icon": "mdiShower",
+      "entities": []
     }
   ]
 }

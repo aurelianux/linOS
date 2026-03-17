@@ -11,7 +11,6 @@ export const translations = {
 
     "overview.title": "Übersicht",
     "overview.subtitle": "Willkommen bei linBoard v0.1",
-    "overview.quickControls": "Schnellsteuerung",
 
     "panels.title": "Panels",
     "panels.subtitle": "Systemübersicht und Infrastrukturstatus.",
@@ -56,8 +55,6 @@ export const translations = {
     "lights.on": "An",
     "lights.off": "Aus",
 
-    "overview.quickActions": "Modus",
-
     "lang.switch": "EN",
   },
   en: {
@@ -70,7 +67,6 @@ export const translations = {
 
     "overview.title": "Overview",
     "overview.subtitle": "Welcome to linBoard v0.1",
-    "overview.quickControls": "Quick Controls",
 
     "panels.title": "Panels",
     "panels.subtitle": "System overview and infrastructure status.",
@@ -114,8 +110,6 @@ export const translations = {
 
     "lights.on": "On",
     "lights.off": "Off",
-
-    "overview.quickActions": "Mode",
 
     "lang.switch": "DE",
   },
