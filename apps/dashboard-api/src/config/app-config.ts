@@ -64,6 +64,8 @@ export interface DashboardRoom {
   /** HA group entity ID for the room's lights, e.g. "group.lights_wohnzimmer" */
   lightGroupId?: string | undefined;
   scenes: DashboardScene[];
+  /** Optional list of HA entity IDs to display as individual cards */
+  entities?: string[];
 }
 
 export interface DashboardQuickAction {
@@ -92,6 +94,7 @@ const dashboardRoomSchema = z.object({
   icon: z.string().min(1),
   lightGroupId: z.string().optional(),
   scenes: z.array(dashboardSceneSchema),
+  entities: z.array(z.string().min(1)).optional().default([]),
 });
 
 const dashboardQuickActionSchema = z.object({

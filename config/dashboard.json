@@ -33,6 +33,11 @@
       "lightGroupId": "group.lights_wohnzimmer",
       "scenes": [
         { "id": "hell", "label": "Bright", "entityId": "scene.wohnzimmer_hell" }
+      ],
+      "entities": [
+        "light.bidschirm",
+        "media_player.fernseher",
+        "remote.fernseher"
       ]
     },
     {
@@ -61,7 +66,16 @@
       "name": "Hallway",
       "icon": "mdiHomeVariant",
       "lightGroupId": "group.lights_flur",
-      "scenes": []
+      "scenes": [],
+      "entities": [
+        "light.flur",
+        "binary_sensor.bewegungsmelder_flur_occupancy",
+        "sensor.bewegungsmelder_flur_battery",
+        "sensor.bewegungsmelder_flur_device_temperature",
+        "sensor.bewegungsmelder_flur_illuminance",
+        "sensor.bewegungsmelder_flur_voltage",
+        "switch.bewegungsmelder_flur_trigger_indicator"
+      ]
     }
   ]
 }

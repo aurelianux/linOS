@@ -95,6 +95,8 @@ export interface DashboardRoom {
   /** HA group entity ID for the room's lights, e.g. "group.lights_wohnzimmer" */
   lightGroupId?: string;
   scenes: DashboardScene[];
+  /** Optional list of HA entity IDs to display as individual cards */
+  entities?: string[];
 }
 
 export interface DashboardQuickAction {
