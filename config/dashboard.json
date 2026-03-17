@@ -11,6 +11,10 @@
       ],
       "entities": [
         "light.bidschirm",
+        "light.klavier",
+        "light.links",
+        "light.rechts",
+        "light.notenschlussel",
         "media_player.fernseher",
         "remote.fernseher"
       ]
@@ -23,6 +27,9 @@
       "scenes": [
         { "id": "hell", "label": "Bright", "entityId": "scene.kuche_hell" },
         { "id": "chill", "label": "Chill", "entityId": "scene.kuche_chill" }
+      ],
+      "entities": [
+        "light.kuche"
       ]
     },
     {
@@ -34,6 +41,9 @@
         { "id": "hell", "label": "Bright", "entityId": "scene.schlafzimmer_hell" },
         { "id": "chill", "label": "Chill", "entityId": "scene.schlafzimmer_chill" },
         { "id": "aus", "label": "Off", "entityId": "scene.schlafzimmer_aus" }
+      ],
+      "entities": [
+        "light.nachttisch"
       ]
     },
     {
