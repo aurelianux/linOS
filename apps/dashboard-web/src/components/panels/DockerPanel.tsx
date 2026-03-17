@@ -4,6 +4,7 @@ import { Panel } from "@/components/common/Panel";
 import { LoadingState } from "@/components/common/LoadingState";
 import { useDockerContainers } from "@/hooks/useDockerContainers";
 import type { ContainerInfo } from "@/lib/api/types";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 // ─── State dot ─────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ function ContainerRow({ container }: { container: ContainerInfo }) {
 // ─── Docker unavailable notice ─────────────────────────────────────────────
 
 function DockerUnavailableNotice({ reason }: { reason: string }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-2">
@@ -63,8 +65,7 @@ function DockerUnavailableNotice({ reason }: { reason: string }) {
         <p className="text-sm text-amber-400">{reason}</p>
       </div>
       <p className="text-xs text-slate-500">
-        To enable container listing, add the following volume to the
-        dashboard-api service in{" "}
+        {t("docker.socketHint")}{" "}
         <code className="bg-slate-800 px-1 rounded text-slate-300">
           docker-compose.yml
         </code>
@@ -74,15 +75,7 @@ function DockerUnavailableNotice({ reason }: { reason: string }) {
         {"<HOST_DOCKER_SOCKET>:/var/run/docker.sock:ro"}
       </pre>
       <p className="text-xs text-slate-500">
-        Replace{" "}
-        <code className="bg-slate-800 px-1 rounded text-slate-300">
-          {"<HOST_DOCKER_SOCKET>"}
-        </code>{" "}
-        with{" "}
-        <code className="bg-slate-800 px-1 rounded text-slate-300">
-          /var/run/docker.sock
-        </code>{" "}
-        on standard Linux hosts.
+        {t("docker.socketHintReplace", { HOST_DOCKER_SOCKET: "<HOST_DOCKER_SOCKET>" })}
       </p>
     </div>
   );
@@ -97,10 +90,11 @@ function DockerUnavailableNotice({ reason }: { reason: string }) {
  */
 export function DockerPanel() {
   const { data, loading, error, lastUpdated, refresh } = useDockerContainers();
+  const { t } = useTranslation();
 
   return (
     <Panel
-      title="Docker Containers"
+      title={t("docker.title")}
       onRefresh={refresh}
       loading={loading}
       lastUpdated={lastUpdated}
@@ -121,7 +115,7 @@ export function DockerPanel() {
       )}
 
       {data?.available && data.containers.length === 0 && (
-        <p className="text-sm text-slate-400">No running containers found.</p>
+        <p className="text-sm text-slate-400">{t("docker.noContainers")}</p>
       )}
 
       {data?.available && data.containers.length > 0 && (

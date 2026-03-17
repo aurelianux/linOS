@@ -1,16 +1,19 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "../../lib/utils";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
-const navItems = [
-  { label: "Overview", path: "/" },
-  { label: "Rooms", path: "/rooms" },
-  { label: "Panels", path: "/panels" },
+const navItems: Array<{ labelKey: TranslationKey; path: string }> = [
+  { labelKey: "nav.overview", path: "/" },
+  { labelKey: "nav.rooms", path: "/rooms" },
+  { labelKey: "nav.panels", path: "/panels" },
 ];
 
 /**
  * Mobile bottom navigation
  */
 export function BottomNav() {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-around items-center h-16 px-2">
       {navItems.map((item) => (
@@ -27,7 +30,7 @@ export function BottomNav() {
             )
           }
         >
-          <span>{item.label}</span>
+          <span>{t(item.labelKey)}</span>
         </NavLink>
       ))}
     </div>

@@ -48,6 +48,107 @@ export function loadAppConfig(configPath?: string): AppConfig {
   }
 }
 
+// ─── Dashboard entity config ─────────────────────────────────────────────────
+
+export interface DashboardScene {
+  id: string;
+  label: string;
+  entityId: string;
+}
+
+export interface DashboardRoom {
+  id: string;
+  name: string;
+  /** MDI icon name, e.g. "mdiSofa" */
+  icon: string;
+  /** HA group entity ID for the room's lights, e.g. "group.lights_wohnzimmer" */
+  lightGroupId?: string | undefined;
+  scenes: DashboardScene[];
+}
+
+export interface DashboardQuickAction {
+  id: string;
+  label: string;
+  /** Script entity ID, e.g. "script.wohnung_home" */
+  entityId: string;
+  /** MDI icon name, e.g. "mdiHome" */
+  icon: string;
+}
+
+export interface DashboardConfig {
+  quickActions: DashboardQuickAction[];
+  rooms: DashboardRoom[];
+}
+
+const dashboardSceneSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  entityId: z.string().min(1),
+});
+
+const dashboardRoomSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  icon: z.string().min(1),
+  lightGroupId: z.string().optional(),
+  scenes: z.array(dashboardSceneSchema),
+});
+
+const dashboardQuickActionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  entityId: z.string().min(1),
+  icon: z.string().min(1),
+});
+
+const dashboardConfigSchema = z.object({
+  quickActions: z.array(dashboardQuickActionSchema),
+  rooms: z.array(dashboardRoomSchema),
+});
+
+/**
+ * Load dashboard entity config from JSON file.
+ * Defaults to config/dashboard.json at the repo root.
+ * Validates structure with Zod; gracefully returns empty config on failure.
+ */
+export function loadDashboardConfig(configPath?: string): DashboardConfig {
+  const defaultPath = path.join(__dirname, "../../../../config/dashboard.json");
+  const resolvedPath = configPath
+    ? path.isAbsolute(configPath)
+      ? configPath
+      : path.resolve(process.cwd(), configPath)
+    : defaultPath;
+
+  try {
+    if (!fs.existsSync(resolvedPath)) {
+      console.warn(
+        `⚠️  Dashboard config not found: ${resolvedPath}, using empty config`
+      );
+      return { quickActions: [], rooms: [] };
+    }
+
+    const content = fs.readFileSync(resolvedPath, "utf-8");
+    const parsed: unknown = JSON.parse(content);
+    const result = dashboardConfigSchema.safeParse(parsed);
+
+    if (!result.success) {
+      console.warn(
+        `⚠️  Dashboard config validation failed: ${result.error.message}`
+      );
+      return { quickActions: [], rooms: [] };
+    }
+
+    console.log(`✓ Loaded dashboard config from: ${resolvedPath}`);
+    return result.data;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`⚠️  Failed to load dashboard config: ${message}`);
+    return { quickActions: [], rooms: [] };
+  }
+}
+
+// ─── Services config ──────────────────────────────────────────────────────────
+
 /**
  * A single service/stack definition.
  * healthUrl (optional) is probed via HTTP GET; any 2xx/3xx response counts as "ok".

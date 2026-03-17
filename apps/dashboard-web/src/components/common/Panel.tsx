@@ -2,6 +2,8 @@ import { type ReactNode } from "react";
 import { mdiRefresh } from "@mdi/js";
 import Icon from "@mdi/react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface PanelProps {
   title: string;
@@ -32,15 +34,10 @@ export function Panel({
   lastUpdated,
   className = "",
 }: PanelProps) {
+  const { t } = useTranslation();
+
   return (
-    <div
-      className={[
-        "rounded-lg border border-slate-800 bg-slate-900 flex flex-col",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <div className={cn("rounded-lg border border-slate-800 bg-slate-900 flex flex-col", className)}>
       {/* Title bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
         <h3 className="text-lg font-semibold text-slate-100">{title}</h3>
@@ -48,7 +45,7 @@ export function Panel({
         <div className="flex items-center gap-3">
           {lastUpdated && (
             <span className="text-xs text-slate-500">
-              Updated {lastUpdated.toLocaleTimeString()}
+              {t("panel.updated")}{lastUpdated.toLocaleTimeString()}
             </span>
           )}
           {onRefresh && (
@@ -57,10 +54,10 @@ export function Panel({
               size="sm"
               onClick={onRefresh}
               disabled={loading}
-              aria-label={`Refresh ${title}`}
+              aria-label={t("panel.refreshLabel", { title })}
             >
               <Icon path={mdiRefresh} size={0.8} className="mr-1" />
-              Refresh
+              {t("panel.refresh")}
             </Button>
           )}
         </div>

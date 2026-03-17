@@ -319,12 +319,49 @@ export function errorMiddleware(logger: pino.Logger) {
 - Dark-first, slate palette only — see Design System above
 - CSS transitions for animation — no framer-motion
 
+### No magic strings / no inline config
+- Never hardcode entity IDs, room names, service URLs, or feature flags inline in components
+- Entity lists → top-level `const` arrays in the page file, or a dedicated `config/` file
+- Named constants for any value used in more than one place
+- Route paths → single source, not spread across files
+
+```tsx
+// ❌ Magic string inline
+<LightCard entityId="light.wohnzimmer_decke" />
+
+// ✅ Config array at top of file or in config/entities.ts
+const LIGHTS: Array<`light.${string}`> = ["light.wohnzimmer_decke"];
+LIGHTS.map((id) => <LightCard key={id} entityId={id} />)
+```
+
+### Component simplicity — one job per component
+- A component renders UI. It does not contain business logic, data transformations, or unrelated state.
+- Extract derived values to plain functions or custom hooks above the component.
+- If a component exceeds ~80 lines, consider splitting — a large render is a sign of mixed concerns.
+- Sub-components that are only used once inside a parent file are fine to co-locate in the same file.
+- Props stay simple: pass data and callbacks — never pass entire store slices or complex objects when scalar values suffice.
+
+```tsx
+// ❌ Logic inside JSX / large render
+{containers.filter(c => c.state === "running").sort(...).map(...)}
+
+// ✅ Derived value above return
+const runningContainers = containers.filter(c => c.state === "running").sort(...);
+return runningContainers.map(...);
+```
+
+### Helper files — no duplication
+- Shared logic goes in `lib/` or `hooks/` — never copy-pasted between components.
+- Use the `createPollingHook<T>()` factory for every polling endpoint (already exists in `hooks/usePolledData.ts`).
+- Icon resolution always via `haIconToMdiPath()` (already in `lib/ha/icons.ts`).
+- Utility types and API shapes go in `lib/api/types.ts` — not re-declared in component files.
+
 ### HA components
 - Always `useEntity(id, { returnNullIfNotFound: true })` — never bare `useEntity(id)`
 - Handle `null` / `"unavailable"` / `"unknown"` — render degraded UI, never crash
 - Wrap every HA card in `<CardErrorBoundary entityId={entityId}>`
 - Always `try/catch` around `entity.service.*` calls — show error to user
-- UI text is **English** — not "Nicht verfügbar", not "Fehler beim Laden"
+- All user-visible text goes through `useTranslation()` — no raw string literals in JSX
 
 ### Icons
 - Named imports from `@mdi/js` only — `import { mdiLightbulb } from "@mdi/js"`
@@ -420,9 +457,10 @@ apps/dashboard-web/src/
 ├── hooks/              # usePolledData factory + per-endpoint exports
 ├── lib/
 │   ├── api/            # fetchJson client + ApiErrorException + types
-│   └── ha/             # icons.ts, provider.tsx, config.ts
+│   ├── ha/             # icons.ts, provider.tsx, config.ts
+│   └── i18n/           # translations.ts (DE/EN dict), useTranslation.ts hook
 ├── pages/              # OverviewPage, RoomsPage, PanelsPage
-└── stores/             # Zustand stores (only if feature is built)
+└── stores/             # Zustand stores (languageStore + feature stores)
 
 apps/dashboard-api/src/
 ├── config/             # env.ts (Zod), app-config.ts (services.json loader)
@@ -464,7 +502,10 @@ One logical change per commit. No 500-line commits.
 □ No `any` types, no `@ts-ignore`
 □ No console.log left in code (except error boundaries)
 □ No commented-out code blocks
-□ No German text in UI components
+□ All user-visible strings go through t() from useTranslation()
+□ No magic strings — entity IDs, room names, paths in named constants or config files
+□ Components are focused — no business logic mixed into render
+□ No duplicated logic — shared code lives in lib/ or hooks/
 □ HA entities: null / unavailable / unknown all handled
 □ HA service calls wrapped in try/catch
 □ Every new HA card wrapped in <CardErrorBoundary>
