@@ -38,7 +38,7 @@
     {
       "id": "kueche",
       "name": "Kitchen",
-      "icon": "mdiKitchen",
+      "icon": "mdiStove",
       "lightGroupId": "group.lights_kuche",
       "scenes": [
         { "id": "hell", "label": "Bright", "entityId": "scene.kuche_hell" },
