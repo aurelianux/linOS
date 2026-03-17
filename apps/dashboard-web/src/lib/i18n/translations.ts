@@ -11,7 +11,6 @@ export const translations = {
 
     "overview.title": "Übersicht",
     "overview.subtitle": "Willkommen bei linBoard v0.1",
-    "overview.quickControls": "Schnellsteuerung",
 
     "panels.title": "Panels",
     "panels.subtitle": "Systemübersicht und Infrastrukturstatus.",
@@ -20,7 +19,7 @@ export const translations = {
     "rooms.subtitle": "Räumliche Übersicht deiner Smart-Home-Geräte.",
     "rooms.noRooms": "Keine Räume konfiguriert",
     "rooms.noRoomsHint":
-      "Füge Entity-IDs zur ROOM_CONFIG in src/pages/RoomsPage.tsx hinzu.",
+      "Füge Räume in config/dashboard.json hinzu, um diese Ansicht zu befüllen.",
     "rooms.noEntities": "Keine Geräte in diesem Raum.",
     "rooms.entitySingular": "Gerät",
     "rooms.entityPlural": "Geräte",
@@ -56,8 +55,6 @@ export const translations = {
     "lights.on": "An",
     "lights.off": "Aus",
 
-    "overview.quickActions": "Modus",
-
     "lang.switch": "EN",
   },
   en: {
@@ -70,7 +67,6 @@ export const translations = {
 
     "overview.title": "Overview",
     "overview.subtitle": "Welcome to linBoard v0.1",
-    "overview.quickControls": "Quick Controls",
 
     "panels.title": "Panels",
     "panels.subtitle": "System overview and infrastructure status.",
@@ -79,7 +75,7 @@ export const translations = {
     "rooms.subtitle": "Spatial overview of your smart home entities.",
     "rooms.noRooms": "No rooms configured",
     "rooms.noRoomsHint":
-      "Add entity IDs to ROOM_CONFIG in src/pages/RoomsPage.tsx to populate this view.",
+      "Add rooms to config/dashboard.json to populate this view.",
     "rooms.noEntities": "No entities assigned to this room.",
     "rooms.entitySingular": "entity",
     "rooms.entityPlural": "entities",
@@ -114,8 +110,6 @@ export const translations = {
 
     "lights.on": "On",
     "lights.off": "Off",
-
-    "overview.quickActions": "Mode",
 
     "lang.switch": "DE",
   },

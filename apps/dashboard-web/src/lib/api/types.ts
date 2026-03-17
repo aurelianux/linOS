@@ -81,33 +81,16 @@ export interface ContainersData {
  * Dashboard entity configuration.
  * Returned by GET /api/dashboard/config
  */
-export interface DashboardScene {
-  id: string;
-  label: string;
-  entityId: string;
-}
-
 export interface DashboardRoom {
   id: string;
   name: string;
   /** MDI icon name string, e.g. "mdiSofa" — resolved via resolveDashboardIcon() */
   icon: string;
-  /** HA group entity ID for the room's lights, e.g. "group.lights_wohnzimmer" */
-  lightGroupId?: string;
-  scenes: DashboardScene[];
-}
-
-export interface DashboardQuickAction {
-  id: string;
-  label: string;
-  /** Script entity ID, e.g. "script.wohnung_home" */
-  entityId: string;
-  /** MDI icon name string, e.g. "mdiHome" — resolved via resolveDashboardIcon() */
-  icon: string;
+  /** HA entity IDs to display as individual cards */
+  entities: string[];
 }
 
 export interface DashboardConfig {
-  quickActions: DashboardQuickAction[];
   rooms: DashboardRoom[];
 }
 

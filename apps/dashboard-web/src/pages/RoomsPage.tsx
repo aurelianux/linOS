@@ -28,9 +28,7 @@ export function RoomsPage() {
       {HA_CONFIGURED && !loading && !error && !hasRooms && (
         <div className="rounded-lg border border-slate-800 bg-slate-900 px-6 py-8 text-center space-y-2">
           <p className="text-slate-300 font-medium">{t("rooms.noRooms")}</p>
-          <p className="text-sm text-slate-500">
-            Add rooms to config/dashboard.json to populate this view.
-          </p>
+          <p className="text-sm text-slate-500">{t("rooms.noRoomsHint")}</p>
         </div>
       )}
 
