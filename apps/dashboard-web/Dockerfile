@@ -20,6 +20,8 @@ RUN pnpm -C dashboard-web build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && pnpm add -g serve
 COPY --from=builder /app/dashboard-web/dist ./
 EXPOSE 4000
