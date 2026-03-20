@@ -57,6 +57,11 @@ export const translations = {
     "lights.brightness": "Helligkeit",
     "lights.colorTemp": "Farbtemperatur",
     "lights.toggleError": "Fehler beim Schalten",
+    "lights.preset.warmweiss": "Warmweiß",
+    "lights.preset.neutral": "Neutral",
+    "lights.preset.kaltweiss": "Kaltweiß",
+    "lights.preset.orange": "Orange",
+    "lights.preset.blau": "Blau",
 
     "quickToggle.title": "Schnellzugriff",
     "quickToggle.apartment": "Wohnung",
@@ -154,6 +159,11 @@ export const translations = {
     "lights.brightness": "Brightness",
     "lights.colorTemp": "Color Temperature",
     "lights.toggleError": "Failed to toggle",
+    "lights.preset.warmweiss": "Warm White",
+    "lights.preset.neutral": "Neutral",
+    "lights.preset.kaltweiss": "Cool White",
+    "lights.preset.orange": "Orange",
+    "lights.preset.blau": "Blue",
 
     "quickToggle.title": "Quick Toggles",
     "quickToggle.apartment": "Apartment",
