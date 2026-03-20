@@ -11,7 +11,8 @@
         "light.rechts",
         "light.notenschlussel",
         "media_player.fernseher",
-        "remote.fernseher"
+        "media_player.arbeitszimmer",
+        "climate.thermostat_wz"
       ],
       "airQuality": {
         "temperature": "sensor.lufsensor_wz_temperature",
@@ -57,8 +58,17 @@
       "id": "badezimmer",
       "name": "Bathroom",
       "icon": "mdiShower",
-      "entities": []
+      "entities": [
+        "climate.thermostat_bad"
+      ]
     }
+  ],
+  "lightColorPresets": [
+    { "id": "warmweiss", "label": "Warm", "color": "#f5a623" },
+    { "id": "neutral", "label": "Neutral", "color": "#f0e6d0" },
+    { "id": "kaltweiss", "label": "Cool", "color": "#cce5ff" },
+    { "id": "orange", "label": "Orange", "color": "#ff8c00" },
+    { "id": "blau", "label": "Blue", "color": "#5b9bd5" }
   ],
   "quickToggles": {
     "globalEntity": "input_select.lighting_mode",
