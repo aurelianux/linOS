@@ -77,6 +77,12 @@ export interface QuickToggleConfig {
   rooms: RoomQuickToggle[];
 }
 
+export interface LightColorPreset {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface RoborockSegment {
   id: number;
   roomId: string;
@@ -95,6 +101,7 @@ export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig | undefined;
   quickToggles?: QuickToggleConfig | undefined;
+  lightColorPresets?: LightColorPreset[] | undefined;
 }
 
 const airQualitySchema = z.object({
@@ -122,6 +129,12 @@ const quickToggleConfigSchema = z.object({
   rooms: z.array(roomQuickToggleSchema),
 });
 
+const lightColorPresetSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  color: z.string().min(1),
+});
+
 const roborockSegmentSchema = z.object({
   id: z.number().int().positive(),
   roomId: z.string().min(1),
@@ -140,6 +153,7 @@ const dashboardConfigSchema = z.object({
   rooms: z.array(dashboardRoomSchema),
   roborock: roborockConfigSchema.optional(),
   quickToggles: quickToggleConfigSchema.optional(),
+  lightColorPresets: z.array(lightColorPresetSchema).optional(),
 });
 
 /**
