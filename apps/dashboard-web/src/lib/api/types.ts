@@ -76,6 +76,13 @@ export interface ContainerInfo {
   state: string;
 }
 
+export type DockerUnavailableCode =
+  | "SOCKET_NOT_FOUND"
+  | "BINARY_NOT_FOUND"
+  | "PERMISSION_DENIED"
+  | "DAEMON_NOT_RUNNING"
+  | "UNKNOWN_ERROR";
+
 /**
  * Response envelope for GET /api/system/containers
  */
@@ -84,6 +91,8 @@ export interface ContainersData {
   containers: ContainerInfo[];
   /** Set when available is false — explains why Docker is unreachable */
   unavailableReason: string | null;
+  /** Machine-readable error code for frontend conditional rendering */
+  unavailableCode: DockerUnavailableCode | null;
 }
 
 /**
