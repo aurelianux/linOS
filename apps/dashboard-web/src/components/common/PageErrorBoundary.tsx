@@ -1,6 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import { mdiAlertCircleOutline, mdiRefresh } from "@mdi/js";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 
 interface Props {
   children: ReactNode;

@@ -1,4 +1,4 @@
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import { mdiDevices } from "@mdi/js";
 import { haIconToMdiPath } from "@/lib/ha/icons";
 

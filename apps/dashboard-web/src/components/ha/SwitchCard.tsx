@@ -1,6 +1,6 @@
 import { useEntity } from "@hakit/core";
 import { mdiPower } from "@mdi/js";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { haIconToMdiPath } from "@/lib/ha/icons";
