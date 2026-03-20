@@ -61,10 +61,18 @@ export interface ContainersData {
   unavailableReason: string | null;
 }
 
+export interface SystemVitals {
+  cpuLoadPercent: number;
+  memoryUsedPercent: number;
+}
+
 // ─── Cache instances ───────────────────────────────────────────────────────
 
 const systemInfoCache = makeCache<SystemInfo>();
 const containersCache = makeCache<ContainersData>();
+const vitalsCache = makeCache<SystemVitals>();
+
+const VITALS_CACHE_TTL_MS = 3_000;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -198,6 +206,33 @@ export function systemRouter(): Router {
 
       systemInfoCache.set(info, CACHE_TTL_MS);
       res.json({ ok: true, data: info } satisfies ApiResponse<SystemInfo>);
+    }
+  );
+
+  router.get(
+    "/system/vitals",
+    (_req: Request, res: Response): void => {
+      const cached = vitalsCache.get();
+      if (cached) {
+        res.json({ ok: true, data: cached } satisfies ApiResponse<SystemVitals>);
+        return;
+      }
+
+      const cpus = os.cpus();
+      const load1 = os.loadavg()[0] ?? 0;
+      const cpuLoadPercent =
+        cpus.length > 0
+          ? Math.min(100, Math.round((load1 / cpus.length) * 100))
+          : 0;
+
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const memoryUsedPercent =
+        totalMem > 0 ? Math.round(((totalMem - freeMem) / totalMem) * 100) : 0;
+
+      const vitals: SystemVitals = { cpuLoadPercent, memoryUsedPercent };
+      vitalsCache.set(vitals, VITALS_CACHE_TTL_MS);
+      res.json({ ok: true, data: vitals } satisfies ApiResponse<SystemVitals>);
     }
   );
 

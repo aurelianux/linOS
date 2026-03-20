@@ -1,7 +1,33 @@
 import { HaStatusIndicator } from "@/components/ha/HaStatusIndicator";
+import { SystemMetricBadge } from "@/components/layout/SystemMetricBadge";
+import { useSystemVitals } from "@/hooks/useSystemVitals";
+import { useMetricHistory } from "@/hooks/useMetricHistory";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useLanguageStore } from "@/stores/languageStore";
+
+function HeaderVitals() {
+  const { data } = useSystemVitals();
+  const cpuHistory = useMetricHistory(data?.cpuLoadPercent ?? null);
+  const ramHistory = useMetricHistory(data?.memoryUsedPercent ?? null);
+
+  if (!data) return null;
+
+  return (
+    <div className="flex items-center gap-4">
+      <SystemMetricBadge
+        label="CPU"
+        percent={data.cpuLoadPercent}
+        history={cpuHistory}
+      />
+      <SystemMetricBadge
+        label="RAM"
+        percent={data.memoryUsedPercent}
+        history={ramHistory}
+      />
+    </div>
+  );
+}
 
 /**
  * Header component - app title and top-level branding
@@ -12,7 +38,10 @@ export function Header() {
 
   return (
     <header className="flex items-center justify-between h-16 px-6 border-b border-slate-700 bg-slate-950 shrink-0">
-      <h1 className="text-2xl font-bold text-slate-100">{t("appTitle")}</h1>
+      <div className="flex items-center gap-6">
+        <h1 className="text-2xl font-bold text-slate-100">{t("appTitle")}</h1>
+        <HeaderVitals />
+      </div>
       <div className="flex items-center gap-4">
         {HA_CONFIGURED && <HaStatusIndicator />}
         <button
