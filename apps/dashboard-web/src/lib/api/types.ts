@@ -134,6 +134,16 @@ export interface QuickToggleConfig {
   rooms: RoomQuickToggle[];
 }
 
+/**
+ * Light color preset for UI color dots.
+ * color is display-only (hex for the dot); actual values applied by HA script.
+ */
+export interface LightColorPreset {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface RoborockSegment {
   id: number;
   roomId: string;
@@ -152,6 +162,7 @@ export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig;
   quickToggles?: QuickToggleConfig;
+  lightColorPresets?: LightColorPreset[];
 }
 
 /**

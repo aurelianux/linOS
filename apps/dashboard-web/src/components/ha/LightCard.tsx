@@ -1,4 +1,4 @@
-import { useEntity } from "@hakit/core";
+import { useEntity, useHass } from "@hakit/core";
 import { mdiLightbulb } from "@mdi/js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -6,46 +6,31 @@ import { haIconToMdiPath } from "@/lib/ha/icons";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { useOptimisticAction } from "@/hooks/useOptimisticAction";
 import { InlineError } from "@/components/common/InlineError";
-import type { CSSProperties, ChangeEvent } from "react";
-import { useCallback, useRef } from "react";
+import { useDashboardConfig } from "@/hooks/useDashboardConfig";
+import type { ChangeEvent } from "react";
+import { useCallback, useRef, useState } from "react";
 
 interface LightCardProps {
   entityId: `light.${string}`;
 }
 
-function getRgbStyle(
-  rgbColor: number[] | undefined
-): CSSProperties | undefined {
-  if (!rgbColor || rgbColor.length < 3) return undefined;
-  const [r, g, b] = rgbColor;
-  return {
-    "--light-r": String(r),
-    "--light-g": String(g),
-    "--light-b": String(b),
-  } as CSSProperties;
-}
-
 export function LightCard({ entityId }: LightCardProps) {
   const entity = useEntity(entityId, { returnNullIfNotFound: true });
+  const { callService } = useHass();
   const { t } = useTranslation();
-  const {
-    optimisticValue: optimisticOn,
-    execute,
-    error,
-    clearError,
-  } = useOptimisticAction<boolean>();
-
+  const { data: dashConfig } = useDashboardConfig();
+  const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const presets = dashConfig?.lightColorPresets ?? [];
 
   const isUnavailable =
     !entity ||
     entity.state === "unavailable" ||
     entity.state === "unknown";
 
-  const realOn = entity?.state === "on";
-  const isOn = optimisticOn ?? realOn;
+  const isOn = entity?.state === "on";
   const brightness = entity?.attributes.brightness ?? 0;
   const rgbColor = entity?.attributes.rgb_color as number[] | undefined;
   const friendlyName =
@@ -53,19 +38,16 @@ export function LightCard({ entityId }: LightCardProps) {
   const iconPath =
     haIconToMdiPath(entity?.attributes.icon ?? "") ?? mdiLightbulb;
 
-  const supportedColorModes = (entity?.attributes.supported_color_modes ??
-    []) as string[];
-  const supportsColorTemp = supportedColorModes.includes("color_temp");
-  const minMireds = (entity?.attributes.min_mireds as number) ?? 153;
-  const maxMireds = (entity?.attributes.max_mireds as number) ?? 500;
-  const colorTemp = (entity?.attributes.color_temp as number) ?? minMireds;
-
-  const handleClick = useCallback(() => {
+  const handleToggle = useCallback(async () => {
     if (isUnavailable || !entity) return;
-    execute(!realOn, async () => {
+    try {
       await entity.service.toggle();
-    });
-  }, [isUnavailable, entity, realOn, execute]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t("lights.toggleError");
+      setError(msg);
+      setTimeout(() => setError(null), 3000);
+    }
+  }, [isUnavailable, entity, t]);
 
   const handleBrightness = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -83,61 +65,51 @@ export function LightCard({ entityId }: LightCardProps) {
     [isUnavailable, entity, isOn, entityId]
   );
 
-  const handleColorTemp = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      if (isUnavailable || !entity || !isOn) return;
-      const value = Number(e.target.value);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        entity.service
-          .turnOn({ serviceData: { color_temp: value } })
-          .catch((err: unknown) => {
-            console.error("Failed to set color temp:", entityId, err);
-          });
-      }, 200);
+  const handlePreset = useCallback(
+    async (presetId: string) => {
+      if (isUnavailable || !entity) return;
+      try {
+        await callService({
+          domain: "script",
+          service: "apply_light_color_preset",
+          serviceData: {
+            target_light: entityId,
+            preset: presetId,
+          },
+        });
+      } catch (err: unknown) {
+        console.error("Failed to apply preset:", entityId, presetId, err);
+      }
     },
-    [isUnavailable, entity, isOn, entityId]
+    [isUnavailable, entity, entityId, callService]
   );
 
-  const rgbStyle = isOn ? getRgbStyle(rgbColor) : undefined;
-  const hasRgb = rgbStyle !== undefined;
+  const clearError = useCallback(() => setError(null), []);
 
   return (
     <Card
       role="button"
       tabIndex={0}
-      onClick={handleClick}
+      onClick={handleToggle}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          handleClick();
+          handleToggle();
         }
       }}
-      style={rgbStyle}
       className={cn(
         "cursor-pointer transition-colors duration-300 select-none",
-        isOn && !hasRgb && "bg-amber-400/5 border-amber-900/50",
-        isOn && hasRgb && "border-amber-900/50",
+        isOn && "bg-amber-400/5 border-amber-900/50",
         isUnavailable && "opacity-50 pointer-events-none"
       )}
     >
-      {/* Dynamic RGB tint overlay via CSS custom properties */}
-      {isOn && hasRgb && (
-        <div
-          className="absolute inset-0 rounded-[inherit] pointer-events-none opacity-10"
-          style={{
-            backgroundColor: `rgb(var(--light-r), var(--light-g), var(--light-b))`,
-          }}
-        />
-      )}
-
-      <CardContent className="relative p-3 space-y-2">
+      <CardContent className="p-2.5 space-y-1.5">
         {/* Header: color dot + icon + name + brightness % */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {isOn && rgbColor && rgbColor.length >= 3 && (
               <span
-                className="w-2.5 h-2.5 rounded-full shrink-0"
+                className="w-2 h-2 rounded-full shrink-0"
                 style={{
                   backgroundColor: `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`,
                 }}
@@ -145,8 +117,11 @@ export function LightCard({ entityId }: LightCardProps) {
             )}
             <Icon
               path={iconPath}
-              size={0.9}
-              className={isOn ? "text-amber-400" : "text-slate-400"}
+              size={0.8}
+              className={cn(
+                "shrink-0",
+                isOn ? "text-amber-400" : "text-slate-400"
+              )}
             />
             <span
               className="text-sm font-medium text-slate-200 truncate"
@@ -162,7 +137,7 @@ export function LightCard({ entityId }: LightCardProps) {
           )}
         </div>
 
-        {/* Sliders — only when on. Stop propagation so clicks don't toggle. */}
+        {/* Controls — only when on. Stop propagation so clicks don't toggle. */}
         {isOn && !isUnavailable && (
           <div
             className="space-y-1.5"
@@ -177,16 +152,21 @@ export function LightCard({ entityId }: LightCardProps) {
               onChange={handleBrightness}
               aria-label={t("lights.brightness")}
             />
-            {supportsColorTemp && (
-              <Slider
-                min={minMireds}
-                max={maxMireds}
-                step={1}
-                value={colorTemp}
-                onChange={handleColorTemp}
-                className="accent-sky-400"
-                aria-label={t("lights.colorTemp")}
-              />
+
+            {/* Color presets */}
+            {presets.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                {presets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    title={preset.label}
+                    onClick={() => handlePreset(preset.id)}
+                    className="w-5 h-5 rounded-full border border-slate-600 hover:border-slate-400 transition-colors shrink-0"
+                    style={{ backgroundColor: preset.color }}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
