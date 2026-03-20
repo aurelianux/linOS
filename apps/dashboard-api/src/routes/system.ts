@@ -1,6 +1,7 @@
 import os from "os";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { access, constants } from "fs/promises";
 import { Router, type Request, type Response } from "express";
 import { type ApiResponse } from "../middleware/errors.js";
 
@@ -120,6 +121,18 @@ async function getDiskInfo(): Promise<{ total: number; used: number } | null> {
  *   /var/run/docker.sock:/var/run/docker.sock:ro
  */
 async function fetchContainers(): Promise<ContainersData> {
+  // Pre-check: does the socket file exist and is it readable?
+  try {
+    await access("/var/run/docker.sock", constants.R_OK);
+  } catch {
+    return {
+      available: false,
+      containers: [],
+      unavailableReason:
+        "Docker socket not found at /var/run/docker.sock. Mount /var/run/docker.sock:/var/run/docker.sock:ro in the container.",
+    };
+  }
+
   let stdout: string;
 
   try {
@@ -131,9 +144,17 @@ async function fetchContainers(): Promise<ContainersData> {
     stdout = result.stdout;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const reason = msg.includes("ENOENT")
-      ? "Docker binary not found. Install Docker or add it to PATH."
-      : "Docker socket not accessible. Mount /var/run/docker.sock:/var/run/docker.sock:ro in the container.";
+    let reason: string;
+    if (msg.includes("ENOENT")) {
+      reason = "Docker binary not found. Install Docker CLI or add it to PATH.";
+    } else if (/permission denied/i.test(msg)) {
+      reason =
+        "Permission denied on Docker socket. Ensure the container's group_add matches the host Docker GID.";
+    } else if (/cannot connect|is the docker daemon running/i.test(msg)) {
+      reason = "Docker daemon is not running on the host.";
+    } else {
+      reason = `Docker command failed: ${msg}`;
+    }
     return { available: false, containers: [], unavailableReason: reason };
   }
 
