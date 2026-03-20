@@ -10,14 +10,18 @@
         "light.links",
         "light.rechts",
         "light.notenschlussel",
-        "sensor.lufsensor_wz_temperature",
-        "sensor.lufsensor_wz_humidity",
-        "sensor.lufsensor_wz_pressure",
-        "sensor.lufsensor_wz_battery",
-        "sensor.lufsensor_wz_voltage",
         "media_player.fernseher",
         "remote.fernseher"
-      ]
+      ],
+      "airQuality": {
+        "temperature": "sensor.lufsensor_wz_temperature",
+        "humidity": "sensor.lufsensor_wz_humidity",
+        "secondary": [
+          "sensor.lufsensor_wz_pressure",
+          "sensor.lufsensor_wz_battery",
+          "sensor.lufsensor_wz_voltage"
+        ]
+      }
     },
     {
       "id": "kueche",
@@ -56,6 +60,16 @@
       "entities": []
     }
   ],
+  "quickToggles": {
+    "globalEntity": "input_select.lighting_mode",
+    "modes": ["hell", "chill", "aus"],
+    "rooms": [
+      { "roomId": "wohnzimmer", "entity": "input_select.lighting_mode_wohnzimmer" },
+      { "roomId": "kueche", "entity": "input_select.lighting_mode_kueche" },
+      { "roomId": "schlafzimmer", "entity": "input_select.lighting_mode_schlafzimmer" },
+      { "roomId": "flur", "entity": "input_select.lighting_mode_flur" }
+    ]
+  },
   "roborock": {
     "entityId": "vacuum.s7_max_ultra",
     "segments": [
