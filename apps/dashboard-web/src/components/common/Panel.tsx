@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { mdiRefresh } from "@mdi/js";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";

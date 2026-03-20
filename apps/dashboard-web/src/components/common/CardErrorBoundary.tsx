@@ -1,6 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import { mdiAlertCircle } from "@mdi/js";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 

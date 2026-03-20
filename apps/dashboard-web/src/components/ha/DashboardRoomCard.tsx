@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import { mdiChevronDown, mdiChevronUp } from "@mdi/js";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
