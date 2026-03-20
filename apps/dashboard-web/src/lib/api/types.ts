@@ -54,6 +54,15 @@ export interface SystemInfo {
 }
 
 /**
+ * Lightweight CPU + RAM vitals for high-frequency polling.
+ * Returned by GET /api/system/vitals
+ */
+export interface SystemVitals {
+  cpuLoadPercent: number;
+  memoryUsedPercent: number;
+}
+
+/**
  * A single Docker container.
  * Returned inside GET /api/system/containers
  */
