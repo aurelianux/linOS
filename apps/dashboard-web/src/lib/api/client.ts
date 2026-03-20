@@ -1,7 +1,5 @@
-import type {
-  ApiResponse,
-  ApiErrorException,
-} from "./types";
+import type { ApiResponse } from "./types";
+import { ApiErrorException } from "./types";
 
 const API_TIMEOUT = 8000; // 8 seconds
 

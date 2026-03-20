@@ -52,8 +52,16 @@ function ContainerRow({ container }: { container: ContainerInfo }) {
 
 // ─── Docker unavailable notice ─────────────────────────────────────────────
 
-function DockerUnavailableNotice({ reason }: { reason: string }) {
+function DockerUnavailableNotice({
+  reason,
+  code,
+}: {
+  reason: string;
+  code: string | null;
+}) {
   const { t } = useTranslation();
+  const showSocketHint = code === "SOCKET_NOT_FOUND";
+
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-2">
@@ -64,19 +72,23 @@ function DockerUnavailableNotice({ reason }: { reason: string }) {
         />
         <p className="text-sm text-amber-400">{reason}</p>
       </div>
-      <p className="text-xs text-slate-500">
-        {t("docker.socketHint")}{" "}
-        <code className="bg-slate-800 px-1 rounded text-slate-300">
-          docker-compose.yml
-        </code>
-        :
-      </p>
-      <pre className="text-xs bg-slate-800 text-slate-300 rounded px-3 py-2 overflow-x-auto">
-        {"<HOST_DOCKER_SOCKET>:/var/run/docker.sock:ro"}
-      </pre>
-      <p className="text-xs text-slate-500">
-        {t("docker.socketHintReplace", { HOST_DOCKER_SOCKET: "<HOST_DOCKER_SOCKET>" })}
-      </p>
+      {showSocketHint && (
+        <>
+          <p className="text-xs text-slate-500">
+            {t("docker.socketHint")}{" "}
+            <code className="bg-slate-800 px-1 rounded text-slate-300">
+              docker-compose.yml
+            </code>
+            :
+          </p>
+          <pre className="text-xs bg-slate-800 text-slate-300 rounded px-3 py-2 overflow-x-auto">
+            {"<HOST_DOCKER_SOCKET>:/var/run/docker.sock:ro"}
+          </pre>
+          <p className="text-xs text-slate-500">
+            {t("docker.socketHintReplace", { HOST_DOCKER_SOCKET: "<HOST_DOCKER_SOCKET>" })}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -111,6 +123,7 @@ export function DockerPanel() {
       {data && !data.available && (
         <DockerUnavailableNotice
           reason={data.unavailableReason ?? "Docker not available."}
+          code={data.unavailableCode ?? null}
         />
       )}
 
