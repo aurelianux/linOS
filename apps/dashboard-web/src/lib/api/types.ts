@@ -99,6 +99,16 @@ export interface ContainersData {
  * Dashboard entity configuration.
  * Returned by GET /api/dashboard/config
  */
+/**
+ * Air quality sensor grouping for a room.
+ * Renders as a single composite card instead of individual SensorCards.
+ */
+export interface AirQualityConfig {
+  temperature: `sensor.${string}`;
+  humidity: `sensor.${string}`;
+  secondary: Array<`sensor.${string}`>;
+}
+
 export interface DashboardRoom {
   id: string;
   name: string;
@@ -106,6 +116,22 @@ export interface DashboardRoom {
   icon: string;
   /** HA entity IDs to display as individual cards */
   entities: string[];
+  /** Composite air quality sensor card config */
+  airQuality?: AirQualityConfig;
+}
+
+/**
+ * Quick toggle configuration for room lighting modes.
+ */
+export interface RoomQuickToggle {
+  roomId: string;
+  entity: `input_select.${string}`;
+}
+
+export interface QuickToggleConfig {
+  globalEntity: `input_select.${string}`;
+  modes: string[];
+  rooms: RoomQuickToggle[];
 }
 
 export interface RoborockSegment {
@@ -125,6 +151,7 @@ export interface RoborockConfig {
 export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig;
+  quickToggles?: QuickToggleConfig;
 }
 
 /**
