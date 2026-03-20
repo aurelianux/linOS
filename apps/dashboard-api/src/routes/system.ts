@@ -7,6 +7,19 @@ import { type ApiResponse } from "../middleware/errors.js";
 
 const execFileAsync = promisify(execFile);
 
+// ─── Exec error typing ───────────────────────────────────────────────────
+
+/** Shape of the error thrown by promisify(execFile) — extends Error with stdio */
+interface ExecError extends Error {
+  stderr?: string;
+  stdout?: string;
+  code?: string | number | null;
+}
+
+function isExecError(err: unknown): err is ExecError {
+  return err instanceof Error;
+}
+
 // ─── TTL Cache ─────────────────────────────────────────────────────────────
 
 interface CacheEntry<T> {
@@ -55,11 +68,20 @@ export interface ContainerInfo {
   state: string;
 }
 
+export type DockerUnavailableCode =
+  | "SOCKET_NOT_FOUND"
+  | "BINARY_NOT_FOUND"
+  | "PERMISSION_DENIED"
+  | "DAEMON_NOT_RUNNING"
+  | "UNKNOWN_ERROR";
+
 export interface ContainersData {
   available: boolean;
   containers: ContainerInfo[];
   /** Set when available is false */
   unavailableReason: string | null;
+  /** Machine-readable error code for frontend conditional rendering */
+  unavailableCode: DockerUnavailableCode | null;
 }
 
 export interface SystemVitals {
@@ -130,6 +152,7 @@ async function fetchContainers(): Promise<ContainersData> {
       containers: [],
       unavailableReason:
         "Docker socket not found at /var/run/docker.sock. Mount /var/run/docker.sock:/var/run/docker.sock:ro in the container.",
+      unavailableCode: "SOCKET_NOT_FOUND",
     };
   }
 
@@ -142,20 +165,31 @@ async function fetchContainers(): Promise<ContainersData> {
       { timeout: 5000 }
     );
     stdout = result.stdout;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+  } catch (err: unknown) {
+    // Combine message + stderr for pattern matching — execFile puts
+    // the actual Docker error output in stderr, not message.
+    const msg = isExecError(err)
+      ? `${err.message}\n${err.stderr ?? ""}`
+      : String(err);
+
     let reason: string;
+    let code: DockerUnavailableCode;
+
     if (msg.includes("ENOENT")) {
       reason = "Docker binary not found. Install Docker CLI or add it to PATH.";
+      code = "BINARY_NOT_FOUND";
     } else if (/permission denied/i.test(msg)) {
       reason =
         "Permission denied on Docker socket. Ensure the container's group_add matches the host Docker GID.";
+      code = "PERMISSION_DENIED";
     } else if (/cannot connect|is the docker daemon running/i.test(msg)) {
       reason = "Docker daemon is not running on the host.";
+      code = "DAEMON_NOT_RUNNING";
     } else {
-      reason = `Docker command failed: ${msg}`;
+      reason = `Docker command failed: ${msg.split("\n")[0] ?? msg}`;
+      code = "UNKNOWN_ERROR";
     }
-    return { available: false, containers: [], unavailableReason: reason };
+    return { available: false, containers: [], unavailableReason: reason, unavailableCode: code };
   }
 
   const containers: ContainerInfo[] = [];
@@ -179,7 +213,7 @@ async function fetchContainers(): Promise<ContainersData> {
     }
   }
 
-  return { available: true, containers, unavailableReason: null };
+  return { available: true, containers, unavailableReason: null, unavailableCode: null };
 }
 
 // ─── Router ────────────────────────────────────────────────────────────────
