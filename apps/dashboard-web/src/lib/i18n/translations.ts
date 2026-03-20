@@ -54,6 +54,23 @@ export const translations = {
 
     "lights.on": "An",
     "lights.off": "Aus",
+    "lights.brightness": "Helligkeit",
+    "lights.colorTemp": "Farbtemperatur",
+    "lights.toggleError": "Fehler beim Schalten",
+
+    "quickToggle.title": "Schnellzugriff",
+    "quickToggle.apartment": "Wohnung",
+    "quickToggle.mode.hell": "Hell",
+    "quickToggle.mode.chill": "Chill",
+    "quickToggle.mode.aus": "Aus",
+    "quickToggle.error": "Modus konnte nicht gesetzt werden",
+
+    "airQuality.title": "Luftqualität",
+    "airQuality.temperature": "Temperatur",
+    "airQuality.humidity": "Luftfeuchtigkeit",
+    "airQuality.pressure": "Luftdruck",
+    "airQuality.battery": "Batterie",
+    "airQuality.voltage": "Spannung",
 
     "roborock.title": "Staubsauger",
     "roborock.start": "Starten",
@@ -134,6 +151,23 @@ export const translations = {
 
     "lights.on": "On",
     "lights.off": "Off",
+    "lights.brightness": "Brightness",
+    "lights.colorTemp": "Color Temperature",
+    "lights.toggleError": "Failed to toggle",
+
+    "quickToggle.title": "Quick Toggles",
+    "quickToggle.apartment": "Apartment",
+    "quickToggle.mode.hell": "Bright",
+    "quickToggle.mode.chill": "Chill",
+    "quickToggle.mode.aus": "Off",
+    "quickToggle.error": "Failed to set mode",
+
+    "airQuality.title": "Air Quality",
+    "airQuality.temperature": "Temperature",
+    "airQuality.humidity": "Humidity",
+    "airQuality.pressure": "Pressure",
+    "airQuality.battery": "Battery",
+    "airQuality.voltage": "Voltage",
 
     "roborock.title": "Vacuum",
     "roborock.start": "Start",
