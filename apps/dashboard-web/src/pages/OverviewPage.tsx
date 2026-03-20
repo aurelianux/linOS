@@ -1,5 +1,7 @@
 import { ServiceStatusCard } from "../components/common/ServiceStatusCard";
 import { HaStatusCard } from "../components/ha/HaStatusCard";
+import { RoborockQuickPanel } from "../components/panels/RoborockQuickPanel";
+import { CardErrorBoundary } from "../components/common/CardErrorBoundary";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -15,6 +17,12 @@ export function OverviewPage() {
         <h2 className="text-3xl font-bold text-slate-100 mb-2">{t("overview.title")}</h2>
         <p className="text-slate-400">{t("overview.subtitle")}</p>
       </div>
+
+      {HA_CONFIGURED && (
+        <CardErrorBoundary>
+          <RoborockQuickPanel />
+        </CardErrorBoundary>
+      )}
 
       <ServiceStatusCard />
 
