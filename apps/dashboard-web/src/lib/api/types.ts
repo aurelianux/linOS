@@ -99,8 +99,23 @@ export interface DashboardRoom {
   entities: string[];
 }
 
+export interface RoborockSegment {
+  id: number;
+  roomId: string;
+  defaultSelected: boolean;
+}
+
+export interface RoborockConfig {
+  entityId: string;
+  segments: RoborockSegment[];
+  defaultFanPower: number;
+  defaultWaterBoxMode: number;
+  defaultCleaningMode: "vacuum" | "vacuum_and_mop";
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
+  roborock?: RoborockConfig;
 }
 
 /**

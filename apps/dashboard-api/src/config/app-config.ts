@@ -59,8 +59,23 @@ export interface DashboardRoom {
   entities: string[];
 }
 
+export interface RoborockSegment {
+  id: number;
+  roomId: string;
+  defaultSelected: boolean;
+}
+
+export interface RoborockConfig {
+  entityId: string;
+  segments: RoborockSegment[];
+  defaultFanPower: number;
+  defaultWaterBoxMode: number;
+  defaultCleaningMode: "vacuum" | "vacuum_and_mop";
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
+  roborock?: RoborockConfig | undefined;
 }
 
 const dashboardRoomSchema = z.object({
@@ -70,8 +85,23 @@ const dashboardRoomSchema = z.object({
   entities: z.array(z.string().min(1)).default([]),
 });
 
+const roborockSegmentSchema = z.object({
+  id: z.number().int().positive(),
+  roomId: z.string().min(1),
+  defaultSelected: z.boolean(),
+});
+
+const roborockConfigSchema = z.object({
+  entityId: z.string().min(1),
+  segments: z.array(roborockSegmentSchema).min(1),
+  defaultFanPower: z.number().int(),
+  defaultWaterBoxMode: z.number().int(),
+  defaultCleaningMode: z.enum(["vacuum", "vacuum_and_mop"]),
+});
+
 const dashboardConfigSchema = z.object({
   rooms: z.array(dashboardRoomSchema),
+  roborock: roborockConfigSchema.optional(),
 });
 
 /**

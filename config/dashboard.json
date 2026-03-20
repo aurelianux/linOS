@@ -55,5 +55,18 @@
       "icon": "mdiShower",
       "entities": []
     }
-  ]
+  ],
+  "roborock": {
+    "entityId": "vacuum.s7_max_ultra",
+    "segments": [
+      { "id": 16, "roomId": "wohnzimmer", "defaultSelected": true },
+      { "id": 17, "roomId": "flur", "defaultSelected": true },
+      { "id": 18, "roomId": "kueche", "defaultSelected": false },
+      { "id": 19, "roomId": "badezimmer", "defaultSelected": false },
+      { "id": 20, "roomId": "schlafzimmer", "defaultSelected": false }
+    ],
+    "defaultFanPower": 103,
+    "defaultWaterBoxMode": 203,
+    "defaultCleaningMode": "vacuum_and_mop"
+  }
 }
