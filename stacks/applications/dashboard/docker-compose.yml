@@ -28,8 +28,10 @@ services:
       PORT: ${DASHBOARD_API_PORT:-4001}
       NODE_ENV: production
       SERVICES_CONFIG_PATH: /app/config/services.json   # ← Pfad IM Container
+      DASHBOARD_CONFIG_PATH: /app/config/dashboard.json
     volumes:
       - ../../../config/services.json:/app/config/services.json:ro   # ← Mount
+      - ../../../config/dashboard.json:/app/config/dashboard.json:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     networks:

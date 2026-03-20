@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { haIconToMdiPath } from "@/lib/ha/icons";
 import { cn } from "@/lib/utils";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import type { ChangeEvent } from "react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
