@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { mdiHome, mdiChevronDown, mdiChevronUp } from "@mdi/js";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { getCardForDomain } from "./domainCards";

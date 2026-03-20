@@ -1,5 +1,5 @@
 import { mdiServer } from "@mdi/js";
-import Icon from "@mdi/react";
+import { Icon } from "@/components/ui/icon";
 import { Panel } from "@/components/common/Panel";
 import { LoadingState } from "@/components/common/LoadingState";
 import { useSystemInfo } from "@/hooks/useSystemInfo";
