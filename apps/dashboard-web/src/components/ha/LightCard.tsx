@@ -16,6 +16,8 @@ interface LightCardProps {
 const CARD_HEIGHT = 140;
 const DRAG_THRESHOLD = 8;
 const DIRECTION_LOCK_THRESHOLD = 12;
+const COLOR_DOT_SIZE = 32;
+const COLOR_DOT_GAP = 12;
 
 type GestureDirection = "none" | "vertical" | "left" | "right";
 
@@ -33,6 +35,31 @@ function getLightCss(
 ): string | undefined {
   if (!isOn || !rgbColor || rgbColor.length < 3) return undefined;
   return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
+}
+
+/** Map a clientX to the nearest dot index based on centered dot layout */
+function clientXToDotIndex(
+  clientX: number,
+  cardRect: DOMRect,
+  dotCount: number
+): number {
+  const totalDotsWidth =
+    dotCount * COLOR_DOT_SIZE + (dotCount - 1) * COLOR_DOT_GAP;
+  const offsetLeft = (cardRect.width - totalDotsWidth) / 2;
+  const relativeX = clientX - cardRect.left - offsetLeft;
+
+  // Find which dot center is closest
+  let closestIdx = 0;
+  let closestDist = Infinity;
+  for (let i = 0; i < dotCount; i++) {
+    const dotCenter = i * (COLOR_DOT_SIZE + COLOR_DOT_GAP) + COLOR_DOT_SIZE / 2;
+    const dist = Math.abs(relativeX - dotCenter);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closestIdx = i;
+    }
+  }
+  return closestIdx;
 }
 
 export function LightCard({ entityId }: LightCardProps) {
@@ -53,7 +80,7 @@ export function LightCard({ entityId }: LightCardProps) {
   const startX = useRef(0);
   const startBrightness = useRef(0);
   const directionLocked = useRef<GestureDirection>("none");
-  const pointerId = useRef<number | null>(null);
+  const activePointerId = useRef<number | null>(null);
 
   const isUnavailable =
     !entity ||
@@ -68,7 +95,7 @@ export function LightCard({ entityId }: LightCardProps) {
 
   const displayBrightness =
     dragBrightness !== null ? dragBrightness : brightnessToPercent(brightness);
-  const fillPercent = isOn ? displayBrightness : 0;
+  const fillPercent = isOn || dragBrightness !== null ? displayBrightness : 0;
   const lightColor = getLightCss(rgbColor, isOn);
 
   // -- Service calls --------------------------------------------------------
@@ -113,16 +140,7 @@ export function LightCard({ entityId }: LightCardProps) {
     }
   }, [entity, isUnavailable, entityId]);
 
-  const handleToggle = useCallback(async () => {
-    if (!entity || isUnavailable) return;
-    try {
-      await entity.service.toggle();
-    } catch (err: unknown) {
-      console.error("Failed to toggle:", entityId, err);
-    }
-  }, [entity, isUnavailable, entityId]);
-
-  // -- Reset on unmount / escape key -----------------------------------------
+  // -- Reset ----------------------------------------------------------------
 
   const resetGesture = useCallback(() => {
     setIsPressed(false);
@@ -130,7 +148,7 @@ export function LightCard({ entityId }: LightCardProps) {
     setDragBrightness(null);
     setColorIndex(null);
     directionLocked.current = "none";
-    pointerId.current = null;
+    activePointerId.current = null;
   }, []);
 
   useEffect(() => {
@@ -146,29 +164,27 @@ export function LightCard({ entityId }: LightCardProps) {
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (isUnavailable) return;
-      // Ignore if a preset button was clicked
-      if ((e.target as HTMLElement).closest("[data-preset]")) return;
 
       e.preventDefault();
       const el = cardRef.current;
       if (el) el.setPointerCapture(e.pointerId);
 
-      pointerId.current = e.pointerId;
+      activePointerId.current = e.pointerId;
       startY.current = e.clientY;
       startX.current = e.clientX;
-      startBrightness.current = brightnessToPercent(brightness);
+      startBrightness.current = isOn ? brightnessToPercent(brightness) : 0;
       directionLocked.current = "none";
       setIsPressed(true);
       setDirection("none");
       setDragBrightness(null);
       setColorIndex(null);
     },
-    [isUnavailable, brightness]
+    [isUnavailable, brightness, isOn]
   );
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (isUnavailable || pointerId.current === null) return;
+      if (isUnavailable || activePointerId.current === null) return;
 
       const dy = startY.current - e.clientY;
       const dx = e.clientX - startX.current;
@@ -185,7 +201,7 @@ export function LightCard({ entityId }: LightCardProps) {
             directionLocked.current = "vertical";
           } else if (dx < -DIRECTION_LOCK_THRESHOLD) {
             directionLocked.current = "left";
-          } else if (dx > DIRECTION_LOCK_THRESHOLD) {
+          } else if (dx > DIRECTION_LOCK_THRESHOLD && isOn) {
             directionLocked.current = "right";
           }
           setDirection(directionLocked.current);
@@ -193,22 +209,19 @@ export function LightCard({ entityId }: LightCardProps) {
         return;
       }
 
-      if (directionLocked.current === "vertical" && isOn) {
+      if (directionLocked.current === "vertical") {
+        // Works whether light is on or off — dragging up from off turns it on
         const sensitivity = CARD_HEIGHT;
         const delta = (dy / sensitivity) * 100;
         const newPercent = Math.max(1, Math.min(100, startBrightness.current + delta));
         setDragBrightness(Math.round(newPercent));
       } else if (directionLocked.current === "left" && presets.length > 0) {
-        // Map horizontal position to preset index (from center to left edge)
         const el = cardRef.current;
         if (!el) return;
         const rect = el.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const ratio = Math.max(0, Math.min(1, x / rect.width));
-        const idx = Math.min(presets.length - 1, Math.floor(ratio * presets.length));
+        const idx = clientXToDotIndex(e.clientX, rect, presets.length);
         setColorIndex(idx);
       }
-      // "right" direction: no continuous tracking needed, just visual confirmation
     },
     [isUnavailable, isOn, presets.length]
   );
@@ -226,14 +239,12 @@ export function LightCard({ entityId }: LightCardProps) {
         applyPreset(presets[colorIndex]);
       } else if (dir === "right" && isOn) {
         turnOff();
-      } else if (dir === "none") {
-        // Simple tap → toggle
-        handleToggle();
       }
+      // No action on simple tap (dir === "none") — no toggle
 
       resetGesture();
     },
-    [dragBrightness, colorIndex, presets, isOn, setBrightness, applyPreset, turnOff, handleToggle, resetGesture]
+    [dragBrightness, colorIndex, presets, isOn, setBrightness, applyPreset, turnOff, resetGesture]
   );
 
   const onPointerCancel = useCallback(
@@ -245,7 +256,7 @@ export function LightCard({ entityId }: LightCardProps) {
     [resetGesture]
   );
 
-  // -- Directional hints UI --------------------------------------------------
+  // -- Derived UI state -----------------------------------------------------
 
   const showHints = isPressed && direction === "none";
   const showBrightness = direction === "vertical";
@@ -280,7 +291,7 @@ export function LightCard({ entityId }: LightCardProps) {
         }}
       />
 
-      {/* Directional hint arrows — appear on press, fade out when direction is locked */}
+      {/* Directional hint arrows — appear on press */}
       <div
         className={cn(
           "absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-200 pointer-events-none",
@@ -289,22 +300,22 @@ export function LightCard({ entityId }: LightCardProps) {
       >
         <div className="relative w-full h-full">
           {/* Up: brightness up */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2">
             <Icon path={mdiArrowUp} size={0.6} className="text-slate-400 animate-pulse" />
           </div>
           {/* Down: brightness down */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
             <Icon path={mdiArrowDown} size={0.6} className="text-slate-400 animate-pulse" />
           </div>
           {/* Left: color */}
           {presets.length > 0 && (
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <div className="absolute left-2 top-1/2 -translate-y-1/2">
               <Icon path={mdiPalette} size={0.6} className="text-slate-400 animate-pulse" />
             </div>
           )}
-          {/* Right: power off */}
+          {/* Right: power off (only when on) */}
           {isOn && (
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
               <Icon path={mdiPower} size={0.6} className="text-slate-400 animate-pulse" />
             </div>
           )}
@@ -314,23 +325,28 @@ export function LightCard({ entityId }: LightCardProps) {
       {/* Color picker overlay */}
       <div
         className={cn(
-          "absolute inset-0 z-20 flex items-center justify-center gap-3 bg-slate-950/85 rounded-lg transition-opacity duration-200",
+          "absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 rounded-lg transition-opacity duration-200",
           showColorPicker ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        {presets.map((preset, idx) => (
-          <div
-            key={preset.id}
-            data-preset={preset.id}
-            className={cn(
-              "w-8 h-8 rounded-full border-2 transition-all duration-150",
-              colorIndex === idx
-                ? "scale-150 border-slate-100 shadow-lg"
-                : "border-slate-600 scale-100"
-            )}
-            style={{ backgroundColor: preset.displayColor }}
-          />
-        ))}
+        <div className="flex items-center" style={{ gap: COLOR_DOT_GAP }}>
+          {presets.map((preset, idx) => (
+            <div
+              key={preset.id}
+              className={cn(
+                "rounded-full border-2 transition-all duration-150",
+                colorIndex === idx
+                  ? "scale-150 border-slate-100 shadow-lg"
+                  : "border-slate-600 scale-100"
+              )}
+              style={{
+                width: COLOR_DOT_SIZE,
+                height: COLOR_DOT_SIZE,
+                backgroundColor: preset.displayColor,
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Power off overlay */}
@@ -346,7 +362,7 @@ export function LightCard({ entityId }: LightCardProps) {
         </div>
       </div>
 
-      {/* Brightness drag overlay */}
+      {/* Brightness drag overlay — large centered percentage */}
       <div
         className={cn(
           "absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-200 pointer-events-none",
@@ -358,15 +374,14 @@ export function LightCard({ entityId }: LightCardProps) {
         </span>
       </div>
 
-      {/* Content */}
+      {/* Content — name + brightness label */}
       <div
         className={cn(
-          "relative z-10 h-full flex flex-col justify-between p-2.5 transition-opacity duration-200",
+          "relative z-10 h-full flex flex-col justify-end p-2.5 transition-opacity duration-200",
           (showColorPicker || showPowerOff) && "opacity-0"
         )}
       >
-        {/* Top: name + brightness */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-end justify-between">
           <span
             className={cn(
               "text-sm font-medium truncate transition-colors duration-300",
@@ -385,31 +400,6 @@ export function LightCard({ entityId }: LightCardProps) {
             {brightnessToPercent(brightness)}%
           </span>
         </div>
-
-        {/* Spacer */}
-        <div />
-
-        {/* Bottom: color presets as small dots (clickable without gesture) */}
-        {isOn && presets.length > 0 ? (
-          <div className="flex items-center gap-2">
-            {presets.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                data-preset={preset.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  applyPreset(preset);
-                }}
-                className="w-3.5 h-3.5 rounded-full border border-slate-600 hover:border-slate-300 hover:scale-150 active:scale-100 transition-all duration-150"
-                style={{ backgroundColor: preset.displayColor }}
-                title={t(`lights.preset.${preset.id}` as Parameters<typeof t>[0])}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="h-3.5" />
-        )}
 
         {isUnavailable && (
           <p className="text-xs text-slate-500 mt-0.5">
