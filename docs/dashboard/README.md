@@ -3,8 +3,8 @@
 ## Overview
 
 The dashboard is a full-stack application built with:
-- **Frontend**: React + TypeScript + Vite (port 4000)
-- **Backend**: Express + TypeScript (port 4001)
+- **Frontend**: React 19 + TypeScript + Vite + @hakit/core + Zustand (port 4000)
+- **Backend**: Express 5 + TypeScript + Zod + Pino (port 4001)
 - **Manager**: pnpm workspaces
 
 For exact versions, see [apps/package.json](../../apps/package.json) and individual package.json files.
@@ -38,6 +38,7 @@ pnpm -C dashboard-api dev    # Express on :4001
 | Web | http://localhost:4000 | Dashboard UI |
 | API | http://localhost:4001 | Backend API |
 | Health | http://localhost:4001/health | Liveness probe |
+| Storybook | http://localhost:6006 | Component explorer |
 
 ## Development Commands
 
@@ -54,6 +55,9 @@ pnpm build        # Compile both packages to dist/
 
 # Full workflow
 pnpm typecheck && pnpm lint && pnpm build
+
+# Storybook
+pnpm -C dashboard-web storybook
 ```
 
 ## Testing API
@@ -82,10 +86,21 @@ curl http://localhost:4001/nonexistent
 # { "ok": false, "error": { "message": "Not Found", "code": "NOT_FOUND" } }
 ```
 
+## API Routes
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/health` | GET | Liveness probe |
+| `/services` | GET | Service health status (from `config/services.json`) |
+| `/system/info` | GET | Host system information |
+| `/system/vitals` | GET | CPU/RAM usage for header metrics |
+| `/system/containers` | GET | Docker container status (via Docker Engine API socket) |
+| `/dashboard/config` | GET | Dashboard configuration (rooms, entities, quick toggles) |
+
 ## Architecture
 
-- **Frontend**: [README.md](./README.md) (or see `apps/dashboard-web/README.md`)
-- **Backend**: [API.md](./API.md) – Full backend architecture & integration guide
+- **Frontend**: [apps/dashboard-web/README.md](../../apps/dashboard-web/README.md) — component structure, HA integration, state management
+- **Backend**: [API.md](./API.md) — full backend architecture and integration guide
 - **Tech Stack**: [DECISIONS.md](./DECISIONS.md)
 
 ## Environment Variables
@@ -94,7 +109,7 @@ The API reads from `process.env`. For local dev, defaults are used:
 
 | Variable | Default | Usage |
 |----------|---------|-------|
-| `NODE_ENV` | `development` | Log format & error verbosity |
+| `NODE_ENV` | `development` | Log format and error verbosity |
 | `PORT` | `4001` | API server port |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `CORS_ALLOW_ORIGINS` | `http://localhost:4000,http://dashboard.lan` | CORS allowlist |
@@ -146,12 +161,4 @@ Ensure you've installed dependencies:
 pnpm install
 ```
 
-## Next Steps
-
-1. ✅ API skeleton is production-ready
-2. 📋 Frontend needs stub page extraction into components
-3. 🏠 Next: Home Assistant integration endpoints
-4. 🔐 Then: Authentication & authorization layer
-
 See [API.md](./API.md) for detailed backend documentation.
-
