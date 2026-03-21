@@ -9,7 +9,8 @@ import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { AirQualitySensorCard } from "./AirQualitySensorCard";
 import { QuickToggle } from "./QuickToggle";
-import type { DashboardRoom } from "@/lib/api/types";
+import { useDashboardConfig } from "@/hooks/useDashboardConfig";
+import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 
 interface DashboardRoomCardProps {
   room: DashboardRoom;
@@ -30,8 +31,10 @@ export function DashboardRoomCard({
   quickToggleEntity,
 }: DashboardRoomCardProps) {
   const { t } = useTranslation();
+  const { data: config } = useDashboardConfig();
   const [expanded, setExpanded] = useState(true);
   const iconPath = resolveDashboardIcon(room.icon);
+  const quickToggles = config?.quickToggles as QuickToggleConfig | undefined;
 
   const airQualityIds = getAirQualityEntityIds(room);
   const filteredEntities = room.entities.filter(
@@ -78,6 +81,7 @@ export function DashboardRoomCard({
                 <QuickToggle
                   entityId={quickToggleEntity}
                   label={room.name}
+                  modes={quickToggles?.modes}
                 />
               </CardErrorBoundary>
             )}

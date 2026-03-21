@@ -32,7 +32,7 @@ export function QuickToggleBar({
       <h3 className="text-sm font-medium text-slate-400">
         {t("quickToggle.title")}
       </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
         {showGlobal && (
           <CardErrorBoundary entityId={quickToggles.globalEntity}>
             <QuickToggle
