@@ -1,11 +1,11 @@
 import { useEntity, useHass } from "@hakit/core";
-import { mdiThermometer, mdiMinus, mdiPlus } from "@mdi/js";
+import { mdiThermometer } from "@mdi/js";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { haIconToMdiPath } from "@/lib/ha/icons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ClimateCardProps {
   entityId: `climate.${string}`;
@@ -20,10 +20,16 @@ const HVAC_COLORS: Record<string, string> = {
   idle: "text-slate-400",
 };
 
+const TEMP_PRESETS = [8, 18, 21, 23] as const;
+const PENDING_TIMEOUT_MS = 15_000;
+
 export function ClimateCard({ entityId }: ClimateCardProps) {
   const entity = useEntity(entityId, { returnNullIfNotFound: true });
   const { helpers } = useHass();
   const { t } = useTranslation();
+
+  const [pendingTemp, setPendingTemp] = useState<number | null>(null);
+  const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isUnavailable =
     !entity ||
@@ -40,30 +46,57 @@ export function ClimateCard({ entityId }: ClimateCardProps) {
     | undefined;
   const targetTemp = entity?.attributes.temperature as number | undefined;
   const hvacAction = (entity?.attributes.hvac_action as string) ?? entity?.state ?? "off";
-  const minTemp = (entity?.attributes.min_temp as number) ?? 5;
-  const maxTemp = (entity?.attributes.max_temp as number) ?? 35;
-  const tempStep = (entity?.attributes.target_temp_step as number) ?? 0.5;
 
   const colorClass = HVAC_COLORS[hvacAction] ?? "text-slate-400";
   const isHeating = hvacAction === "heating";
 
-  const adjustTemp = useCallback(
-    (delta: number) => {
-      if (isUnavailable || targetTemp === undefined) return;
-      const newTemp = Math.max(minTemp, Math.min(maxTemp, targetTemp + delta));
+  // Clear pending when HA confirms the target temperature
+  useEffect(() => {
+    if (pendingTemp !== null && targetTemp === pendingTemp) {
+      setPendingTemp(null);
+      if (pendingTimer.current) {
+        clearTimeout(pendingTimer.current);
+        pendingTimer.current = null;
+      }
+    }
+  }, [targetTemp, pendingTemp]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingTimer.current) clearTimeout(pendingTimer.current);
+    };
+  }, []);
+
+  const setTemp = useCallback(
+    (temp: number) => {
+      if (isUnavailable) return;
+
+      setPendingTemp(temp);
+      // Auto-clear pending after timeout in case HA never confirms
+      if (pendingTimer.current) clearTimeout(pendingTimer.current);
+      pendingTimer.current = setTimeout(() => {
+        setPendingTemp(null);
+        pendingTimer.current = null;
+      }, PENDING_TIMEOUT_MS);
+
       try {
         helpers.callService({
           domain: "climate",
           service: "set_temperature",
-          serviceData: { temperature: newTemp },
+          serviceData: { temperature: temp },
           target: { entity_id: entityId },
         });
       } catch (err: unknown) {
         console.error("Failed to set temperature:", entityId, err);
+        setPendingTemp(null);
       }
     },
-    [isUnavailable, targetTemp, minTemp, maxTemp, entityId, helpers]
+    [isUnavailable, entityId, helpers]
   );
+
+  const displayTarget = pendingTemp ?? targetTemp;
+  const isPending = pendingTemp !== null && pendingTemp !== targetTemp;
 
   return (
     <Card
@@ -99,8 +132,8 @@ export function ClimateCard({ entityId }: ClimateCardProps) {
           </span>
         </div>
 
-        {/* Center: current temperature large */}
-        <div className="flex items-center justify-center">
+        {/* Center: current temperature + target indicator */}
+        <div className="flex items-center justify-center gap-3">
           {currentTemp !== undefined ? (
             <span className={cn("text-3xl font-semibold tabular-nums transition-colors duration-300", colorClass)}>
               {currentTemp}
@@ -109,43 +142,44 @@ export function ClimateCard({ entityId }: ClimateCardProps) {
           ) : (
             <span className="text-xl text-slate-500">–</span>
           )}
+          {displayTarget !== undefined && (
+            <span className={cn(
+              "text-sm tabular-nums transition-all duration-300",
+              isPending ? "text-amber-400 animate-pulse" : "text-slate-500"
+            )}>
+              → {displayTarget}°
+            </span>
+          )}
         </div>
 
-        {/* Footer: target temp controls */}
-        <div className="flex items-center justify-between">
-          {targetTemp !== undefined && !isUnavailable ? (
-            <>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  adjustTemp(-tempStep);
-                }}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 flex items-center justify-center transition-colors"
-                aria-label={`${t("climate.target")} -${tempStep}°`}
-              >
-                <Icon path={mdiMinus} size={0.7} className="text-slate-300" />
-              </button>
-              <span className="text-sm text-slate-400 tabular-nums">
-                {t("climate.target")}: {targetTemp}°
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  adjustTemp(tempStep);
-                }}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 flex items-center justify-center transition-colors"
-                aria-label={`${t("climate.target")} +${tempStep}°`}
-              >
-                <Icon path={mdiPlus} size={0.7} className="text-slate-300" />
-              </button>
-            </>
+        {/* Footer: temperature presets */}
+        <div className="flex items-center justify-between gap-1">
+          {!isUnavailable ? (
+            TEMP_PRESETS.map((temp) => {
+              const isActive = displayTarget === temp;
+              return (
+                <button
+                  key={temp}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTemp(temp);
+                  }}
+                  className={cn(
+                    "flex-1 py-1 rounded-md text-xs font-medium tabular-nums",
+                    "transition-all duration-200",
+                    isActive
+                      ? "bg-amber-400 text-slate-950 shadow-sm"
+                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                  )}
+                >
+                  {temp}°
+                </button>
+              );
+            })
           ) : (
             <span className="text-xs text-slate-500 w-full text-center">
-              {isUnavailable
-                ? t("entity.unavailable")
-                : entity?.state ?? "–"}
+              {t("entity.unavailable")}
             </span>
           )}
         </div>
