@@ -24,6 +24,42 @@ input_select:
     initial: chill
     icon: mdi:lightbulb-multiple
 
+  lighting_mode_wohnzimmer:
+    name: Lichtmodus Wohnzimmer
+    options:
+      - hell
+      - chill
+      - aus
+    initial: chill
+    icon: mdi:lightbulb-group
+
+  lighting_mode_kueche:
+    name: Lichtmodus Küche
+    options:
+      - hell
+      - chill
+      - aus
+    initial: chill
+    icon: mdi:lightbulb-group
+
+  lighting_mode_schlafzimmer:
+    name: Lichtmodus Schlafzimmer
+    options:
+      - hell
+      - chill
+      - aus
+    initial: chill
+    icon: mdi:lightbulb-group
+
+  lighting_mode_flur:
+    name: Lichtmodus Flur
+    options:
+      - hell
+      - chill
+      - aus
+    initial: chill
+    icon: mdi:lightbulb-group
+
 input_boolean:
   dog_is_home:
     name: Charlie zuhause
@@ -141,6 +177,20 @@ scene:
         state: "off"
         brightness: 60
         color_temp: 380
+
+  - id: sz_wohnzimmer_aus
+    name: Wohnzimmer Aus
+    entities:
+      light.bidschirm:
+        state: "off"
+      light.links:
+        state: "off"
+      light.rechts:
+        state: "off"
+      light.notenschlussel:
+        state: "off"
+      light.klavier:
+        state: "off"
 
   - id: sz_kuche_aus
     name: Küche Aus
@@ -264,11 +314,21 @@ script:
         data:
           option: "{{ mode }}"
 
-  # Lichtmodus -> passende Szenen
+  # Lichtmodus -> passende Szenen + sync per-room selectors
   apply_lighting_mode:
     alias: Lichtmodus anwenden
     mode: restart
     sequence:
+      # Sync per-room selectors to match global mode
+      - service: input_select.select_option
+        target:
+          entity_id:
+            - input_select.lighting_mode_wohnzimmer
+            - input_select.lighting_mode_kueche
+            - input_select.lighting_mode_schlafzimmer
+            - input_select.lighting_mode_flur
+        data:
+          option: "{{ states('input_select.lighting_mode') }}"
       - choose:
           - conditions:
               - condition: state
@@ -302,12 +362,10 @@ script:
               - service: scene.turn_on
                 target:
                   entity_id:
+                    - scene.wohnzimmer_aus
                     - scene.kuche_aus
                     - scene.flur_aus
                     - scene.schlafzimmer_aus
-              - service: light.turn_off
-                target:
-                  entity_id: group.lights_wohnzimmer
 
   wohnung_home:
     alias: Wohnung – Home
@@ -423,8 +481,68 @@ script:
       - service: climate.set_temperature
         target:
           entity_id: group.thermostats_all
-        data:   
+        data:
           temperature: 22
+
+  # Licht-Farbvoreinstellung auf ein bestimmtes Licht anwenden
+  apply_light_color_preset:
+    alias: Licht-Farbvoreinstellung anwenden
+    mode: parallel
+    max: 10
+    fields:
+      target_light:
+        description: Entity-ID des Lichts
+        example: light.bidschirm
+      preset:
+        description: "warmweiss / neutral / kaltweiss / orange / blau"
+        example: warmweiss
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ preset == 'warmweiss' }}"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: "{{ target_light }}"
+                data:
+                  color_temp: 370
+          - conditions:
+              - condition: template
+                value_template: "{{ preset == 'neutral' }}"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: "{{ target_light }}"
+                data:
+                  color_temp: 250
+          - conditions:
+              - condition: template
+                value_template: "{{ preset == 'kaltweiss' }}"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: "{{ target_light }}"
+                data:
+                  color_temp: 153
+          - conditions:
+              - condition: template
+                value_template: "{{ preset == 'orange' }}"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: "{{ target_light }}"
+                data:
+                  hs_color: [30, 90]
+          - conditions:
+              - condition: template
+                value_template: "{{ preset == 'blau' }}"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: "{{ target_light }}"
+                data:
+                  hs_color: [220, 60]
 
 ########################################
 # AUTOMATIONS (Presence/Webhooks -> set mode, Router führt aus)
@@ -616,3 +734,139 @@ automation:
           mode: hell
       - service: script.apply_lighting_mode
     mode: single
+
+  ########################################
+  # Per-Room Lighting Mode Automations
+  ########################################
+
+  - id: auto_lighting_mode_wohnzimmer
+    alias: Lichtmodus Wohnzimmer anwenden
+    trigger:
+      - platform: state
+        entity_id: input_select.lighting_mode_wohnzimmer
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_wohnzimmer
+                state: "hell"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.wohnzimmer_hell
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_wohnzimmer
+                state: "chill"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.wohnzimmer_chill
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_wohnzimmer
+                state: "aus"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.wohnzimmer_aus
+    mode: restart
+
+  - id: auto_lighting_mode_kueche
+    alias: Lichtmodus Küche anwenden
+    trigger:
+      - platform: state
+        entity_id: input_select.lighting_mode_kueche
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_kueche
+                state: "hell"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.kuche_hell
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_kueche
+                state: "chill"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.kuche_chill
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_kueche
+                state: "aus"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.kuche_aus
+    mode: restart
+
+  - id: auto_lighting_mode_schlafzimmer
+    alias: Lichtmodus Schlafzimmer anwenden
+    trigger:
+      - platform: state
+        entity_id: input_select.lighting_mode_schlafzimmer
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_schlafzimmer
+                state: "hell"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.schlafzimmer_hell
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_schlafzimmer
+                state: "chill"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.schlafzimmer_chill
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_schlafzimmer
+                state: "aus"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.schlafzimmer_aus
+    mode: restart
+
+  - id: auto_lighting_mode_flur
+    alias: Lichtmodus Flur anwenden
+    trigger:
+      - platform: state
+        entity_id: input_select.lighting_mode_flur
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_flur
+                state: "hell"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.flur_hell
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_flur
+                state: "chill"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.flur_chill
+          - conditions:
+              - condition: state
+                entity_id: input_select.lighting_mode_flur
+                state: "aus"
+            sequence:
+              - service: scene.turn_on
+                target:
+                  entity_id: scene.flur_aus
+    mode: restart

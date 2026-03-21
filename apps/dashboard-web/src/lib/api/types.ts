@@ -99,6 +99,16 @@ export interface ContainersData {
  * Dashboard entity configuration.
  * Returned by GET /api/dashboard/config
  */
+/**
+ * Air quality sensor grouping for a room.
+ * Renders as a single composite card instead of individual SensorCards.
+ */
+export interface AirQualityConfig {
+  temperature: `sensor.${string}`;
+  humidity: `sensor.${string}`;
+  secondary: Array<`sensor.${string}`>;
+}
+
 export interface DashboardRoom {
   id: string;
   name: string;
@@ -106,10 +116,56 @@ export interface DashboardRoom {
   icon: string;
   /** HA entity IDs to display as individual cards */
   entities: string[];
+  /** Composite air quality sensor card config */
+  airQuality?: AirQualityConfig;
+}
+
+/**
+ * Quick toggle configuration for room lighting modes.
+ */
+export interface RoomQuickToggle {
+  roomId: string;
+  entity: `input_select.${string}`;
+}
+
+export interface QuickToggleConfig {
+  globalEntity: `input_select.${string}`;
+  modes: string[];
+  rooms: RoomQuickToggle[];
+}
+
+/**
+ * Light color preset.
+ * displayColor is for the UI indicator only.
+ * Either colorTemp (mireds) or hsColor ([hue, saturation]) defines the actual light value.
+ */
+export interface LightColorPreset {
+  id: string;
+  label: string;
+  displayColor: string;
+  colorTemp?: number;
+  hsColor?: [number, number];
+}
+
+export interface RoborockSegment {
+  id: number;
+  roomId: string;
+  defaultSelected: boolean;
+}
+
+export interface RoborockConfig {
+  entityId: string;
+  segments: RoborockSegment[];
+  defaultFanPower: number;
+  defaultWaterBoxMode: number;
+  defaultCleaningMode: "vacuum" | "vacuum_and_mop";
 }
 
 export interface DashboardConfig {
   rooms: DashboardRoom[];
+  roborock?: RoborockConfig;
+  quickToggles?: QuickToggleConfig;
+  lightColorPresets?: LightColorPreset[];
 }
 
 /**

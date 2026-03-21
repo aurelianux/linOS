@@ -50,6 +50,12 @@ export function loadAppConfig(configPath?: string): AppConfig {
 
 // ─── Dashboard entity config ─────────────────────────────────────────────────
 
+export interface AirQualityConfig {
+  temperature: string;
+  humidity: string;
+  secondary: string[];
+}
+
 export interface DashboardRoom {
   id: string;
   name: string;
@@ -57,21 +63,101 @@ export interface DashboardRoom {
   icon: string;
   /** HA entity IDs to display as individual cards */
   entities: string[];
+  airQuality?: AirQualityConfig | undefined;
+}
+
+export interface RoomQuickToggle {
+  roomId: string;
+  entity: string;
+}
+
+export interface QuickToggleConfig {
+  globalEntity: string;
+  modes: string[];
+  rooms: RoomQuickToggle[];
+}
+
+export interface LightColorPreset {
+  id: string;
+  label: string;
+  displayColor: string;
+  colorTemp?: number | undefined;
+  hsColor?: [number, number] | undefined;
+}
+
+export interface RoborockSegment {
+  id: number;
+  roomId: string;
+  defaultSelected: boolean;
+}
+
+export interface RoborockConfig {
+  entityId: string;
+  segments: RoborockSegment[];
+  defaultFanPower: number;
+  defaultWaterBoxMode: number;
+  defaultCleaningMode: "vacuum" | "vacuum_and_mop";
 }
 
 export interface DashboardConfig {
   rooms: DashboardRoom[];
+  roborock?: RoborockConfig | undefined;
+  quickToggles?: QuickToggleConfig | undefined;
+  lightColorPresets?: LightColorPreset[] | undefined;
 }
+
+const airQualitySchema = z.object({
+  temperature: z.string().min(1),
+  humidity: z.string().min(1),
+  secondary: z.array(z.string().min(1)).default([]),
+});
 
 const dashboardRoomSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   icon: z.string().min(1),
   entities: z.array(z.string().min(1)).default([]),
+  airQuality: airQualitySchema.optional(),
+});
+
+const roomQuickToggleSchema = z.object({
+  roomId: z.string().min(1),
+  entity: z.string().min(1),
+});
+
+const quickToggleConfigSchema = z.object({
+  globalEntity: z.string().min(1),
+  modes: z.array(z.string().min(1)).min(1),
+  rooms: z.array(roomQuickToggleSchema),
+});
+
+const lightColorPresetSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  displayColor: z.string().min(1),
+  colorTemp: z.number().int().positive().optional(),
+  hsColor: z.tuple([z.number(), z.number()]).optional(),
+});
+
+const roborockSegmentSchema = z.object({
+  id: z.number().int().positive(),
+  roomId: z.string().min(1),
+  defaultSelected: z.boolean(),
+});
+
+const roborockConfigSchema = z.object({
+  entityId: z.string().min(1),
+  segments: z.array(roborockSegmentSchema).min(1),
+  defaultFanPower: z.number().int(),
+  defaultWaterBoxMode: z.number().int(),
+  defaultCleaningMode: z.enum(["vacuum", "vacuum_and_mop"]),
 });
 
 const dashboardConfigSchema = z.object({
   rooms: z.array(dashboardRoomSchema),
+  roborock: roborockConfigSchema.optional(),
+  quickToggles: quickToggleConfigSchema.optional(),
+  lightColorPresets: z.array(lightColorPresetSchema).optional(),
 });
 
 /**
