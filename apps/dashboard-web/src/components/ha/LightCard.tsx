@@ -2,7 +2,7 @@ import { useEntity } from "@hakit/core";
 import { mdiArrowUp, mdiArrowDown, mdiPalette, mdiPower } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
 import { Card } from "@/components/ui/card";
-import { cn, throttle } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useLightGesture } from "@/hooks/useLightGesture";
@@ -101,13 +101,6 @@ export function LightCard({ entityId }: LightCardProps) {
     [entity, isUnavailable, entityId]
   );
 
-  // Throttled version for live updates during drag
-  const liveBrightness = useRef(
-    throttle((percent: number) => {
-      commitBrightness(percent);
-    }, 150)
-  ).current;
-
   const applyColorPreset = useCallback(
     (index: number) => {
       if (!entity || isUnavailable) return;
@@ -153,7 +146,6 @@ export function LightCard({ entityId }: LightCardProps) {
     isUnavailable,
     presetCount: presets.length,
     onBrightnessCommit: commitBrightness,
-    onBrightnessLive: liveBrightness,
     onColorSelect: applyColorPreset,
     onTurnOff: turnOff,
   });

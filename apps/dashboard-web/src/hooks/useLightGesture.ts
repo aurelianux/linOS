@@ -40,7 +40,6 @@ interface UseLightGestureOptions {
   isUnavailable: boolean;
   presetCount: number;
   onBrightnessCommit: (percent: number) => void;
-  onBrightnessLive?: (percent: number) => void;
   onColorSelect?: (index: number) => void;
   onTurnOff?: () => void;
 }
@@ -67,7 +66,6 @@ export function useLightGesture({
   isUnavailable,
   presetCount,
   onBrightnessCommit,
-  onBrightnessLive,
   onColorSelect,
   onTurnOff,
 }: UseLightGestureOptions): UseLightGestureResult {
@@ -84,11 +82,8 @@ export function useLightGesture({
   const startBrightness = useRef(0);
   const directionLocked = useRef<GestureDirection>("none");
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastLiveCall = useRef(0);
 
   // Stable refs for callbacks that change frequently
-  const onBrightnessLiveRef = useRef(onBrightnessLive);
-  onBrightnessLiveRef.current = onBrightnessLive;
   const onBrightnessCommitRef = useRef(onBrightnessCommit);
   onBrightnessCommitRef.current = onBrightnessCommit;
   const onColorSelectRef = useRef(onColorSelect);
@@ -103,7 +98,6 @@ export function useLightGesture({
     setColorIndex(null);
     directionLocked.current = "none";
     activePointerId.current = null;
-    lastLiveCall.current = 0;
     if (hintTimer.current) {
       clearTimeout(hintTimer.current);
       hintTimer.current = null;
@@ -145,7 +139,6 @@ export function useLightGesture({
       startX.current = e.clientX;
       startBrightness.current = isOn ? brightnessToPercent(brightness) : 0;
       directionLocked.current = "none";
-      lastLiveCall.current = 0;
 
       setDirection("none");
       setDragBrightness(null);
@@ -215,13 +208,6 @@ export function useLightGesture({
         const newPercent = Math.max(1, Math.min(100, startBrightness.current + delta));
         const rounded = Math.round(newPercent);
         setDragBrightness(rounded);
-
-        // Throttled live brightness update
-        const now = Date.now();
-        if (onBrightnessLiveRef.current && now - lastLiveCall.current >= 150) {
-          lastLiveCall.current = now;
-          onBrightnessLiveRef.current(rounded);
-        }
       } else if (directionLocked.current === "left") {
         const dots = dotRefs.current;
         if (dots.length > 0 && dots[0]) {
