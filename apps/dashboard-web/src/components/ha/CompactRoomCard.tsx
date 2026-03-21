@@ -1,13 +1,13 @@
-import { Icon } from "@/components/ui/icon";
-import { Card, CardContent } from "@/components/ui/card";
-import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
-import { getCardForDomain } from "./domainCards";
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import { AirQualitySensorCard } from "./AirQualitySensorCard";
-import { QuickToggle } from "./QuickToggle";
+import { Card, CardContent } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
+import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { AirQualitySensorCard } from "./AirQualitySensorCard";
+import { getCardForDomain } from "./domainCards";
+import { QuickToggle } from "./QuickToggle";
 
 interface CompactRoomCardProps {
   room: DashboardRoom;
@@ -76,7 +76,7 @@ export function CompactRoomCard({
 
             {/* Entity cards in compact grid */}
             {filteredEntities.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {filteredEntities.map((entityId) => {
                   const domain = entityId.split(".")[0] ?? "";
                   const EntityCard = getCardForDomain(domain);
