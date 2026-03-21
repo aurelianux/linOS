@@ -135,13 +135,16 @@ export interface QuickToggleConfig {
 }
 
 /**
- * Light color preset for UI color dots.
- * color is display-only (hex for the dot); actual values applied by HA script.
+ * Light color preset.
+ * displayColor is for the UI indicator only.
+ * Either colorTemp (mireds) or hsColor ([hue, saturation]) defines the actual light value.
  */
 export interface LightColorPreset {
   id: string;
   label: string;
-  color: string;
+  displayColor: string;
+  colorTemp?: number;
+  hsColor?: [number, number];
 }
 
 export interface RoborockSegment {

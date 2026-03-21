@@ -64,11 +64,11 @@
     }
   ],
   "lightColorPresets": [
-    { "id": "warmweiss", "label": "Warm", "color": "#f5a623" },
-    { "id": "neutral", "label": "Neutral", "color": "#f0e6d0" },
-    { "id": "kaltweiss", "label": "Cool", "color": "#cce5ff" },
-    { "id": "orange", "label": "Orange", "color": "#ff8c00" },
-    { "id": "blau", "label": "Blue", "color": "#5b9bd5" }
+    { "id": "warmweiss", "label": "Warm", "displayColor": "#f5a623", "colorTemp": 370 },
+    { "id": "neutral", "label": "Neutral", "displayColor": "#f0e6d0", "colorTemp": 250 },
+    { "id": "kaltweiss", "label": "Cool", "displayColor": "#cce5ff", "colorTemp": 153 },
+    { "id": "orange", "label": "Orange", "displayColor": "#ff8c00", "hsColor": [30, 90] },
+    { "id": "blau", "label": "Blue", "displayColor": "#5b9bd5", "hsColor": [220, 60] }
   ],
   "quickToggles": {
     "globalEntity": "input_select.lighting_mode",
