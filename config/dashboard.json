@@ -83,11 +83,11 @@
   "roborock": {
     "entityId": "vacuum.s7_max_ultra",
     "segments": [
-      { "id": 16, "roomId": "wohnzimmer", "defaultSelected": true },
+      { "id": 16, "roomId": "kueche", "defaultSelected": false },
       { "id": 17, "roomId": "flur", "defaultSelected": true },
-      { "id": 18, "roomId": "kueche", "defaultSelected": false },
+      { "id": 18, "roomId": "schlafzimmer", "defaultSelected": false },
       { "id": 19, "roomId": "badezimmer", "defaultSelected": false },
-      { "id": 20, "roomId": "schlafzimmer", "defaultSelected": false }
+      { "id": 20, "roomId": "wohnzimmer", "defaultSelected": true }
     ],
     "defaultFanPower": 103,
     "defaultWaterBoxMode": 203,
