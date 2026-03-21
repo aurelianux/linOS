@@ -60,7 +60,16 @@
       "icon": "mdiShower",
       "entities": [
         "climate.thermostat_bad"
-      ]
+      ],
+      "airQuality": {
+        "temperature": "sensor.lufsensor_bad_temperature",
+        "humidity": "sensor.lufsensor_bad_humidity",
+        "secondary": [
+          "sensor.lufsensor_bad_pressure",
+          "sensor.lufsensor_bad_battery",
+          "sensor.lufsensor_bad_voltage"
+        ]
+      }
     }
   ],
   "lightColorPresets": [
