@@ -4,14 +4,10 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
 const navItems: Array<{ labelKey: TranslationKey; path: string }> = [
-  { labelKey: "nav.overview", path: "/" },
-  { labelKey: "nav.rooms", path: "/rooms" },
-  { labelKey: "nav.panels", path: "/panels" },
+  { labelKey: "nav.dashboard", path: "/" },
+  { labelKey: "nav.admin", path: "/admin" },
 ];
 
-/**
- * Mobile bottom navigation
- */
 export function BottomNav() {
   const { t } = useTranslation();
   return (
