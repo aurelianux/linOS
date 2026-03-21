@@ -82,7 +82,7 @@ export function SmarthomePage() {
           <h3 className="text-sm font-medium text-slate-400 mb-3">
             {t("rooms.title")}
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {roomLayout.map(({ room, spanFull }) => (
               <div
                 key={room.id}
