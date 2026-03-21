@@ -14,7 +14,7 @@ Dieses Repository geht davon aus, dass alles unter dem Ordner `stacks/` liegt:
 - `stacks/applications/`
   - `plane/` – Plane Projektmanagement
   - `service-index/` – HTML-Übersichtsseite aller Dienste (erreichbar unter `manny.lan`)
-  - `dashboard/` – linBoard Dashboard (Web + API, erreichbar unter `dashboard.lan`)
+  - `dashboard/` – linBoard Dashboard (Web + API, erreichbar unter `dashboard.manny.lan`)
 
 Runtime-Daten (Datenbanken, Logs, Caddy-ACME, Zigbee-DB usw.) sind über `.gitignore` ausgeschlossen und werden nicht committet.
 
@@ -73,7 +73,7 @@ Plane:
 
 | Skript | Beschreibung |
 |---|---|
-| `scripts/smrestart` | Alle Stacks per `docker compose up -d` neu starten (liest `config/manny-shell.json`). Log → `logs/` |
+| `scripts/smrestart` | Alle Stacks per `docker compose up -d` neu starten (liest `config/services.json`). Log → `logs/` |
 | `scripts/smstatus` | Aktuellen Container-Status anzeigen. Log → `logs/` |
 | `scripts/update_index.py` | `services.json` für den Service-Index neu generieren. |
 
