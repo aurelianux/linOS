@@ -237,15 +237,19 @@ export function useLightGesture({
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (activePointerId.current === null) return;
 
+      // Read refs BEFORE releasing capture — releasePointerCapture may
+      // synchronously fire lostpointercapture → resetGesture → clear refs
+      const dir = directionLocked.current;
+      const currentDragBrightness = dragBrightness;
+      const currentColorIndex = colorIndex;
+
       const el = cardRef.current;
       if (el) el.releasePointerCapture(e.pointerId);
 
-      const dir = directionLocked.current;
-
-      if (dir === "vertical" && dragBrightness !== null) {
-        onBrightnessCommitRef.current(dragBrightness);
-      } else if (dir === "left" && colorIndex !== null) {
-        onColorSelectRef.current?.(colorIndex);
+      if (dir === "vertical" && currentDragBrightness !== null) {
+        onBrightnessCommitRef.current(currentDragBrightness);
+      } else if (dir === "left" && currentColorIndex !== null) {
+        onColorSelectRef.current?.(currentColorIndex);
       } else if (dir === "right") {
         onTurnOffRef.current?.();
       }
