@@ -6,7 +6,7 @@ import { cn, throttle } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useLightGesture } from "@/hooks/useLightGesture";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface LightCardProps {
   entityId: `light.${string}`;
@@ -51,16 +51,51 @@ export function LightCard({ entityId }: LightCardProps) {
   const friendlyName =
     entity?.attributes.friendly_name ?? entityId.split(".")[1] ?? entityId;
 
+  // -- Optimistic brightness ------------------------------------------------
+
+  const [optimisticBrightness, setOptimisticBrightness] = useState<number | null>(null);
+  const optimisticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear optimistic value when HA confirms the brightness
+  useEffect(() => {
+    if (
+      optimisticBrightness !== null &&
+      brightnessToPercent(brightness) === optimisticBrightness
+    ) {
+      setOptimisticBrightness(null);
+      if (optimisticTimer.current) {
+        clearTimeout(optimisticTimer.current);
+        optimisticTimer.current = null;
+      }
+    }
+  }, [brightness, optimisticBrightness]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (optimisticTimer.current) clearTimeout(optimisticTimer.current);
+    };
+  }, []);
+
   // -- Service calls --------------------------------------------------------
 
   const commitBrightness = useCallback(
     (percent: number) => {
       if (!entity || isUnavailable) return;
-      const value = percentToBrightness(Math.max(1, Math.min(100, percent)));
+      const clamped = Math.max(1, Math.min(100, percent));
+      setOptimisticBrightness(clamped);
+      // Auto-clear after 5s if HA never confirms
+      if (optimisticTimer.current) clearTimeout(optimisticTimer.current);
+      optimisticTimer.current = setTimeout(() => {
+        setOptimisticBrightness(null);
+        optimisticTimer.current = null;
+      }, 5000);
+      const value = percentToBrightness(clamped);
       entity.service
         .turnOn({ serviceData: { brightness: value } })
         .catch((err: unknown) => {
           console.error("Failed to set brightness:", entityId, err);
+          setOptimisticBrightness(null);
         });
     },
     [entity, isUnavailable, entityId]
@@ -125,10 +160,15 @@ export function LightCard({ entityId }: LightCardProps) {
 
   // -- Derived values -------------------------------------------------------
 
+  const actualBrightness = brightnessToPercent(brightness);
   const displayBrightness =
-    dragBrightness !== null ? dragBrightness : brightnessToPercent(brightness);
+    dragBrightness !== null
+      ? dragBrightness
+      : optimisticBrightness ?? actualBrightness;
   const fillPercent =
-    dragBrightness !== null ? displayBrightness : isOn ? brightnessToPercent(brightness) : 0;
+    dragBrightness !== null
+      ? displayBrightness
+      : optimisticBrightness ?? (isOn ? actualBrightness : 0);
   const lightColor = getLightCss(rgbColor, isOn ?? false);
 
   const showBrightness = direction === "vertical";
@@ -164,19 +204,19 @@ export function LightCard({ entityId }: LightCardProps) {
         <div className="absolute inset-0 z-20 pointer-events-none">
           <div className="relative w-full h-full">
             <div className="absolute top-2 left-1/2 -translate-x-1/2">
-              <Icon path={mdiArrowUp} size={0.6} className="text-slate-400 animate-pulse" />
+              <Icon path={mdiArrowUp} size={0.9} className="text-slate-400 animate-pulse" />
             </div>
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-              <Icon path={mdiArrowDown} size={0.6} className="text-slate-400 animate-pulse" />
+              <Icon path={mdiArrowDown} size={0.9} className="text-slate-400 animate-pulse" />
             </div>
             {presets.length > 0 && (
               <div className="absolute left-2 top-1/2 -translate-y-1/2">
-                <Icon path={mdiPalette} size={0.6} className="text-slate-400 animate-pulse" />
+                <Icon path={mdiPalette} size={0.9} className="text-slate-400 animate-pulse" />
               </div>
             )}
             {isOn && (
               <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <Icon path={mdiPower} size={0.6} className="text-slate-400 animate-pulse" />
+                <Icon path={mdiPower} size={0.9} className="text-slate-400 animate-pulse" />
               </div>
             )}
           </div>
