@@ -1,4 +1,5 @@
 import os from "os";
+import http from "http";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { access, constants } from "fs/promises";
@@ -6,19 +7,6 @@ import { Router, type Request, type Response } from "express";
 import { type ApiResponse } from "../middleware/errors.js";
 
 const execFileAsync = promisify(execFile);
-
-// ─── Exec error typing ───────────────────────────────────────────────────
-
-/** Shape of the error thrown by promisify(execFile) — extends Error with stdio */
-interface ExecError extends Error {
-  stderr?: string;
-  stdout?: string;
-  code?: string | number | null;
-}
-
-function isExecError(err: unknown): err is ExecError {
-  return err instanceof Error;
-}
 
 // ─── TTL Cache ─────────────────────────────────────────────────────────────
 
@@ -133,11 +121,58 @@ async function getDiskInfo(): Promise<{ total: number; used: number } | null> {
   }
 }
 
+const DOCKER_SOCKET = "/var/run/docker.sock";
+
 /**
- * Run `docker ps --format '{{json .}}'` and parse running containers.
+ * Make an HTTP request to the Docker Engine API via the Unix socket.
+ * Returns the parsed JSON response body.
+ */
+function dockerApiRequest<T>(path: string, timeoutMs = 5000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      { socketPath: DOCKER_SOCKET, path, method: "GET", timeout: timeoutMs },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          const body = Buffer.concat(chunks).toString();
+          if (!res.statusCode || res.statusCode >= 400) {
+            reject(new Error(`Docker API ${res.statusCode}: ${body}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(body) as T);
+          } catch {
+            reject(new Error(`Failed to parse Docker API response: ${body.slice(0, 200)}`));
+          }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Docker API request timed out"));
+    });
+    req.end();
+  });
+}
+
+/** Raw container shape from GET /containers/json */
+interface DockerApiContainer {
+  Id: string;
+  Names: string[];
+  Image: string;
+  Status: string;
+  State: string;
+}
+
+/**
+ * Query the Docker Engine API via the Unix socket at /var/run/docker.sock.
+ *
+ * Uses GET /containers/json?all=true directly — no docker CLI binary needed.
  *
  * Returns available=false with an actionable message when Docker is not
- * reachable (socket not mounted / daemon not running / binary not found).
+ * reachable (socket not mounted / daemon not running / permission denied).
  *
  * Volume mount needed in docker-compose:
  *   /var/run/docker.sock:/var/run/docker.sock:ro
@@ -145,7 +180,7 @@ async function getDiskInfo(): Promise<{ total: number; used: number } | null> {
 async function fetchContainers(): Promise<ContainersData> {
   // Pre-check: does the socket file exist and is it readable?
   try {
-    await access("/var/run/docker.sock", constants.R_OK);
+    await access(DOCKER_SOCKET, constants.R_OK);
   } catch {
     return {
       available: false,
@@ -156,62 +191,43 @@ async function fetchContainers(): Promise<ContainersData> {
     };
   }
 
-  let stdout: string;
+  let rawContainers: DockerApiContainer[];
 
   try {
-    const result = await execFileAsync(
-      "docker",
-      ["ps", "--format", "{{json .}}"],
-      { timeout: 5000 }
+    rawContainers = await dockerApiRequest<DockerApiContainer[]>(
+      "/containers/json?all=true"
     );
-    stdout = result.stdout;
   } catch (err: unknown) {
-    // Combine message + stderr for pattern matching — execFile puts
-    // the actual Docker error output in stderr, not message.
-    const msg = isExecError(err)
-      ? `${err.message}\n${err.stderr ?? ""}`
-      : String(err);
+    const msg = err instanceof Error ? err.message : String(err);
 
     let reason: string;
     let code: DockerUnavailableCode;
 
-    if (msg.includes("ENOENT")) {
-      reason = "Docker binary not found. Install Docker CLI or add it to PATH.";
-      code = "BINARY_NOT_FOUND";
-    } else if (/permission denied/i.test(msg)) {
+    if (/permission denied|EACCES/i.test(msg)) {
       reason =
         "Permission denied on Docker socket. Ensure the container's group_add matches the host Docker GID.";
       code = "PERMISSION_DENIED";
-    } else if (/cannot connect|is the docker daemon running/i.test(msg)) {
-      reason = "Docker daemon is not running on the host.";
+    } else if (/ECONNREFUSED|ENOENT|connect/.test(msg)) {
+      reason = "Docker daemon is not running or socket is not accessible.";
+      code = "DAEMON_NOT_RUNNING";
+    } else if (/timed out/i.test(msg)) {
+      reason = "Docker API request timed out.";
       code = "DAEMON_NOT_RUNNING";
     } else {
-      reason = `Docker command failed: ${msg.split("\n")[0] ?? msg}`;
+      reason = `Docker API error: ${msg}`;
       code = "UNKNOWN_ERROR";
     }
     return { available: false, containers: [], unavailableReason: reason, unavailableCode: code };
   }
 
-  const containers: ContainerInfo[] = [];
-
-  for (const line of stdout.trim().split("\n")) {
-    if (!line.trim()) continue;
-
-    try {
-      const raw = JSON.parse(line) as Record<string, unknown>;
-      containers.push({
-        // `docker ps --format '{{json .}}'` uses uppercase "ID" for the container ID
-        id: String(raw["ID"] ?? "").slice(0, 12),
-        // Names may be prefixed with "/" — strip it
-        name: String(raw["Names"] ?? "").replace(/^\//, ""),
-        image: String(raw["Image"] ?? ""),
-        status: String(raw["Status"] ?? ""),
-        state: String(raw["State"] ?? ""),
-      });
-    } catch {
-      // Skip malformed NDJSON lines
-    }
-  }
+  const containers: ContainerInfo[] = rawContainers.map((c) => ({
+    id: c.Id.slice(0, 12),
+    // Docker API returns names prefixed with "/" — strip it
+    name: (c.Names[0] ?? "").replace(/^\//, ""),
+    image: c.Image,
+    status: c.Status,
+    state: c.State.toLowerCase(),
+  }));
 
   return { available: true, containers, unavailableReason: null, unavailableCode: null };
 }
@@ -222,7 +238,7 @@ async function fetchContainers(): Promise<ContainersData> {
  * System information router.
  *
  * GET /system/info        – Host metrics via Node.js `os` module + `df -B1 /`
- * GET /system/containers  – Running Docker containers via `docker ps`
+ * GET /system/containers  – Docker containers via Engine API socket
  *
  * Both endpoints use a 10-second TTL cache to avoid spawning a subprocess
  * on every request when the frontend polls every 30 seconds.
