@@ -4,9 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HaProvider } from "./lib/ha/provider";
 import { AppShell } from "./components/layout/AppShell";
 import { PageErrorBoundary } from "./components/common/PageErrorBoundary";
-import { OverviewPage } from "./pages/OverviewPage";
-import { RoomsPage } from "./pages/RoomsPage";
-import { PanelsPage } from "./pages/PanelsPage";
+import { SmarthomePage } from "./pages/SmarthomePage";
+import { AdminPage } from "./pages/AdminPage";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -16,9 +15,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <AppShell>
           <PageErrorBoundary>
             <Routes>
-              <Route path="/" element={<OverviewPage />} />
-              <Route path="/rooms" element={<RoomsPage />} />
-              <Route path="/panels/*" element={<PanelsPage />} />
+              <Route path="/" element={<SmarthomePage />} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </PageErrorBoundary>
