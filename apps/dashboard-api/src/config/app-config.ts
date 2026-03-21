@@ -80,7 +80,9 @@ export interface QuickToggleConfig {
 export interface LightColorPreset {
   id: string;
   label: string;
-  color: string;
+  displayColor: string;
+  colorTemp?: number | undefined;
+  hsColor?: [number, number] | undefined;
 }
 
 export interface RoborockSegment {
@@ -132,7 +134,9 @@ const quickToggleConfigSchema = z.object({
 const lightColorPresetSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  color: z.string().min(1),
+  displayColor: z.string().min(1),
+  colorTemp: z.number().int().positive().optional(),
+  hsColor: z.tuple([z.number(), z.number()]).optional(),
 });
 
 const roborockSegmentSchema = z.object({

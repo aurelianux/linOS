@@ -63,6 +63,11 @@ export const translations = {
     "lights.preset.orange": "Orange",
     "lights.preset.blau": "Blau",
 
+    "climate.target": "Ziel",
+    "climate.heating": "Heizt",
+    "climate.cooling": "Kühlt",
+    "climate.off": "Aus",
+
     "quickToggle.title": "Schnellzugriff",
     "quickToggle.apartment": "Wohnung",
     "quickToggle.mode.hell": "Hell",
@@ -164,6 +169,11 @@ export const translations = {
     "lights.preset.kaltweiss": "Cool White",
     "lights.preset.orange": "Orange",
     "lights.preset.blau": "Blue",
+
+    "climate.target": "Target",
+    "climate.heating": "Heating",
+    "climate.cooling": "Cooling",
+    "climate.off": "Off",
 
     "quickToggle.title": "Quick Toggles",
     "quickToggle.apartment": "Apartment",
