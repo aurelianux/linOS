@@ -3,23 +3,30 @@ import { HaStatusCard } from "@/components/ha/HaStatusCard";
 import { DashboardRoomCard } from "@/components/ha/DashboardRoomCard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
+import type { QuickToggleConfig } from "@/lib/api/types";
 
-/**
- * Rooms page – spatial view of the smart home.
- *
- * Rooms are driven by GET /dashboard/config from dashboard-api.
- * Each room card shows a light group toggle and scene buttons.
- */
+function buildQuickToggleMap(
+  quickToggles: QuickToggleConfig | undefined
+): Map<string, `input_select.${string}`> {
+  if (!quickToggles) return new Map();
+  return new Map(
+    quickToggles.rooms.map((r) => [r.roomId, r.entity])
+  );
+}
+
 export function RoomsPage() {
   const { t } = useTranslation();
   const { data: dashConfig, loading, error } = useDashboardConfig();
   const rooms = dashConfig?.rooms ?? [];
   const hasRooms = rooms.length > 0;
+  const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-slate-100 mb-2">{t("rooms.title")}</h2>
+        <h2 className="text-3xl font-bold text-slate-100 mb-2">
+          {t("rooms.title")}
+        </h2>
         <p className="text-slate-400">{t("rooms.subtitle")}</p>
       </div>
 
@@ -34,14 +41,20 @@ export function RoomsPage() {
 
       {HA_CONFIGURED && error && (
         <div className="rounded-lg border border-red-900/50 bg-slate-900 px-6 py-4">
-          <p className="text-sm text-red-400">{t("entity.failedToLoad")}: {error}</p>
+          <p className="text-sm text-red-400">
+            {t("entity.failedToLoad")}: {error}
+          </p>
         </div>
       )}
 
       {HA_CONFIGURED && hasRooms && (
         <div className="space-y-4">
           {rooms.map((room) => (
-            <DashboardRoomCard key={room.id} room={room} />
+            <DashboardRoomCard
+              key={room.id}
+              room={room}
+              quickToggleEntity={quickToggleMap.get(room.id)}
+            />
           ))}
         </div>
       )}

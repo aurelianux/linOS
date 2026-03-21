@@ -10,14 +10,19 @@
         "light.links",
         "light.rechts",
         "light.notenschlussel",
-        "sensor.lufsensor_wz_temperature",
-        "sensor.lufsensor_wz_humidity",
-        "sensor.lufsensor_wz_pressure",
-        "sensor.lufsensor_wz_battery",
-        "sensor.lufsensor_wz_voltage",
         "media_player.fernseher",
-        "remote.fernseher"
-      ]
+        "media_player.arbeitszimmer",
+        "climate.thermostat_wz"
+      ],
+      "airQuality": {
+        "temperature": "sensor.lufsensor_wz_temperature",
+        "humidity": "sensor.lufsensor_wz_humidity",
+        "secondary": [
+          "sensor.lufsensor_wz_pressure",
+          "sensor.lufsensor_wz_battery",
+          "sensor.lufsensor_wz_voltage"
+        ]
+      }
     },
     {
       "id": "kueche",
@@ -53,7 +58,39 @@
       "id": "badezimmer",
       "name": "Bathroom",
       "icon": "mdiShower",
-      "entities": []
+      "entities": [
+        "climate.thermostat_bad"
+      ]
     }
-  ]
+  ],
+  "lightColorPresets": [
+    { "id": "warmweiss", "label": "Warm", "displayColor": "#f5a623", "colorTemp": 370 },
+    { "id": "neutral", "label": "Neutral", "displayColor": "#f0e6d0", "colorTemp": 250 },
+    { "id": "kaltweiss", "label": "Cool", "displayColor": "#cce5ff", "colorTemp": 153 },
+    { "id": "orange", "label": "Orange", "displayColor": "#ff8c00", "hsColor": [30, 90] },
+    { "id": "blau", "label": "Blue", "displayColor": "#5b9bd5", "hsColor": [220, 60] }
+  ],
+  "quickToggles": {
+    "globalEntity": "input_select.lighting_mode",
+    "modes": ["hell", "chill", "aus"],
+    "rooms": [
+      { "roomId": "wohnzimmer", "entity": "input_select.lighting_mode_wohnzimmer" },
+      { "roomId": "kueche", "entity": "input_select.lighting_mode_kueche" },
+      { "roomId": "schlafzimmer", "entity": "input_select.lighting_mode_schlafzimmer" },
+      { "roomId": "flur", "entity": "input_select.lighting_mode_flur" }
+    ]
+  },
+  "roborock": {
+    "entityId": "vacuum.s7_max_ultra",
+    "segments": [
+      { "id": 16, "roomId": "kueche", "defaultSelected": false },
+      { "id": 17, "roomId": "flur", "defaultSelected": true },
+      { "id": 18, "roomId": "schlafzimmer", "defaultSelected": false },
+      { "id": 19, "roomId": "badezimmer", "defaultSelected": false },
+      { "id": 20, "roomId": "wohnzimmer", "defaultSelected": true }
+    ],
+    "defaultFanPower": 103,
+    "defaultWaterBoxMode": 203,
+    "defaultCleaningMode": "vacuum_and_mop"
+  }
 }
