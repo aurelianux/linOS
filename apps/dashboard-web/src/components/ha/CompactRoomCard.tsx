@@ -1,8 +1,5 @@
-import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { mdiChevronDown, mdiChevronUp } from "@mdi/js";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { getCardForDomain } from "./domainCards";
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
@@ -12,7 +9,7 @@ import { QuickToggle } from "./QuickToggle";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 
-interface DashboardRoomCardProps {
+interface CompactRoomCardProps {
   room: DashboardRoom;
   quickToggleEntity?: `input_select.${string}`;
 }
@@ -26,13 +23,12 @@ function getAirQualityEntityIds(room: DashboardRoom): Set<string> {
   ]);
 }
 
-export function DashboardRoomCard({
+export function CompactRoomCard({
   room,
   quickToggleEntity,
-}: DashboardRoomCardProps) {
+}: CompactRoomCardProps) {
   const { t } = useTranslation();
   const { data: config } = useDashboardConfig();
-  const [expanded, setExpanded] = useState(true);
   const iconPath = resolveDashboardIcon(room.icon);
   const quickToggles = config?.quickToggles as QuickToggleConfig | undefined;
 
@@ -44,37 +40,22 @@ export function DashboardRoomCard({
     filteredEntities.length > 0 || !!room.airQuality || !!quickToggleEntity;
 
   return (
-    <Card className="border-slate-800 bg-slate-900">
-      <CardContent className="p-4">
-        <button
-          onClick={() => setExpanded((prev) => !prev)}
-          disabled={!hasContent}
-          className={cn(
-            "w-full flex items-center justify-between gap-2",
-            hasContent && "cursor-pointer"
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <Icon
-              path={iconPath}
-              size={1}
-              className="text-slate-400 shrink-0"
-            />
-            <span className="text-base font-semibold text-slate-100">
-              {room.name}
-            </span>
-          </div>
-          {hasContent && (
-            <Icon
-              path={expanded ? mdiChevronUp : mdiChevronDown}
-              size={0.9}
-              className="text-slate-500 shrink-0"
-            />
-          )}
-        </button>
+    <Card className="border-slate-800 bg-slate-900 h-full">
+      <CardContent className="p-3">
+        {/* Room header */}
+        <div className="flex items-center gap-2 mb-2">
+          <Icon
+            path={iconPath}
+            size={0.8}
+            className="text-slate-400 shrink-0"
+          />
+          <span className="text-sm font-semibold text-slate-100">
+            {room.name}
+          </span>
+        </div>
 
-        {expanded && hasContent && (
-          <div className="mt-3 pt-3 border-t border-slate-800 space-y-3">
+        {hasContent && (
+          <div className="space-y-2">
             {/* Quick toggle for this room */}
             {quickToggleEntity && (
               <CardErrorBoundary entityId={quickToggleEntity}>
@@ -86,16 +67,16 @@ export function DashboardRoomCard({
               </CardErrorBoundary>
             )}
 
-            {/* Composite air quality card */}
+            {/* Composite air quality / sensor card */}
             {room.airQuality && (
               <CardErrorBoundary entityId={room.airQuality.temperature}>
                 <AirQualitySensorCard config={room.airQuality} />
               </CardErrorBoundary>
             )}
 
-            {/* Regular entity cards */}
+            {/* Entity cards in compact grid */}
             {filteredEntities.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {filteredEntities.map((entityId) => {
                   const domain = entityId.split(".")[0] ?? "";
                   const EntityCard = getCardForDomain(domain);
@@ -111,11 +92,27 @@ export function DashboardRoomCard({
         )}
 
         {!hasContent && (
-          <p className="text-xs text-slate-500 mt-2">
-            {t("rooms.noEntities")}
-          </p>
+          <p className="text-xs text-slate-500">{t("rooms.noEntities")}</p>
         )}
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Determine if a room is "large" (should span full width on desktop).
+ * Large rooms have >3 entities or include airQuality data.
+ */
+export function isLargeRoom(room: DashboardRoom): boolean {
+  const airQualityIds = room.airQuality
+    ? new Set([
+        room.airQuality.temperature,
+        room.airQuality.humidity,
+        ...room.airQuality.secondary,
+      ])
+    : new Set<string>();
+  const filteredCount = room.entities.filter(
+    (id) => !airQualityIds.has(id)
+  ).length;
+  return filteredCount > 3 || (!!room.airQuality && filteredCount > 1);
 }

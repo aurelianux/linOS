@@ -5,15 +5,10 @@ export const translations = {
     appTitle: "linBoard",
     appVersion: "v0.1",
 
-    "nav.overview": "Übersicht",
-    "nav.rooms": "Räume",
-    "nav.panels": "Panels",
+    "nav.dashboard": "Dashboard",
+    "nav.admin": "Admin",
 
-    "overview.title": "Übersicht",
-    "overview.subtitle": "Willkommen bei linBoard v0.1",
-
-    "panels.title": "Panels",
-    "panels.subtitle": "Systemübersicht und Infrastrukturstatus.",
+    "admin.subtitle": "Systemübersicht und Infrastrukturstatus.",
 
     "rooms.title": "Räume",
     "rooms.subtitle": "Räumliche Übersicht deiner Smart-Home-Geräte.",
@@ -122,15 +117,10 @@ export const translations = {
     appTitle: "linBoard",
     appVersion: "v0.1",
 
-    "nav.overview": "Overview",
-    "nav.rooms": "Rooms",
-    "nav.panels": "Panels",
+    "nav.dashboard": "Dashboard",
+    "nav.admin": "Admin",
 
-    "overview.title": "Overview",
-    "overview.subtitle": "Welcome to linBoard v0.1",
-
-    "panels.title": "Panels",
-    "panels.subtitle": "System overview and infrastructure status.",
+    "admin.subtitle": "System overview and infrastructure status.",
 
     "rooms.title": "Rooms",
     "rooms.subtitle": "Spatial overview of your smart home entities.",
