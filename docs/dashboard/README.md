@@ -1,10 +1,10 @@
-# linBoard (Dashboard) – Local Development
+# linBoard (Dashboard) — Local Development
 
 ## Overview
 
-The dashboard is a full-stack application built with:
-- **Frontend**: React + TypeScript + Vite (port 4000)
-- **Backend**: Express + TypeScript (port 4001)
+The dashboard is a full-stack smart-home application built with:
+- **Frontend**: React 19 + TypeScript + Vite + @hakit/core + Zustand (port 4000)
+- **Backend**: Express 5 + TypeScript + Zod + Pino (port 4001)
 - **Manager**: pnpm workspaces
 
 For exact versions, see [apps/package.json](../../apps/package.json) and individual package.json files.
@@ -38,6 +38,7 @@ pnpm -C dashboard-api dev    # Express on :4001
 | Web | http://localhost:4000 | Dashboard UI |
 | API | http://localhost:4001 | Backend API |
 | Health | http://localhost:4001/health | Liveness probe |
+| Storybook | http://localhost:6006 | Component explorer |
 
 ## Development Commands
 
@@ -54,6 +55,9 @@ pnpm build        # Compile both packages to dist/
 
 # Full workflow
 pnpm typecheck && pnpm lint && pnpm build
+
+# Storybook
+pnpm -C dashboard-web storybook
 ```
 
 ## Testing API
@@ -84,9 +88,30 @@ curl http://localhost:4001/nonexistent
 
 ## Architecture
 
-- **Frontend**: [README.md](./README.md) (or see `apps/dashboard-web/README.md`)
-- **Backend**: [API.md](./API.md) – Full backend architecture & integration guide
-- **Tech Stack**: [DECISIONS.md](./DECISIONS.md)
+### Frontend
+
+The web frontend uses `@hakit/core` WebSocket hooks for real-time Home Assistant entity state and Zustand stores for UI persistence. See [apps/dashboard-web/README.md](../../apps/dashboard-web/README.md) for full details.
+
+Key features:
+- Gesture-based light control (tap, drag, long press)
+- Climate cards with temperature presets and mode selectors
+- Quick toggle bar for frequently used entities
+- Docker container monitoring panel
+- System info panel (CPU, RAM in header)
+- Roborock vacuum control panel
+- i18n support (EN/DE) via `useTranslation()` hook
+- Entity configuration driven by `config/dashboard.json`
+
+### Backend
+
+The API serves as a BFF (Backend for Frontend) providing:
+- System metrics (CPU, RAM, disk usage)
+- Docker container status via Docker Engine API socket
+- Service health checks from `config/services.json`
+- Dashboard configuration from `config/dashboard.json`
+- Rate limiting with `express-rate-limit`
+
+See [API.md](./API.md) for full backend architecture and [DECISIONS.md](./DECISIONS.md) for tech stack decisions.
 
 ## Environment Variables
 
@@ -94,7 +119,7 @@ The API reads from `process.env`. For local dev, defaults are used:
 
 | Variable | Default | Usage |
 |----------|---------|-------|
-| `NODE_ENV` | `development` | Log format & error verbosity |
+| `NODE_ENV` | `development` | Log format and error verbosity |
 | `PORT` | `4001` | API server port |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `CORS_ALLOW_ORIGINS` | `http://localhost:4000,http://dashboard.lan` | CORS allowlist |
@@ -109,7 +134,7 @@ cd stacks/applications/dashboard
 docker compose up --build
 ```
 
-Environment vars are sourced from `../../.env.linos`.
+Environment vars are sourced from `../../.env.linos`. The dashboard container uses Docker Engine API via socket (not CLI) for container management.
 
 ## Troubleshooting
 
@@ -146,12 +171,9 @@ Ensure you've installed dependencies:
 pnpm install
 ```
 
-## Next Steps
+## Further Reading
 
-1. ✅ API skeleton is production-ready
-2. 📋 Frontend needs stub page extraction into components
-3. 🏠 Next: Home Assistant integration endpoints
-4. 🔐 Then: Authentication & authorization layer
-
-See [API.md](./API.md) for detailed backend documentation.
-
+- [API.md](./API.md) — Backend architecture and integration guide
+- [DECISIONS.md](./DECISIONS.md) — Tech stack decisions
+- [apps/dashboard-web/README.md](../../apps/dashboard-web/README.md) — Frontend details
+- [CLAUDE.md](../../CLAUDE.md) — Full project guidelines, code patterns, and rules

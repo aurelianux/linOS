@@ -1,25 +1,24 @@
 # linBoard Frontend
 
-**React + TypeScript + Vite + Tailwind CSS + Dark Mode**
-
-Modern, responsive dashboard UI with component-driven architecture. Desktop-first responsive design with touch-friendly mobile support.
+React + TypeScript + Vite + Tailwind CSS smart-home dashboard with Home Assistant integration via `@hakit/core` WebSocket hooks.
 
 ---
 
-## 🚀 Quick Start (60 seconds)
+## Quick Start
 
 ```bash
-# From repository root, go to workspace
+# From repository root
 cd apps
 
 # Install dependencies
 pnpm install
 
-# Start dev server (runs on http://localhost:4000)
+# Start frontend :4000 + API :4001 concurrently
 pnpm dev
 
-# In another terminal, start API server
-pnpm -C dashboard-api dev  # runs on http://localhost:4001
+# Or start individually:
+pnpm -C dashboard-web dev    # Vite on :4000
+pnpm -C dashboard-api dev    # Express on :4001
 ```
 
 ### URLs
@@ -28,118 +27,168 @@ pnpm -C dashboard-api dev  # runs on http://localhost:4001
 |---------|-----|-------|
 | **Web** | http://localhost:4000 | Vite dev server, HMR enabled |
 | **API** | http://localhost:4001 | Express backend |
-| **Storybook** | http://localhost:6006 | Component library (see below) |
+| **Storybook** | http://localhost:6006 | Component library |
 
 ---
 
-## 📱 Architecture
+## Architecture
 
-### Routing
+### Pages
 
-- `/` – Overview (dashboard homepage with health check demo)
-- `/rooms` – Room management (stub)
-- `/panels` – Panel management (stub)
+- `/` — **Overview**: quick toggles, room cards with entity controls, system panels (Docker, system info, Roborock vacuum)
+- `/rooms` — **Rooms**: per-room entity cards driven by `config/dashboard.json`
+- `/panels` — **Panels**: system monitoring and management panels
 
 ### Layout
 
-**Desktop (≥768px):**
+**Desktop (>=768px):**
 - Fixed sidebar nav on left
 - Main content on right
-- Header spans full width
+- Header with system vitals (CPU, RAM) spans full width
 
 **Mobile (<768px):**
-- Header at top
+- Header at top with system metric badges
 - Full-width content
-- Bottom nav bar (touch-friendly, ≥48px height)
+- Bottom nav bar (touch-friendly, >=48px height)
+
+### Data Flow
+
+- **HA entity state** → `@hakit/core` WebSocket hooks (`useEntity`) — never custom REST/WS
+- **System/Docker data** → `dashboard-api` REST → `lib/api/client.ts` with polling hooks
+- **UI state** (layout, favorites, language) → Zustand stores with `persist`
 
 ### Dark Mode
 
-- **Default: ON** (no toggle in v0.1)
+- Always dark — slate-950 background, slate-100 text
 - Configured via Tailwind CSS class-based dark mode
-- Colors: Slate-950 background, slate-100 text
 
 ---
 
-## 🏗️ Folder Structure
+## Folder Structure
 
 ```
 src/
-├── pages/                    # Page components (routed)
-│   ├── OverviewPage.tsx
-│   ├── RoomsPage.tsx
-│   └── PanelsPage.tsx
 ├── components/
-│   ├── layout/               # Layout components
-│   │   ├── AppShell.tsx      # Main shell (header, nav, content)
-│   │   ├── Header.tsx
-│   │   ├── SidebarNav.tsx    # Desktop nav
-│   │   └── BottomNav.tsx     # Mobile nav
-│   ├── common/               # Reusable UI components
-│   │   ├── LoadingState.tsx
-│   │   ├── ErrorState.tsx
-│   │   ├── EmptyState.tsx
-│   │   └── StatusBadge.tsx
-│   └── ui/                   # Primitives (Button, Card, Badge, Switch)
+│   ├── common/               # Shared UI: CardErrorBoundary, Panel, LoadingState,
+│   │                         #   ErrorState, EmptyState, InlineError, StatusBadge,
+│   │                         #   PageErrorBoundary, ServiceStatusCard
+│   ├── ha/                   # HA entity cards
+│   │   ├── LightCard.tsx         # Gesture-based light control (tap, drag, press)
+│   │   ├── ClimateCard.tsx       # Temperature display, mode selector, presets
+│   │   ├── SwitchCard.tsx        # On/off toggle card
+│   │   ├── SensorCard.tsx        # Sensor value display
+│   │   ├── AirQualitySensorCard.tsx  # Air quality readings
+│   │   ├── GenericEntityCard.tsx # Fallback for unmapped domains
+│   │   ├── QuickToggle.tsx       # Compact toggle button
+│   │   ├── QuickToggleBar.tsx    # Row of quick toggles
+│   │   ├── DashboardRoomCard.tsx # Room card with entity list
+│   │   ├── RoomCard.tsx          # Room navigation card
+│   │   ├── EntityIcon.tsx        # Entity icon resolver
+│   │   ├── HaStatusCard.tsx      # HA connection status
+│   │   ├── HaStatusIndicator.tsx # Compact status indicator
+│   │   ├── ConnectionStatus.tsx  # Connection state display
+│   │   └── domainCards.ts        # Domain → card component registry
+│   ├── layout/               # App shell and navigation
+│   │   ├── AppShell.tsx          # Main shell (header, nav, content)
+│   │   ├── Header.tsx            # Top bar with system vitals
+│   │   ├── SidebarNav.tsx        # Desktop sidebar
+│   │   ├── BottomNav.tsx         # Mobile bottom nav
+│   │   └── SystemMetricBadge.tsx # CPU/RAM badge in header
+│   ├── panels/               # System and device panels
+│   │   ├── DockerPanel.tsx       # Container status and management
+│   │   ├── SystemInfoPanel.tsx   # Host system metrics
+│   │   └── RoborockQuickPanel.tsx # Vacuum control (fan speed, mop, rooms)
+│   └── ui/                   # shadcn/ui base components
+│       ├── badge.tsx
 │       ├── button.tsx
 │       ├── card.tsx
-│       ├── badge.tsx
+│       ├── icon.tsx              # Custom Icon component (React 19 compatible)
+│       ├── slider.tsx
 │       └── switch.tsx
+├── hooks/
+│   ├── usePolledData.ts          # createPollingHook<T>() factory
+│   ├── useSystemInfo.ts          # System info polling
+│   ├── useSystemVitals.ts        # CPU/RAM vitals polling
+│   ├── useDockerContainers.ts    # Docker container polling
+│   ├── useServiceStatuses.ts     # Service health polling
+│   ├── useDashboardConfig.ts     # Dashboard config polling
+│   ├── useLightGesture.ts        # Light card gesture handling
+│   ├── useMetricHistory.ts       # Metric history tracking
+│   └── useOptimisticAction.ts    # Optimistic UI updates
 ├── lib/
 │   ├── api/
-│   │   ├── client.ts         # API fetch wrapper (typed, timeout, envelope)
-│   │   └── types.ts          # API response types
-│   └── utils.ts              # cn() helper for Tailwind merging
-├── main.tsx                  # App entry point
-└── index.css                 # Global Tailwind styles
+│   │   ├── client.ts             # fetchJson + ApiErrorException
+│   │   ├── endpoints.ts          # API endpoint constants
+│   │   └── types.ts              # API response types
+│   ├── ha/
+│   │   ├── config.ts             # HA entity/room configuration
+│   │   ├── dashboardIcons.ts     # Dashboard icon mapping
+│   │   ├── icons.ts              # haIconToMdiPath() resolver
+│   │   └── provider.tsx          # HAProvider wrapper
+│   ├── i18n/
+│   │   ├── translations.ts       # EN/DE string dictionary
+│   │   └── useTranslation.ts     # useTranslation() hook
+│   └── utils.ts                  # cn() (clsx + tailwind-merge)
+├── pages/
+│   ├── OverviewPage.tsx          # Dashboard homepage
+│   ├── RoomsPage.tsx             # Room-based entity view
+│   └── PanelsPage.tsx            # System panels
+├── stores/
+│   ├── favoritesStore.ts         # Favorite entities (Zustand + persist)
+│   ├── languageStore.ts          # Language preference (EN/DE)
+│   └── layoutStore.ts            # Layout state (Zustand + persist)
+├── main.tsx                      # App entry point
+└── index.css                     # Global Tailwind styles
 ```
 
 ---
 
-## 🎨 Component Conventions
+## Key Patterns
+
+### HA Entity Cards
+
+All HA cards use `useEntity(id, { returnNullIfNotFound: true })` and handle `null`/`unavailable`/`unknown` states gracefully. Service calls are wrapped in `try/catch`. Cards are wrapped in `<CardErrorBoundary>`.
+
+The `domainCards.ts` registry maps HA domains to their card components, with `GenericEntityCard` as the fallback.
+
+### Polling Hooks
+
+All API polling uses the `createPollingHook<T>()` factory from `hooks/usePolledData.ts` — one line per endpoint, no duplication.
+
+### Light Card Gestures
+
+`LightCard` supports gesture-based control via the `useLightGesture` hook:
+- **Tap** to toggle on/off
+- **Horizontal drag** to adjust brightness
+- **Long press** for color temperature presets
+
+### i18n
+
+All user-visible strings go through the `useTranslation()` hook with EN/DE support. Translations are defined in `lib/i18n/translations.ts`.
+
+### Icons
+
+All icons use named imports from `@mdi/js` rendered via the custom `Icon` component (React 19 compatible replacement for `@mdi/react`). HA icon strings are resolved via `haIconToMdiPath()`.
+
+---
+
+## Component Conventions
 
 ### Naming
 
-- **Components:** PascalCase (`Button.tsx`, `ErrorState.tsx`)
+- **Components:** PascalCase (`LightCard.tsx`, `ErrorState.tsx`)
 - **Props interfaces:** `<ComponentName>Props`
-- **Hooks:** camelCase, prefixed with `use` (e.g., `useHealthCheck`)
-
-### Folder Organization
-
-- **UI Primitives** (`src/components/ui/`): Reusable, unstyled base components
-- **Common** (`src/components/common/`): Styled application components (Loading, Error, Status)
-- **Layout** (`src/components/layout/`): Page-level layout composition
-- **Pages** (`src/pages/`): Route-level containers
+- **Hooks:** camelCase prefixed with `use` (e.g., `useLightGesture`)
 
 ### Styling
 
-- **Utility-first Tailwind CSS** for all styling
-- Use `cn()` helper from `src/lib/utils.ts` to merge Tailwind classes
-- No CSS-in-JS or scoped styles (Tailwind only)
-- Dark mode via `dark:` prefix in classes (defaults to dark)
-
-### Component Props
-
-```typescript
-import { cn } from "../../lib/utils";
-
-export interface MyComponentProps
-  extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "secondary";
-}
-
-export function MyComponent({ className, variant = "default", ...props }: MyComponentProps) {
-  return (
-    <div
-      className={cn("base-styles", variant === "secondary" && "secondary-styles", className)}
-      {...props}
-    />
-  );
-}
-```
+- Tailwind utility classes only — no `style={}`, no CSS modules
+- Use `cn()` for conditional classes — never array `.filter(Boolean).join(" ")`
+- Dark-first, slate palette only (see CLAUDE.md for full color system)
 
 ---
 
-## 🔌 API Integration
+## API Integration
 
 ### Base URL
 
@@ -150,96 +199,31 @@ export function MyComponent({ className, variant = "default", ...props }: MyComp
 
 ```typescript
 import { fetchJson, ApiErrorException } from "@/lib/api/client";
-import type { HealthResponse } from "@/lib/api/types";
 
-// Fetch with timeout (8s), envelope parsing, error handling
-const data = await fetchJson<HealthResponse>("/health");
-
-// Errors are typed
-try {
-  await fetchJson("/data");
-} catch (err) {
-  if (err instanceof ApiErrorException) {
-    console.log(err.message, err.code); // e.g., "Not Found", "NOT_FOUND"
-  }
-}
-```
-
-### Response Envelope
-
-**Success:**
-```json
-{
-  "ok": true,
-  "data": { "status": "ok" }
-}
-```
-
-**Error:**
-```json
-{
-  "ok": false,
-  "error": { "message": "Not Found", "code": "NOT_FOUND" }
-}
+const data = await fetchJson<SystemInfo>("/system/info");
 ```
 
 ### Vite Dev Proxy
 
-Configured in `vite.config.ts`:
-```typescript
-proxy: {
-  "/api": {
-    target: "http://localhost:4001",
-    changeOrigin: true,
-    rewrite: (path) => path.replace(/^\/api/, ""),
-  }
-}
-```
-
-This mirrors production Caddy behavior and avoids CORS complexity in dev.
+Configured in `vite.config.ts` to proxy `/api` to `localhost:4001`, mirroring production Caddy behavior.
 
 ---
 
-## 📖 Storybook
+## Tech Stack
 
-### Run Storybook
-
-```bash
-cd apps/dashboard-web
-pnpm storybook    # Opens http://localhost:6006
-```
-
-### Build Static Storybook
-
-```bash
-pnpm build-storybook
-```
-
-### Writing Stories
-
-Stories live alongside components with `.stories.ts` suffix:
-
-```typescript
-// src/components/ui/button.stories.ts
-import type { Meta, StoryObj } from "@storybook/react";
-import { Button } from "./button";
-
-const meta = {
-  title: "UI/Button",
-  component: Button,
-} satisfies Meta<typeof Button>;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Primary: Story = {
-  args: { children: "Click me", variant: "default" },
-};
-```
+| Layer | Technology |
+|---|---|
+| Framework | React 19, TypeScript, Vite |
+| Styling | Tailwind CSS (slate palette), shadcn/ui |
+| HA integration | `@hakit/core` v6 (WebSocket, real-time hooks) |
+| Icons | `@mdi/js` + custom Icon component |
+| State | Zustand v5 with `persist` middleware |
+| Routing | React Router v7 |
+| Package manager | pnpm workspaces |
 
 ---
 
-## 🛠️ Development Commands
+## Development Commands
 
 ```bash
 cd apps
@@ -250,107 +234,22 @@ pnpm lint           # ESLint
 pnpm format         # Prettier (write)
 
 # Serve
-pnpm dev            # Start web + API (pnpm workspaces)
-pnpm -C dashboard-web dev
-pnpm -C dashboard-api dev
+pnpm dev            # Start web + API concurrently
 
 # Build
-pnpm build
-pnpm -C dashboard-web build
+pnpm build          # Production build (Vite + tsc)
+
+# Storybook
+pnpm -C dashboard-web storybook    # Component explorer :6006
 ```
 
 ---
 
-## 🐳 Production Build
+## Production Build (Docker)
 
 ```bash
-pnpm build
-# Output: dist/
+cd stacks/applications/dashboard
+docker compose up --build -d
 ```
 
-Docker build uses:
-- Vite build output
-- Caddy reverse proxy at `/api` route
-- No build args needed in production
-
----
-
-## 📦 Dependencies
-
-### Runtime
-- `react` – UI library
-- `react-dom` – React rendering
-- `react-router-dom` – Routing
-- `clsx` – Class merging utility
-- `tailwind-merge` – Tailwind class precedence
-
-### Dev
-- `vite` – Build tool (rolldown-vite)
-- `typescript` – Type checking
-- `tailwindcss` – Utility CSS
-- `storybook` – Component development
-- `eslint` – Linting
-- `prettier` – Formatting
-
----
-
-## 🎯 Conventions Summary
-
-| Item | Convention |
-|------|-----------|
-| **Styling** | Tailwind CSS only (no scoped CSS) |
-| **Dark Mode** | Default ON, class-based |
-| **Components** | Functional, TypeScript, forwardRef for DOM refs |
-| **Props** | Extend HTML attributes, use `cn()` for className |
-| **Imports** | Absolute paths (if tsconfig configured) or relative |
-| **Testing** | Storybook for UI, React Testing Library (future) |
-| **State** | React hooks, no Redux (yet) |
-
----
-
-## 🔮 Next Steps (Future Tickets)
-
-- [ ] Room CRUD API integration
-- [ ] Panel CRUD API integration
-- [ ] Real device status display
-- [ ] WebSocket for live updates (MQTT bridging)
-- [ ] User preferences / theme toggle
-- [ ] E2E tests (Cypress/Playwright)
-- [ ] Accessibility audit (a11y)
-- [ ] Mobile app shell (PWA)
-
----
-
-## 📝 Environment Variables
-
-### `.env.example`
-```
-VITE_API_BASE=/api
-```
-
-For local dev, Vite proxies `/api` to `localhost:4001`. No extra setup needed.
-
----
-
-## ✅ Acceptance Checklist
-
-- [x] Routes /, /rooms, /panels render
-- [x] AppShell layout with sidebar (desktop) + bottom nav (mobile)
-- [x] UI primitives: Button, Card, Badge, Switch
-- [x] Standard components: LoadingState, ErrorState, EmptyState, StatusBadge
-- [x] API client with timeout + envelope parsing
-- [x] Overview page calls /api/health (demo)
-- [x] Storybook configured with Button, Card, Badge, Switch, StatusBadge stories
-- [x] Dark mode default ON
-- [x] Vite dev proxy /api -> localhost:4001
-- [x] TypeScript build succeeds
-
----
-
-## 📚 References
-
-- [React](https://react.dev)
-- [Vite](https://vitejs.dev)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Storybook](https://storybook.js.org)
-- [react-router-dom](https://reactrouter.com)
+Environment variables are sourced from `.env.linos`. The dashboard container uses Docker Engine API via socket for container management.
