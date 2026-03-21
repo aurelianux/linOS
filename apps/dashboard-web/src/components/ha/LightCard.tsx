@@ -2,24 +2,19 @@ import { useEntity } from "@hakit/core";
 import { mdiArrowUp, mdiArrowDown, mdiPalette, mdiPower } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, throttle } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
-import { useCallback, useRef, useState, useEffect } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
-import type { LightColorPreset } from "@/lib/api/types";
+import { useLightGesture } from "@/hooks/useLightGesture";
+import { useCallback, useRef } from "react";
 
 interface LightCardProps {
   entityId: `light.${string}`;
 }
 
 const CARD_HEIGHT = 140;
-const DRAG_THRESHOLD = 8;
-const DIRECTION_LOCK_THRESHOLD = 12;
 const COLOR_DOT_SIZE = 32;
 const COLOR_DOT_GAP = 12;
-
-type GestureDirection = "none" | "vertical" | "left" | "right";
 
 function brightnessToPercent(b: number): number {
   return Math.round((b / 255) * 100);
@@ -37,50 +32,13 @@ function getLightCss(
   return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
 }
 
-/** Map a clientX to the nearest dot index based on centered dot layout */
-function clientXToDotIndex(
-  clientX: number,
-  cardRect: DOMRect,
-  dotCount: number
-): number {
-  const totalDotsWidth =
-    dotCount * COLOR_DOT_SIZE + (dotCount - 1) * COLOR_DOT_GAP;
-  const offsetLeft = (cardRect.width - totalDotsWidth) / 2;
-  const relativeX = clientX - cardRect.left - offsetLeft;
-
-  // Find which dot center is closest
-  let closestIdx = 0;
-  let closestDist = Infinity;
-  for (let i = 0; i < dotCount; i++) {
-    const dotCenter = i * (COLOR_DOT_SIZE + COLOR_DOT_GAP) + COLOR_DOT_SIZE / 2;
-    const dist = Math.abs(relativeX - dotCenter);
-    if (dist < closestDist) {
-      closestDist = dist;
-      closestIdx = i;
-    }
-  }
-  return closestIdx;
-}
-
 export function LightCard({ entityId }: LightCardProps) {
   const entity = useEntity(entityId, { returnNullIfNotFound: true });
   const { t } = useTranslation();
   const { data: dashConfig } = useDashboardConfig();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const presets = dashConfig?.lightColorPresets ?? [];
-
-  // Gesture state
-  const [isPressed, setIsPressed] = useState(false);
-  const [direction, setDirection] = useState<GestureDirection>("none");
-  const [dragBrightness, setDragBrightness] = useState<number | null>(null);
-  const [colorIndex, setColorIndex] = useState<number | null>(null);
-
-  const cardRef = useRef<HTMLDivElement>(null);
-  const startY = useRef(0);
-  const startX = useRef(0);
-  const startBrightness = useRef(0);
-  const directionLocked = useRef<GestureDirection>("none");
-  const activePointerId = useRef<number | null>(null);
 
   const isUnavailable =
     !entity ||
@@ -93,14 +51,9 @@ export function LightCard({ entityId }: LightCardProps) {
   const friendlyName =
     entity?.attributes.friendly_name ?? entityId.split(".")[1] ?? entityId;
 
-  const displayBrightness =
-    dragBrightness !== null ? dragBrightness : brightnessToPercent(brightness);
-  const fillPercent = isOn || dragBrightness !== null ? displayBrightness : 0;
-  const lightColor = getLightCss(rgbColor, isOn);
-
   // -- Service calls --------------------------------------------------------
 
-  const setBrightness = useCallback(
+  const commitBrightness = useCallback(
     (percent: number) => {
       if (!entity || isUnavailable) return;
       const value = percentToBrightness(Math.max(1, Math.min(100, percent)));
@@ -113,9 +66,18 @@ export function LightCard({ entityId }: LightCardProps) {
     [entity, isUnavailable, entityId]
   );
 
-  const applyPreset = useCallback(
-    (preset: LightColorPreset) => {
+  // Throttled version for live updates during drag
+  const liveBrightness = useRef(
+    throttle((percent: number) => {
+      commitBrightness(percent);
+    }, 150)
+  ).current;
+
+  const applyColorPreset = useCallback(
+    (index: number) => {
       if (!entity || isUnavailable) return;
+      const preset = presets[index];
+      if (!preset) return;
       const serviceData: Record<string, unknown> = {};
       if (preset.colorTemp !== undefined) {
         serviceData.color_temp = preset.colorTemp;
@@ -128,7 +90,7 @@ export function LightCard({ entityId }: LightCardProps) {
           console.error("Failed to apply preset:", entityId, preset.id, err);
         });
     },
-    [entity, isUnavailable, entityId]
+    [entity, isUnavailable, entityId, presets]
   );
 
   const turnOff = useCallback(async () => {
@@ -140,125 +102,35 @@ export function LightCard({ entityId }: LightCardProps) {
     }
   }, [entity, isUnavailable, entityId]);
 
-  // -- Reset ----------------------------------------------------------------
+  // -- Gesture hook ---------------------------------------------------------
 
-  const resetGesture = useCallback(() => {
-    setIsPressed(false);
-    setDirection("none");
-    setDragBrightness(null);
-    setColorIndex(null);
-    directionLocked.current = "none";
-    activePointerId.current = null;
-  }, []);
+  const {
+    showHints,
+    direction,
+    dragBrightness,
+    colorIndex,
+    dotRefs,
+    handlers,
+  } = useLightGesture({
+    cardRef,
+    isOn: isOn ?? false,
+    brightness,
+    isUnavailable,
+    presetCount: presets.length,
+    onBrightnessCommit: commitBrightness,
+    onBrightnessLive: liveBrightness,
+    onColorSelect: applyColorPreset,
+    onTurnOff: turnOff,
+  });
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") resetGesture();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [resetGesture]);
+  // -- Derived values -------------------------------------------------------
 
-  // -- Pointer events --------------------------------------------------------
+  const displayBrightness =
+    dragBrightness !== null ? dragBrightness : brightnessToPercent(brightness);
+  const fillPercent =
+    dragBrightness !== null ? displayBrightness : isOn ? brightnessToPercent(brightness) : 0;
+  const lightColor = getLightCss(rgbColor, isOn ?? false);
 
-  const onPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (isUnavailable) return;
-
-      e.preventDefault();
-      const el = cardRef.current;
-      if (el) el.setPointerCapture(e.pointerId);
-
-      activePointerId.current = e.pointerId;
-      startY.current = e.clientY;
-      startX.current = e.clientX;
-      startBrightness.current = isOn ? brightnessToPercent(brightness) : 0;
-      directionLocked.current = "none";
-      setIsPressed(true);
-      setDirection("none");
-      setDragBrightness(null);
-      setColorIndex(null);
-    },
-    [isUnavailable, brightness, isOn]
-  );
-
-  const onPointerMove = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (isUnavailable || activePointerId.current === null) return;
-
-      const dy = startY.current - e.clientY;
-      const dx = e.clientX - startX.current;
-      const absDy = Math.abs(dy);
-      const absDx = Math.abs(dx);
-
-      // Lock direction once threshold is crossed
-      if (directionLocked.current === "none") {
-        const dist = Math.sqrt(dy * dy + dx * dx);
-        if (dist < DRAG_THRESHOLD) return;
-
-        if (dist >= DIRECTION_LOCK_THRESHOLD) {
-          if (absDy > absDx) {
-            directionLocked.current = "vertical";
-          } else if (dx < -DIRECTION_LOCK_THRESHOLD) {
-            directionLocked.current = "left";
-          } else if (dx > DIRECTION_LOCK_THRESHOLD && isOn) {
-            directionLocked.current = "right";
-          }
-          setDirection(directionLocked.current);
-        }
-        return;
-      }
-
-      if (directionLocked.current === "vertical") {
-        // Works whether light is on or off — dragging up from off turns it on
-        const sensitivity = CARD_HEIGHT;
-        const delta = (dy / sensitivity) * 100;
-        const newPercent = Math.max(1, Math.min(100, startBrightness.current + delta));
-        setDragBrightness(Math.round(newPercent));
-      } else if (directionLocked.current === "left" && presets.length > 0) {
-        const el = cardRef.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const idx = clientXToDotIndex(e.clientX, rect, presets.length);
-        setColorIndex(idx);
-      }
-    },
-    [isUnavailable, isOn, presets.length]
-  );
-
-  const onPointerUp = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      const el = cardRef.current;
-      if (el) el.releasePointerCapture(e.pointerId);
-
-      const dir = directionLocked.current;
-
-      if (dir === "vertical" && dragBrightness !== null) {
-        setBrightness(dragBrightness);
-      } else if (dir === "left" && colorIndex !== null && presets[colorIndex]) {
-        applyPreset(presets[colorIndex]);
-      } else if (dir === "right" && isOn) {
-        turnOff();
-      }
-      // No action on simple tap (dir === "none") — no toggle
-
-      resetGesture();
-    },
-    [dragBrightness, colorIndex, presets, isOn, setBrightness, applyPreset, turnOff, resetGesture]
-  );
-
-  const onPointerCancel = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      const el = cardRef.current;
-      if (el) el.releasePointerCapture(e.pointerId);
-      resetGesture();
-    },
-    [resetGesture]
-  );
-
-  // -- Derived UI state -----------------------------------------------------
-
-  const showHints = isPressed && direction === "none";
   const showBrightness = direction === "vertical";
   const showColorPicker = direction === "left";
   const showPowerOff = direction === "right";
@@ -266,15 +138,11 @@ export function LightCard({ entityId }: LightCardProps) {
   return (
     <Card
       ref={cardRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
+      {...handlers}
       style={{ height: CARD_HEIGHT, touchAction: "none" }}
       className={cn(
         "cursor-pointer select-none",
         isOn ? "border-amber-900/40" : "border-slate-700",
-        isPressed && "border-slate-500",
         isUnavailable && "opacity-50 pointer-events-none"
       )}
     >
@@ -291,93 +159,80 @@ export function LightCard({ entityId }: LightCardProps) {
         }}
       />
 
-      {/* Directional hint arrows — appear on press */}
-      <div
-        className={cn(
-          "absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-200 pointer-events-none",
-          showHints ? "opacity-100" : "opacity-0"
-        )}
-      >
-        <div className="relative w-full h-full">
-          {/* Up: brightness up */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2">
-            <Icon path={mdiArrowUp} size={0.6} className="text-slate-400 animate-pulse" />
-          </div>
-          {/* Down: brightness down */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-            <Icon path={mdiArrowDown} size={0.6} className="text-slate-400 animate-pulse" />
-          </div>
-          {/* Left: color */}
-          {presets.length > 0 && (
-            <div className="absolute left-2 top-1/2 -translate-y-1/2">
-              <Icon path={mdiPalette} size={0.6} className="text-slate-400 animate-pulse" />
+      {/* Directional hint arrows — appear after 150ms press hold */}
+      {showHints && (
+        <div className="absolute inset-0 z-20 pointer-events-none">
+          <div className="relative w-full h-full">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2">
+              <Icon path={mdiArrowUp} size={0.6} className="text-slate-400 animate-pulse" />
             </div>
-          )}
-          {/* Right: power off (only when on) */}
-          {isOn && (
-            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-              <Icon path={mdiPower} size={0.6} className="text-slate-400 animate-pulse" />
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+              <Icon path={mdiArrowDown} size={0.6} className="text-slate-400 animate-pulse" />
             </div>
-          )}
+            {presets.length > 0 && (
+              <div className="absolute left-2 top-1/2 -translate-y-1/2">
+                <Icon path={mdiPalette} size={0.6} className="text-slate-400 animate-pulse" />
+              </div>
+            )}
+            {isOn && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <Icon path={mdiPower} size={0.6} className="text-slate-400 animate-pulse" />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Color picker overlay */}
-      <div
-        className={cn(
-          "absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 rounded-lg transition-opacity duration-200",
-          showColorPicker ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-      >
-        <div className="flex items-center" style={{ gap: COLOR_DOT_GAP }}>
-          {presets.map((preset, idx) => (
-            <div
-              key={preset.id}
-              className={cn(
-                "rounded-full border-2 transition-all duration-150",
-                colorIndex === idx
-                  ? "scale-150 border-slate-100 shadow-lg"
-                  : "border-slate-600 scale-100"
-              )}
-              style={{
-                width: COLOR_DOT_SIZE,
-                height: COLOR_DOT_SIZE,
-                backgroundColor: preset.displayColor,
-              }}
-            />
-          ))}
+      {/* Color picker overlay — mounts only when direction is "left" */}
+      {showColorPicker && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 rounded-lg">
+          <div className="flex items-center" style={{ gap: COLOR_DOT_GAP }}>
+            {presets.map((preset, idx) => (
+              <div
+                key={preset.id}
+                ref={(el) => {
+                  dotRefs.current[idx] = el;
+                }}
+                className={cn(
+                  "rounded-full border-2 transition-all duration-150",
+                  colorIndex === idx
+                    ? "scale-150 border-slate-100 shadow-lg"
+                    : "border-slate-600 scale-100"
+                )}
+                style={{
+                  width: COLOR_DOT_SIZE,
+                  height: COLOR_DOT_SIZE,
+                  backgroundColor: preset.displayColor,
+                }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Power off overlay */}
-      <div
-        className={cn(
-          "absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 rounded-lg transition-opacity duration-200",
-          showPowerOff ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-      >
-        <div className="flex flex-col items-center gap-1">
-          <Icon path={mdiPower} size={1.5} className="text-red-400" />
-          <span className="text-xs text-red-400 font-medium">{t("lights.off")}</span>
+      {/* Power off overlay — mounts only when direction is "right" */}
+      {showPowerOff && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 rounded-lg">
+          <div className="flex flex-col items-center gap-1">
+            <Icon path={mdiPower} size={1.5} className="text-red-400" />
+            <span className="text-xs text-red-400 font-medium">{t("lights.off")}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Brightness drag overlay — large centered percentage */}
-      <div
-        className={cn(
-          "absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-200 pointer-events-none",
-          showBrightness ? "opacity-100" : "opacity-0"
-        )}
-      >
-        <span className="text-3xl font-bold text-slate-100 tabular-nums drop-shadow-lg">
-          {displayBrightness}%
-        </span>
-      </div>
+      {showBrightness && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+          <span className="text-3xl font-bold text-slate-100 tabular-nums drop-shadow-lg">
+            {displayBrightness}%
+          </span>
+        </div>
+      )}
 
       {/* Content — name + brightness label */}
       <div
         className={cn(
-          "relative z-10 h-full flex flex-col justify-end p-2.5 transition-opacity duration-200",
+          "relative z-10 h-full flex flex-col justify-end p-2.5",
           (showColorPicker || showPowerOff) && "opacity-0"
         )}
       >
