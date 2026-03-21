@@ -1,4 +1,4 @@
-import { useEntity, useHass } from "@hakit/core";
+import { useEntity } from "@hakit/core";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -12,7 +12,6 @@ interface LightCardProps {
 }
 
 const CARD_HEIGHT = 140;
-const LONG_PRESS_MS = 400;
 const DRAG_THRESHOLD = 5;
 
 function brightnessToPercent(b: number): number {
@@ -33,7 +32,6 @@ function getLightCss(
 
 export function LightCard({ entityId }: LightCardProps) {
   const entity = useEntity(entityId, { returnNullIfNotFound: true });
-  const { helpers } = useHass();
   const { t } = useTranslation();
   const { data: dashConfig } = useDashboardConfig();
 
@@ -42,16 +40,11 @@ export function LightCard({ entityId }: LightCardProps) {
   // Gesture state
   const [isDragging, setIsDragging] = useState(false);
   const [dragBrightness, setDragBrightness] = useState<number | null>(null);
-  const [showColorMode, setShowColorMode] = useState(false);
-  const [colorIndex, setColorIndex] = useState<number | null>(null);
 
   const cardRef = useRef<HTMLDivElement>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startY = useRef(0);
-  const startX = useRef(0);
   const startBrightness = useRef(0);
   const gestureStarted = useRef(false);
-  const isLongPress = useRef(false);
 
   const isUnavailable =
     !entity ||
@@ -86,7 +79,7 @@ export function LightCard({ entityId }: LightCardProps) {
 
   const applyPreset = useCallback(
     (preset: LightColorPreset) => {
-      if (!entity || isUnavailable || !helpers?.callService) return;
+      if (!entity || isUnavailable) return;
       const serviceData: Record<string, unknown> = {};
       if (preset.colorTemp !== undefined) {
         serviceData.color_temp = preset.colorTemp;
@@ -99,7 +92,7 @@ export function LightCard({ entityId }: LightCardProps) {
           console.error("Failed to apply preset:", entityId, preset.id, err);
         });
     },
-    [entity, isUnavailable, entityId, helpers]
+    [entity, isUnavailable, entityId]
   );
 
   const handleToggle = useCallback(async () => {
@@ -116,58 +109,28 @@ export function LightCard({ entityId }: LightCardProps) {
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (isUnavailable) return;
+      // Ignore clicks on color preset buttons
+      if ((e.target as HTMLElement).closest("[data-preset]")) return;
+
       e.preventDefault();
       const el = cardRef.current;
       if (el) el.setPointerCapture(e.pointerId);
 
       startY.current = e.clientY;
-      startX.current = e.clientX;
       startBrightness.current = brightnessToPercent(brightness);
       gestureStarted.current = false;
-      isLongPress.current = false;
-
-      // Start long press timer for color mode
-      longPressTimer.current = setTimeout(() => {
-        if (!gestureStarted.current && presets.length > 0) {
-          isLongPress.current = true;
-          setShowColorMode(true);
-          setColorIndex(null);
-        }
-      }, LONG_PRESS_MS);
     },
-    [isUnavailable, brightness, presets.length]
+    [isUnavailable, brightness]
   );
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (isUnavailable) return;
 
-      if (showColorMode || isLongPress.current) {
-        // Horizontal color mode: map X position to preset index
-        const el = cardRef.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const ratio = Math.max(0, Math.min(1, x / rect.width));
-        const idx = Math.min(
-          presets.length - 1,
-          Math.floor(ratio * presets.length)
-        );
-        setColorIndex(idx);
-        return;
-      }
-
       const dy = startY.current - e.clientY;
-      const dx = e.clientX - startX.current;
 
       if (!gestureStarted.current) {
-        const dist = Math.sqrt(dy * dy + dx * dx);
-        if (dist < DRAG_THRESHOLD) return;
-        // Cancel long press if movement detected
-        if (longPressTimer.current) {
-          clearTimeout(longPressTimer.current);
-          longPressTimer.current = null;
-        }
+        if (Math.abs(dy) < DRAG_THRESHOLD) return;
         gestureStarted.current = true;
         setIsDragging(true);
       }
@@ -179,7 +142,7 @@ export function LightCard({ entityId }: LightCardProps) {
       const newPercent = Math.max(1, Math.min(100, startBrightness.current + delta));
       setDragBrightness(Math.round(newPercent));
     },
-    [isUnavailable, showColorMode, isOn, presets.length]
+    [isUnavailable, isOn]
   );
 
   const onPointerUp = useCallback(
@@ -187,53 +150,27 @@ export function LightCard({ entityId }: LightCardProps) {
       const el = cardRef.current;
       if (el) el.releasePointerCapture(e.pointerId);
 
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
-
-      if (showColorMode && colorIndex !== null && presets[colorIndex]) {
-        applyPreset(presets[colorIndex]);
-      } else if (isDragging && dragBrightness !== null) {
+      if (isDragging && dragBrightness !== null) {
         setBrightness(dragBrightness);
-      } else if (!gestureStarted.current && !isLongPress.current) {
+      } else if (!gestureStarted.current) {
         // Simple tap → toggle
         handleToggle();
       }
 
       setIsDragging(false);
       setDragBrightness(null);
-      setShowColorMode(false);
-      setColorIndex(null);
       gestureStarted.current = false;
-      isLongPress.current = false;
     },
-    [
-      showColorMode,
-      colorIndex,
-      presets,
-      isDragging,
-      dragBrightness,
-      applyPreset,
-      setBrightness,
-      handleToggle,
-    ]
+    [isDragging, dragBrightness, setBrightness, handleToggle]
   );
 
   const onPointerCancel = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       const el = cardRef.current;
       if (el) el.releasePointerCapture(e.pointerId);
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
       setIsDragging(false);
       setDragBrightness(null);
-      setShowColorMode(false);
-      setColorIndex(null);
       gestureStarted.current = false;
-      isLongPress.current = false;
     },
     []
   );
@@ -247,14 +184,17 @@ export function LightCard({ entityId }: LightCardProps) {
       onPointerCancel={onPointerCancel}
       style={{ height: CARD_HEIGHT, touchAction: "none" }}
       className={cn(
-        "cursor-pointer select-none border-slate-700",
-        isUnavailable && "opacity-50 pointer-events-none",
-        !isOn && "bg-slate-900"
+        "cursor-pointer select-none transition-colors duration-300",
+        isOn ? "border-amber-900/40" : "border-slate-700",
+        isUnavailable && "opacity-50 pointer-events-none"
       )}
     >
-      {/* Color fill — height represents brightness */}
+      {/* Color fill — height represents brightness, smooth transition */}
       <div
-        className="absolute inset-x-0 bottom-0 transition-all duration-150 rounded-b-lg"
+        className={cn(
+          "absolute inset-x-0 bottom-0 rounded-b-lg",
+          isDragging ? "transition-none" : "transition-all duration-500 ease-out"
+        )}
         style={{
           height: `${fillPercent}%`,
           backgroundColor: lightColor ?? "rgb(251 191 36 / 0.15)",
@@ -262,42 +202,54 @@ export function LightCard({ entityId }: LightCardProps) {
         }}
       />
 
-      {/* Color mode overlay */}
-      {showColorMode && presets.length > 0 && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-slate-950/80 rounded-lg">
-          {presets.map((preset, idx) => (
-            <div
-              key={preset.id}
-              className={cn(
-                "w-8 h-8 rounded-full border-2 transition-transform duration-100",
-                colorIndex === idx
-                  ? "scale-125 border-slate-100"
-                  : "border-slate-600"
-              )}
-              style={{ backgroundColor: preset.displayColor }}
-            />
-          ))}
-        </div>
-      )}
-
       {/* Content */}
-      <div className="relative z-10 h-full flex flex-col justify-end p-3">
-        <div className="flex items-end justify-between">
+      <div className="relative z-10 h-full flex flex-col justify-between p-2.5">
+        {/* Top: brightness percentage when dragging */}
+        <div className="flex items-start justify-between">
           <span
             className={cn(
-              "text-sm font-medium truncate",
+              "text-sm font-medium truncate transition-colors duration-300",
               isOn ? "text-slate-100" : "text-slate-400"
             )}
             title={friendlyName}
           >
             {friendlyName}
           </span>
-          {isOn && (
-            <span className="text-xs text-slate-300 tabular-nums ml-2 shrink-0">
-              {displayBrightness}%
-            </span>
-          )}
+          <span
+            className={cn(
+              "text-xs tabular-nums ml-2 shrink-0 transition-opacity duration-200",
+              isOn ? "text-slate-300 opacity-100" : "opacity-0"
+            )}
+          >
+            {displayBrightness}%
+          </span>
         </div>
+
+        {/* Spacer */}
+        <div />
+
+        {/* Bottom: color presets — always visible when on */}
+        {isOn && presets.length > 0 ? (
+          <div className="flex items-center gap-1.5">
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                data-preset={preset.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  applyPreset(preset);
+                }}
+                className="w-5 h-5 rounded-full border border-slate-600 hover:border-slate-400 hover:scale-125 active:scale-95 transition-all duration-150"
+                style={{ backgroundColor: preset.displayColor }}
+                title={t(`lights.preset.${preset.id}` as Parameters<typeof t>[0])}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="h-5" />
+        )}
+
         {isUnavailable && (
           <p className="text-xs text-slate-500 mt-0.5">
             {t("entity.unavailable")}

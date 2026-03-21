@@ -61,7 +61,7 @@ export function SwitchCard({ entityId }: SwitchCardProps) {
     >
       {/* On glow */}
       {isOn && (
-        <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-amber-400/10 to-transparent rounded-lg" />
+        <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-amber-400/10 to-transparent rounded-lg transition-opacity duration-300" />
       )}
 
       <div className="relative z-10 h-full flex flex-col justify-between p-3">
