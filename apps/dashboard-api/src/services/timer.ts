@@ -1,10 +1,12 @@
 import type pino from "pino";
+import type { LightNotificationService, RGB } from "./light-notification.js";
 
 /**
  * Timer state — single in-memory timer (lost on restart, intentional).
  */
 export interface TimerState {
   running: boolean;
+  alerting: boolean;
   startedAt: number | null;
   durationMs: number;
   label: string;
@@ -19,46 +21,42 @@ export interface TimerStartInput {
 /** Callback invoked on every timer state change */
 type TimerChangeListener = (state: TimerState) => void;
 
-/** HA light config for progress feedback */
-interface TimerLightConfig {
-  haUrl: string;
-  haToken: string;
-  lightEntities: string[];
-}
-
-/** RGB color tuple */
-type RGB = [number, number, number];
-
 const LIGHT_UPDATE_INTERVAL_MS = 10_000;
-const BLINK_COUNT = 3;
-const BLINK_DELAY_MS = 500;
+const BLINK_ON_MS = 500;
+const BLINK_OFF_MS = 500;
 const LIGHT_BRIGHTNESS = 255;
+const LAST_MINUTE_MS = 60_000;
 
 /**
- * Interpolate timer progress (1 → 0) to color:
- *   100% → green, 50% → yellow, 10% → red
+ * Color progression for timer lights:
+ *   - Before last 60s: solid green
+ *   - Last 60s: green → yellow → red (compressed)
+ *   - If total duration < 60s, entire duration is the transition window
  */
-function progressToColor(progress: number): RGB {
-  // Clamp
-  const p = Math.max(0, Math.min(1, progress));
+function progressToColor(remainingMs: number, durationMs: number): RGB {
+  const transitionWindow = Math.min(LAST_MINUTE_MS, durationMs);
+
+  if (remainingMs > transitionWindow) {
+    return [0, 255, 0];
+  }
+
+  // p goes from 1.0 (start of transition) to 0.0 (timer end)
+  const p = Math.max(0, Math.min(1, remainingMs / transitionWindow));
 
   if (p > 0.5) {
-    // Green → Yellow  (1.0 → 0.5)
+    // Green → Yellow (1.0 → 0.5)
     const t = (p - 0.5) / 0.5;
     return [Math.round(255 * (1 - t)), 255, 0];
   }
-  // Yellow → Red  (0.5 → 0.0)
+  // Yellow → Red (0.5 → 0.0)
   const t = p / 0.5;
   return [255, Math.round(255 * t), 0];
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export class TimerService {
   private state: TimerState = {
     running: false,
+    alerting: false,
     startedAt: null,
     durationMs: 0,
     label: "",
@@ -66,16 +64,29 @@ export class TimerService {
 
   private listeners: TimerChangeListener[] = [];
   private completionTimeout: ReturnType<typeof setTimeout> | null = null;
-  private lightInterval: ReturnType<typeof setInterval> | null = null;
-  private lightConfig: TimerLightConfig | null = null;
+  private lightUpdateInterval: ReturnType<typeof setInterval> | null = null;
+
+  /** Light notification session IDs */
+  private solidSessionId: string | null = null;
+  private blinkSessionId: string | null = null;
+
+  private lightNotification: LightNotificationService | null = null;
+  private lightEntityIds: string[] = [];
 
   constructor(private readonly logger: pino.Logger) {}
 
-  /** Configure HA light entities for progress feedback (optional) */
-  configureLights(config: TimerLightConfig): void {
-    this.lightConfig = config;
+  /**
+   * Configure HA light entities for progress feedback (optional).
+   * If not called, the timer works normally without light feedback.
+   */
+  configureLights(
+    lightNotification: LightNotificationService,
+    entityIds: string[]
+  ): void {
+    this.lightNotification = lightNotification;
+    this.lightEntityIds = entityIds;
     this.logger.info(
-      { entities: config.lightEntities },
+      { entities: entityIds },
       "Timer light feedback configured"
     );
   }
@@ -93,11 +104,13 @@ export class TimerService {
   }
 
   start(input: TimerStartInput): TimerState {
-    // Stop any running timer first
+    // Stop any running timer or alert first
     this.clearTimers();
+    this.stopLightSessions();
 
     this.state = {
       running: true,
+      alerting: false,
       startedAt: Date.now(),
       durationMs: input.durationMs,
       label: input.label ?? "",
@@ -114,10 +127,10 @@ export class TimerService {
     }, input.durationMs);
 
     // Start light updates if configured
-    if (this.lightConfig && this.lightConfig.lightEntities.length > 0) {
-      this.updateLights();
-      this.lightInterval = setInterval(() => {
-        this.updateLights();
+    if (this.lightNotification && this.lightEntityIds.length > 0) {
+      this.startSolidSession();
+      this.lightUpdateInterval = setInterval(() => {
+        this.updateLightColor();
       }, LIGHT_UPDATE_INTERVAL_MS);
     }
 
@@ -126,14 +139,16 @@ export class TimerService {
   }
 
   stop(): TimerState {
-    if (!this.state.running) {
+    if (!this.state.running && !this.state.alerting) {
       return this.getState();
     }
 
     this.clearTimers();
+    this.stopLightSessions();
 
     this.state = {
       running: false,
+      alerting: false,
       startedAt: null,
       durationMs: 0,
       label: "",
@@ -144,28 +159,32 @@ export class TimerService {
     return this.getState();
   }
 
+  // ───────────────────────────────────────────────
+  // Private: timer lifecycle
+  // ───────────────────────────────────────────────
+
   private complete(): void {
     this.clearTimers();
 
     const label = this.state.label;
 
+    // Stop the solid color session
+    this.stopSolidSession();
+
+    // Enter alerting state — keep label and duration for frontend display
     this.state = {
       running: false,
-      startedAt: null,
-      durationMs: 0,
-      label: "",
+      alerting: true,
+      startedAt: this.state.startedAt,
+      durationMs: this.state.durationMs,
+      label,
     };
 
-    this.logger.info({ label }, "Timer completed");
+    this.logger.info({ label }, "Timer completed — entering alert state");
     this.notify();
 
-    // Blink lights on completion
-    if (this.lightConfig && this.lightConfig.lightEntities.length > 0) {
-      this.blinkLights().catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error({ err: msg }, "Failed to blink lights on timer completion");
-      });
-    }
+    // Start continuous blink on lights
+    this.startBlinkSession();
   }
 
   private clearTimers(): void {
@@ -173,9 +192,9 @@ export class TimerService {
       clearTimeout(this.completionTimeout);
       this.completionTimeout = null;
     }
-    if (this.lightInterval) {
-      clearInterval(this.lightInterval);
-      this.lightInterval = null;
+    if (this.lightUpdateInterval) {
+      clearInterval(this.lightUpdateInterval);
+      this.lightUpdateInterval = null;
     }
   }
 
@@ -191,82 +210,76 @@ export class TimerService {
     }
   }
 
-  private getProgress(): number {
-    if (!this.state.running || this.state.startedAt === null || this.state.durationMs === 0) {
-      return 0;
-    }
+  // ───────────────────────────────────────────────
+  // Private: light notification integration
+  // ───────────────────────────────────────────────
+
+  private startSolidSession(): void {
+    if (!this.lightNotification || this.lightEntityIds.length === 0) return;
+    if (this.state.startedAt === null) return;
+
     const elapsed = Date.now() - this.state.startedAt;
-    return Math.max(0, 1 - elapsed / this.state.durationMs);
+    const remainingMs = Math.max(0, this.state.durationMs - elapsed);
+    const color = progressToColor(remainingMs, this.state.durationMs);
+
+    this.solidSessionId = this.lightNotification.start({
+      entityIds: this.lightEntityIds,
+      pattern: "solid",
+      color,
+      brightness: LIGHT_BRIGHTNESS,
+    });
   }
 
-  // ───────────────────────────────────────────────
-  // Home Assistant light integration
-  // ───────────────────────────────────────────────
+  private updateLightColor(): void {
+    if (!this.lightNotification || !this.solidSessionId) return;
+    if (!this.state.running || this.state.startedAt === null) return;
 
-  private async callHaService(
-    entityId: string,
-    service: "turn_on" | "turn_off",
-    data?: Record<string, unknown>
-  ): Promise<void> {
-    if (!this.lightConfig) return;
+    const elapsed = Date.now() - this.state.startedAt;
+    const remainingMs = Math.max(0, this.state.durationMs - elapsed);
+    const color = progressToColor(remainingMs, this.state.durationMs);
 
-    const url = `${this.lightConfig.haUrl}/api/services/light/${service}`;
-    const body = { entity_id: entityId, ...data };
+    this.lightNotification.updateColor(
+      this.solidSessionId,
+      color,
+      LIGHT_BRIGHTNESS
+    );
+  }
 
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.lightConfig.haToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+  private stopSolidSession(): void {
+    if (this.solidSessionId && this.lightNotification) {
+      this.lightNotification.stop(this.solidSessionId).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error({ err: msg }, "Failed to stop solid light session");
       });
-
-      if (!response.ok) {
-        this.logger.warn(
-          { entityId, service, status: response.status },
-          "HA light service call failed"
-        );
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.warn({ entityId, service, err: msg }, "HA light service call error");
+      this.solidSessionId = null;
     }
   }
 
-  private updateLights(): void {
-    if (!this.lightConfig || !this.state.running) return;
+  private startBlinkSession(): void {
+    if (!this.lightNotification || this.lightEntityIds.length === 0) return;
 
-    const progress = this.getProgress();
-    const color = progressToColor(progress);
+    this.blinkSessionId = this.lightNotification.start({
+      entityIds: this.lightEntityIds,
+      pattern: "blink",
+      color: [255, 0, 0],
+      brightness: LIGHT_BRIGHTNESS,
+      onMs: BLINK_ON_MS,
+      offMs: BLINK_OFF_MS,
+    });
+  }
 
-    for (const entityId of this.lightConfig.lightEntities) {
-      this.callHaService(entityId, "turn_on", {
-        rgb_color: color,
-        brightness: LIGHT_BRIGHTNESS,
-      }).catch(() => {
-        // Errors already logged in callHaService
+  private stopBlinkSession(): void {
+    if (this.blinkSessionId && this.lightNotification) {
+      this.lightNotification.stop(this.blinkSessionId).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error({ err: msg }, "Failed to stop blink light session");
       });
+      this.blinkSessionId = null;
     }
   }
 
-  private async blinkLights(): Promise<void> {
-    if (!this.lightConfig) return;
-
-    for (let i = 0; i < BLINK_COUNT; i++) {
-      for (const entityId of this.lightConfig.lightEntities) {
-        await this.callHaService(entityId, "turn_on", {
-          rgb_color: [255, 0, 0] satisfies RGB,
-          brightness: LIGHT_BRIGHTNESS,
-        });
-      }
-      await sleep(BLINK_DELAY_MS);
-
-      for (const entityId of this.lightConfig.lightEntities) {
-        await this.callHaService(entityId, "turn_off");
-      }
-      await sleep(BLINK_DELAY_MS);
-    }
+  private stopLightSessions(): void {
+    this.stopSolidSession();
+    this.stopBlinkSession();
   }
 }

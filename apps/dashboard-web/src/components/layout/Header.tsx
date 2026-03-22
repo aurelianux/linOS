@@ -1,5 +1,6 @@
 import { HaStatusIndicator } from "@/components/ha/HaStatusIndicator";
 import { SystemMetricBadge } from "@/components/layout/SystemMetricBadge";
+import { TimerHeaderBadge } from "@/components/layout/TimerHeaderBadge";
 import { useMetricHistory } from "@/hooks/useMetricHistory";
 import { useSystemVitals } from "@/hooks/useSystemVitals";
 import { HA_CONFIGURED } from "@/lib/ha/config";
@@ -76,6 +77,8 @@ export function Header() {
         <HeaderVitals />
       </div>
       <div className="flex items-center gap-2 md:gap-4">
+        {/* Timer badge (both mobile and desktop) */}
+        <TimerHeaderBadge />
         {/* Mobile: compact badge only */}
         <MobileVitalsBadge />
         {/* Desktop: full controls */}

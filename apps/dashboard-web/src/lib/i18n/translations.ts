@@ -124,6 +124,9 @@ export const translations = {
     "timer.labelPlaceholder": "z. B. Pasta, Wäsche…",
     "timer.start": "Starten",
     "timer.stop": "Stopp",
+    "timer.dismiss": "Bestätigen",
+    "timer.timesUp": "Zeit abgelaufen!",
+    "timer.minuteShort": "min",
     "timer.errorMinDuration": "Dauer muss mindestens 1 Sekunde sein",
 
     "lang.switch": "EN",
@@ -251,6 +254,9 @@ export const translations = {
     "timer.labelPlaceholder": "e.g. Pasta, Laundry…",
     "timer.start": "Start",
     "timer.stop": "Stop",
+    "timer.dismiss": "Dismiss",
+    "timer.timesUp": "Time's up!",
+    "timer.minuteShort": "min",
     "timer.errorMinDuration": "Duration must be at least 1 second",
 
     "lang.switch": "DE",
