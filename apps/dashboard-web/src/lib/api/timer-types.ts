@@ -3,6 +3,7 @@
  */
 export interface TimerState {
   running: boolean;
+  alerting: boolean;
   startedAt: number | null;
   durationMs: number;
   label: string;

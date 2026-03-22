@@ -19,6 +19,10 @@ interface CollapsiblePanelProps {
   onRefresh?: () => void;
   loading?: boolean;
   lastUpdated?: Date | null;
+  /** Default collapsed state when panel has no persisted preference */
+  defaultCollapsed?: boolean;
+  /** When true, panel content is always shown regardless of stored/default state */
+  forceExpanded?: boolean;
   className?: string;
 }
 
@@ -37,11 +41,20 @@ export function CollapsiblePanel({
   onRefresh,
   loading = false,
   lastUpdated,
+  defaultCollapsed = false,
+  forceExpanded = false,
   className,
 }: CollapsiblePanelProps) {
   const { t } = useTranslation();
-  const collapsed = usePanelStore((s) => s.isCollapsed(panelKey));
+  const storedCollapsed = usePanelStore((s) => s.collapsed);
   const toggle = usePanelStore((s) => s.toggle);
+
+  // Use stored preference if it exists, otherwise fall back to defaultCollapsed
+  const collapsed = forceExpanded
+    ? false
+    : panelKey in storedCollapsed
+      ? !!storedCollapsed[panelKey]
+      : defaultCollapsed;
 
   return (
     <div

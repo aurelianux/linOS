@@ -1,39 +1,34 @@
 import type { Express } from "express";
 import type { Server } from "node:http";
 import type pino from "pino";
+import type { LightNotificationService } from "./services/light-notification.js";
 import { TimerService } from "./services/timer.js";
 import { timerRouter } from "./routes/timer.js";
 import { createTimerWebSocket } from "./ws/timer-ws.js";
-import { loadTimerEnv, parseTimerLightEntities } from "./config/timer-env.js";
 
 /**
  * Attach timer feature to an existing Express app + HTTP server.
  *
- * Call this after createApp() but before or after listen().
+ * Call this after createApp() but before finalize().
  * - Registers timer REST routes on the app
  * - Attaches WebSocket server to the HTTP server
- * - Optionally configures HA light feedback from env vars
+ * - Optionally configures light feedback if a LightNotificationService is provided
  */
 export function setupTimer(
   app: Express,
   server: Server,
-  logger: pino.Logger
+  logger: pino.Logger,
+  lightNotification: LightNotificationService | null,
+  lightEntityIds: string[]
 ): TimerService {
   const timerLogger = logger.child({ feature: "timer" });
   const timerService = new TimerService(timerLogger);
 
-  // Load optional HA light config
-  const timerEnv = loadTimerEnv();
-  const lightEntities = parseTimerLightEntities(timerEnv.LINOS_TIMER_LIGHT_ENTITIES);
-
-  if (timerEnv.LINOS_HA_URL && timerEnv.LINOS_HA_TOKEN && lightEntities.length > 0) {
-    timerService.configureLights({
-      haUrl: timerEnv.LINOS_HA_URL,
-      haToken: timerEnv.LINOS_HA_TOKEN,
-      lightEntities,
-    });
+  // Configure light feedback if the service is available
+  if (lightNotification && lightEntityIds.length > 0) {
+    timerService.configureLights(lightNotification, lightEntityIds);
   } else {
-    timerLogger.info("Timer light feedback not configured (LINOS_HA_URL, LINOS_HA_TOKEN, LINOS_TIMER_LIGHT_ENTITIES)");
+    timerLogger.info("Timer light feedback not available (light notification service not configured)");
   }
 
   // Mount REST routes
