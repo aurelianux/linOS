@@ -1,6 +1,6 @@
 import { loadEnv } from "./config/env.js";
 import { loadAppConfig, loadServicesConfig, loadDashboardConfig } from "./config/app-config.js";
-import { createApp } from "./app.js";
+import { createApp, finalize } from "./app.js";
 import { setupTimer } from "./timer-setup.js";
 
 /**
@@ -46,6 +46,9 @@ async function main() {
 
   // Attach timer feature (REST routes + WebSocket)
   setupTimer(app, server, logger);
+
+  // Finalize: register catch-all 404 + error handlers after all routes
+  finalize(app, logger);
 }
 
 main().catch((err) => {
