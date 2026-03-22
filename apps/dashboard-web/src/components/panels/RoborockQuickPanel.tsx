@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useEntity } from "@hakit/core";
-import { mdiRobotVacuum, mdiBattery, mdiPause, mdiStop, mdiHome } from "@mdi/js";
-import { Card, CardContent } from "@/components/ui/card";
+import { mdiBattery, mdiPause, mdiStop, mdiHome } from "@mdi/js";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
@@ -288,30 +287,19 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
     : undefined;
 
   return (
-    <Card className={cn(isUnavailable && "opacity-50")}>
-      <CardContent className="p-5 space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Icon
-              path={mdiRobotVacuum}
-              size={1.1}
-              className={isCleaning ? "text-amber-400" : "text-slate-400"}
-            />
-            <span className="text-base font-semibold text-slate-100">
-              {t("roborock.title")}
+    <div className={cn("space-y-4", isUnavailable && "opacity-50")}>
+      {/* Status bar */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {battery !== null && (
+            <span className="flex items-center gap-0.5 text-xs text-slate-400">
+              <Icon path={mdiBattery} size={0.6} />
+              {battery}%
             </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {battery !== null && (
-              <span className="flex items-center gap-0.5 text-xs text-slate-400">
-                <Icon path={mdiBattery} size={0.6} />
-                {battery}%
-              </span>
-            )}
-            <Badge variant={stateVariant}>{stateLabel}</Badge>
-          </div>
+          )}
+          <Badge variant={stateVariant}>{stateLabel}</Badge>
         </div>
+      </div>
 
         {/* Current room indicator when cleaning */}
         {isCleaning && currentRoomSegment && (
@@ -461,8 +449,7 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
             {t("entity.unavailable")}
           </p>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
