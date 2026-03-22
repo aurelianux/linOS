@@ -1,126 +1,46 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { useEntity } from "@hakit/core";
+import { useState, useCallback, useMemo } from "react";
+import { useEntity, useHass } from "@hakit/core";
+import { mdiCheck } from "@mdi/js";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 import { useScrollSuppression } from "@/hooks/useScrollSuppression";
+import { ToggleChip } from "@/components/ui/toggle-chip";
+import { SegmentToggle } from "@/components/ui/segment-toggle";
 import type { QuickToggleConfig, DashboardRoom } from "@/lib/api/types";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
-const MODE_STYLES: Record<string, { active: string; label: TranslationKey }> = {
-  hell: { active: "bg-amber-400 text-slate-950", label: "quickToggle.mode.hell" },
-  chill: { active: "bg-sky-400 text-slate-950", label: "quickToggle.mode.chill" },
-  aus: { active: "bg-slate-600 text-slate-100", label: "quickToggle.mode.aus" },
-};
+const MODE_OPTIONS: Array<{
+  value: string;
+  labelKey: TranslationKey;
+  activeClass: string;
+}> = [
+  { value: "hell", labelKey: "quickToggle.mode.hell", activeClass: "bg-amber-400 text-slate-950" },
+  { value: "chill", labelKey: "quickToggle.mode.chill", activeClass: "bg-sky-400 text-slate-950" },
+  { value: "aus", labelKey: "quickToggle.mode.aus", activeClass: "bg-slate-600 text-slate-100" },
+];
 
-interface RoomChipProps {
-  room: DashboardRoom;
-  selected: boolean;
-  onToggle: () => void;
-  suppressTaps: boolean;
-}
+type ExecutionState = "idle" | "executing" | "success" | "error";
 
-function RoomChip({ room, selected, onToggle, suppressTaps }: RoomChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (!suppressTaps) onToggle();
-      }}
-      className={cn(
-        "px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200",
-        "border select-none",
-        selected
-          ? "bg-slate-100 text-slate-950 border-slate-100"
-          : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
-      )}
-    >
-      {room.name}
-    </button>
-  );
-}
-
-interface ModeButtonProps {
-  mode: string;
-  selected: boolean;
-  onSelect: () => void;
-  suppressTaps: boolean;
-}
-
-function ModeButton({ mode, selected, onSelect, suppressTaps }: ModeButtonProps) {
-  const { t } = useTranslation();
-  const style = MODE_STYLES[mode];
-  const label = style ? t(style.label) : mode;
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (!suppressTaps) onSelect();
-      }}
-      className={cn(
-        "flex-1 py-3 rounded-lg text-sm font-semibold transition-all duration-200",
-        "border select-none",
-        selected && style
-          ? cn(style.active, "border-transparent shadow-sm")
-          : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-interface ExecuteEntityProps {
-  entityId: `input_select.${string}`;
-  mode: string;
-  onDone: () => void;
-}
-
-/**
- * Executes the mode selection for a single entity on mount.
- */
-function ExecuteEntity({ entityId, mode, onDone }: ExecuteEntityProps) {
-  const entity = useEntity(entityId, { returnNullIfNotFound: true });
-
-  useEffect(() => {
-    if (!entity || entity.state === "unavailable" || entity.state === "unknown") {
-      onDone();
-      return;
-    }
-    entity.service
-      .selectOption({ serviceData: { option: mode } })
-      .catch((err: unknown) => {
-        console.error("Failed to set mode:", entityId, err);
-      })
-      .finally(onDone);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
-
-  return null;
+/** Reads the current mode of a single room entity. */
+function useRoomEntityState(entityId: `input_select.${string}` | undefined) {
+  const entity = useEntity(entityId ?? ("input_select.__noop__" as `input_select.${string}`), {
+    returnNullIfNotFound: true,
+  });
+  if (!entityId) return null;
+  return entity;
 }
 
 export function QuickAccessPanel() {
   const { t } = useTranslation();
+  const { helpers } = useHass();
   const { data: config } = useDashboardConfig();
   const suppressTaps = useScrollSuppression();
 
-  // null = user hasn't interacted yet, use default selection
   const [userSelectedRoomIds, setUserSelectedRoomIds] = useState<Set<string> | null>(null);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
-  const [executing, setExecuting] = useState(false);
-  const [pendingExecutions, setPendingExecutions] = useState<
-    Array<{ entityId: `input_select.${string}`; mode: string }>
-  >([]);
-
-  const handleExecutionDone = useCallback(() => {
-    setPendingExecutions((prev) => {
-      const next = prev.slice(1);
-      if (next.length === 0) {
-        setExecuting(false);
-      }
-      return next;
-    });
-  }, []);
+  const [executionState, setExecutionState] = useState<ExecutionState>("idle");
 
   const quickToggles = config?.quickToggles as QuickToggleConfig | undefined;
   const rooms = config?.rooms ?? [];
@@ -140,6 +60,14 @@ export function QuickAccessPanel() {
   const selectedRoomIds = userSelectedRoomIds ?? defaultRoomIds;
   const setSelectedRoomIds = setUserSelectedRoomIds;
 
+  // Read current mode from the first selected room's entity to preselect
+  const firstSelectedRoomId = Array.from(selectedRoomIds)[0];
+  const firstEntityId = firstSelectedRoomId ? roomToggleMap.get(firstSelectedRoomId) : undefined;
+  const firstEntity = useRoomEntityState(firstEntityId);
+
+  // Auto-preselect mode from entity state when user hasn't chosen yet
+  const effectiveMode = selectedMode ?? firstEntity?.state ?? null;
+
   if (!quickToggles) return null;
 
   const modes = quickToggles.modes;
@@ -151,6 +79,7 @@ export function QuickAccessPanel() {
     } else {
       setSelectedRoomIds(new Set(availableRooms.map((r) => r.id)));
     }
+    setSelectedMode(null);
   };
 
   const handleRoomToggle = (roomId: string) => {
@@ -163,6 +92,7 @@ export function QuickAccessPanel() {
       }
       return next;
     });
+    setSelectedMode(null);
   };
 
   const handleModeSelect = (mode: string) => {
@@ -170,29 +100,57 @@ export function QuickAccessPanel() {
   };
 
   const buildSummary = (): string => {
-    if (selectedRoomIds.size === 0 || !selectedMode) {
+    if (selectedRoomIds.size === 0 || !effectiveMode) {
       return t("quickToggle.noSelection");
     }
     const roomNames = availableRooms
       .filter((r) => selectedRoomIds.has(r.id))
       .map((r) => r.name);
-    const modeStyle = MODE_STYLES[selectedMode];
-    const modeLabel = modeStyle ? t(modeStyle.label) : selectedMode;
+    const modeOption = MODE_OPTIONS.find((m) => m.value === effectiveMode);
+    const modeLabel = modeOption ? t(modeOption.labelKey) : effectiveMode;
     return `${roomNames.join(" & ")} → ${modeLabel}`;
   };
 
-  const canExecute = selectedRoomIds.size > 0 && selectedMode !== null;
+  const canExecute = selectedRoomIds.size > 0 && effectiveMode !== null && executionState !== "executing";
 
-  const handleExecute = () => {
-    if (!canExecute || !selectedMode || executing) return;
-    const executions = Array.from(selectedRoomIds)
+  const handleExecute = useCallback(async () => {
+    if (!effectiveMode || selectedRoomIds.size === 0 || executionState === "executing") return;
+
+    setExecutionState("executing");
+
+    const entityIds = Array.from(selectedRoomIds)
       .map((roomId) => roomToggleMap.get(roomId))
-      .filter((e): e is `input_select.${string}` => !!e)
-      .map((entityId) => ({ entityId, mode: selectedMode }));
+      .filter((e): e is `input_select.${string}` => !!e);
 
-    setPendingExecutions(executions);
-    setExecuting(true);
-  };
+    try {
+      await Promise.all(
+        entityIds.map((entityId) =>
+          helpers.callService({
+            domain: "input_select",
+            service: "select_option",
+            serviceData: { option: effectiveMode },
+            target: { entity_id: entityId },
+          })
+        )
+      );
+      setExecutionState("success");
+      setTimeout(() => setExecutionState("idle"), 1500);
+    } catch (err: unknown) {
+      console.error("Failed to set quick access mode:", err);
+      setExecutionState("error");
+      setTimeout(() => setExecutionState("idle"), 2000);
+    }
+  }, [effectiveMode, selectedRoomIds, executionState, roomToggleMap, helpers]);
+
+  // Build mode segment options from config
+  const modeSegmentOptions = modes.map((mode) => {
+    const opt = MODE_OPTIONS.find((m) => m.value === mode);
+    return {
+      value: mode,
+      labelKey: (opt?.labelKey ?? mode) as TranslationKey,
+      activeClass: opt?.activeClass,
+    };
+  });
 
   return (
     <div className="space-y-3">
@@ -200,29 +158,21 @@ export function QuickAccessPanel() {
       <div>
         <p className="text-xs text-slate-500 mb-1.5">{t("quickToggle.selectRooms")}</p>
         <div className="flex flex-wrap gap-2">
-          {/* Select all chip */}
-          <button
-            type="button"
+          <ToggleChip
+            label={t("quickToggle.allRooms")}
+            selected={allSelected}
             onClick={() => {
               if (!suppressTaps) handleSelectAll();
             }}
-            className={cn(
-              "px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200",
-              "border select-none",
-              allSelected
-                ? "bg-slate-100 text-slate-950 border-slate-100"
-                : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
-            )}
-          >
-            {t("quickToggle.allRooms")}
-          </button>
+          />
           {availableRooms.map((room) => (
-            <RoomChip
+            <ToggleChip
               key={room.id}
-              room={room}
+              label={room.name}
               selected={selectedRoomIds.has(room.id)}
-              onToggle={() => handleRoomToggle(room.id)}
-              suppressTaps={suppressTaps}
+              onClick={() => {
+                if (!suppressTaps) handleRoomToggle(room.id);
+              }}
             />
           ))}
         </div>
@@ -232,43 +182,52 @@ export function QuickAccessPanel() {
       <div>
         <p className="text-xs text-slate-500 mb-1.5">{t("quickToggle.selectMode")}</p>
         <div className="flex gap-2">
-          {modes.map((mode) => (
-            <ModeButton
-              key={mode}
-              mode={mode}
-              selected={selectedMode === mode}
-              onSelect={() => handleModeSelect(mode)}
-              suppressTaps={suppressTaps}
-            />
-          ))}
+          {modeSegmentOptions.map((opt) => {
+            const isActive = effectiveMode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  if (!suppressTaps) handleModeSelect(opt.value);
+                }}
+                className={cn(
+                  "flex-1 py-3 rounded-lg text-sm font-semibold transition-all duration-200",
+                  "border select-none",
+                  isActive && opt.activeClass
+                    ? cn(opt.activeClass, "border-transparent shadow-sm")
+                    : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
+                )}
+              >
+                {t(opt.labelKey)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Execute button */}
       <button
         type="button"
-        disabled={!canExecute || executing}
+        disabled={!canExecute}
         onClick={handleExecute}
         className={cn(
           "w-full py-3 rounded-lg text-sm font-semibold transition-all duration-200",
-          "border select-none",
-          canExecute && !executing
-            ? "bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 active:bg-amber-500"
-            : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
+          "border select-none flex items-center justify-center gap-2",
+          executionState === "success"
+            ? "bg-emerald-500 text-slate-950 border-emerald-500"
+            : executionState === "error"
+              ? "bg-red-500 text-slate-950 border-red-500"
+              : canExecute
+                ? "bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 active:bg-amber-500"
+                : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
         )}
       >
-        {executing ? "…" : buildSummary()}
+        {executionState === "success" && (
+          <Icon path={mdiCheck} size={0.7} className="animate-scale-in" />
+        )}
+        {executionState === "executing" ? "…" : executionState === "success" ? t("quickToggle.execute") : buildSummary()}
       </button>
-
-      {/* Hidden execution components */}
-      {pendingExecutions.map((exec) => (
-        <ExecuteEntity
-          key={exec.entityId}
-          entityId={exec.entityId}
-          mode={exec.mode}
-          onDone={handleExecutionDone}
-        />
-      ))}
     </div>
   );
 }
