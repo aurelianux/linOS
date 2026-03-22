@@ -72,65 +72,10 @@ const ROOM_TRANSLATION_KEYS: Record<string, TranslationKey> = {
   badezimmer: "room.badezimmer",
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Shared UI components ────────────────────────────────────────────────────
 
-interface ToggleChipProps {
-  label: string;
-  selected: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}
-
-function ToggleChip({ label, selected, disabled, onClick }: ToggleChipProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-        selected
-          ? "bg-amber-400/10 text-amber-400 border-amber-400/50"
-          : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600",
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-interface SegmentToggleProps {
-  options: ReadonlyArray<{ value: number; labelKey: TranslationKey }>;
-  value: number;
-  disabled?: boolean;
-  onChange: (value: number) => void;
-}
-
-function SegmentToggle({ options, value, disabled, onChange }: SegmentToggleProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-            value === opt.value
-              ? "bg-slate-700 text-slate-100"
-              : "bg-slate-800 text-slate-500 hover:text-slate-400",
-            disabled && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          {t(opt.labelKey)}
-        </button>
-      ))}
-    </div>
-  );
-}
+import { ToggleChip } from "@/components/ui/toggle-chip";
+import { SegmentToggle } from "@/components/ui/segment-toggle";
 
 // ─── Helper: extract typed attribute ──────────────────────────────────────────
 
@@ -328,7 +273,7 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
               <Button
                 variant="secondary"
                 size="sm"
-                className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950"
+                className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950"
                 onClick={handleResume}
               >
                 {t("roborock.resume")}
@@ -431,16 +376,20 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
 
         {/* Start button — hidden when active */}
         {!isActive && (
-          <Button
-            className={cn(
-              "w-full font-semibold",
-              canStart && "bg-amber-500 hover:bg-amber-600 text-slate-950"
-            )}
+          <button
+            type="button"
             disabled={!canStart}
             onClick={handleStart}
+            className={cn(
+              "w-full py-3 rounded-lg text-sm font-semibold transition-all duration-200",
+              "border select-none",
+              canStart
+                ? "bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 active:bg-amber-500"
+                : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
+            )}
           >
             {t("roborock.start")}
-          </Button>
+          </button>
         )}
 
         {/* Unavailable message */}
