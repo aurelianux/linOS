@@ -11,7 +11,10 @@ const navItems: Array<{ labelKey: TranslationKey; path: string }> = [
 export function BottomNav() {
   const { t } = useTranslation();
   return (
-    <div className="flex justify-around items-center h-16 px-2">
+    <div
+      className="flex justify-around items-center h-16 px-2"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
+    >
       {navItems.map((item) => (
         <NavLink
           key={item.path}

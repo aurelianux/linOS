@@ -1,8 +1,10 @@
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { CompactRoomCard, isLargeRoom } from "@/components/ha/CompactRoomCard";
+import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
 import { QuickToggleBar } from "@/components/ha/QuickToggleBar";
 import { RoborockQuickPanel } from "@/components/panels/RoborockQuickPanel";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -34,6 +36,7 @@ function buildRoomLayout(rooms: DashboardRoom[]): Array<{
 export function SmarthomePage() {
   const { t } = useTranslation();
   const { data: dashConfig, loading, error } = useDashboardConfig();
+  const isMobile = useIsMobile();
   const rooms = dashConfig?.rooms ?? [];
   const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
   const roomLayout = buildRoomLayout(rooms);
@@ -47,10 +50,10 @@ export function SmarthomePage() {
         </h2>
       </div>
 
-      {/* Quick toggles */}
+      {/* Quick toggles — new panel on mobile, legacy bar on desktop */}
       {HA_CONFIGURED && (
         <CardErrorBoundary>
-          <QuickToggleBar />
+          {isMobile ? <QuickAccessPanel /> : <QuickToggleBar />}
         </CardErrorBoundary>
       )}
 
