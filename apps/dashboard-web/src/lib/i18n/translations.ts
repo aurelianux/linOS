@@ -117,6 +117,15 @@ export const translations = {
     "roborock.state.idle": "Bereit",
     "roborock.state.error": "Fehler",
 
+    "timer.title": "Timer",
+    "timer.minutes": "Minuten",
+    "timer.seconds": "Sekunden",
+    "timer.label": "Bezeichnung",
+    "timer.labelPlaceholder": "z. B. Pasta, Wäsche…",
+    "timer.start": "Starten",
+    "timer.stop": "Stopp",
+    "timer.errorMinDuration": "Dauer muss mindestens 1 Sekunde sein",
+
     "lang.switch": "EN",
   },
   en: {
@@ -234,6 +243,15 @@ export const translations = {
     "roborock.state.paused": "Paused",
     "roborock.state.idle": "Idle",
     "roborock.state.error": "Error",
+
+    "timer.title": "Timer",
+    "timer.minutes": "Minutes",
+    "timer.seconds": "Seconds",
+    "timer.label": "Label",
+    "timer.labelPlaceholder": "e.g. Pasta, Laundry…",
+    "timer.start": "Start",
+    "timer.stop": "Stop",
+    "timer.errorMinDuration": "Duration must be at least 1 second",
 
     "lang.switch": "DE",
   },
