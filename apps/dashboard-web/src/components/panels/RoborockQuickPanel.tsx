@@ -37,15 +37,6 @@ const FAN_SPEED_TO_POWER: Record<string, number> = {
   max_plus: 106,
 };
 
-const FAN_POWER_TO_SPEED: Record<number, string> = {
-  101: "silent",
-  102: "balanced",
-  103: "turbo",
-  104: "max",
-  105: "custom",
-  106: "max_plus",
-};
-
 const VACUUM_STATE_KEYS: Record<string, TranslationKey> = {
   docked: "roborock.state.docked",
   cleaning: "roborock.state.cleaning",
@@ -207,25 +198,22 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
 
   const handleStart = async () => {
     if (!entity || selectedRooms.length === 0 || isUnavailable) return;
-    const fanSpeedName = FAN_POWER_TO_SPEED[fanPower] ?? "turbo";
     try {
-      // Set fan speed
-      await entity.service.setFanSpeed({
-        serviceData: { fan_speed: fanSpeedName },
-      });
-      // Set water/mop mode — 200 (off) for vacuum-only
+      // Single app_segment_clean command with all settings inline.
+      // Avoids timing issues from sequential setFanSpeed + set_water_box_custom_mode
+      // and uses the correct Roborock params format ({ segments, repeat, ... }).
       const waterMode = cleaningMode === "vacuum" ? 200 : waterBoxMode;
       await entity.service.sendCommand({
         serviceData: {
-          command: "set_water_box_custom_mode",
-          params: [waterMode],
-        },
-      });
-      // Start segment clean
-      await entity.service.sendCommand({
-        serviceData: {
           command: "app_segment_clean",
-          params: [selectedRooms],
+          params: [
+            {
+              segments: selectedRooms,
+              repeat: 1,
+              fan_power: fanPower,
+              water_box_mode: waterMode,
+            },
+          ],
         },
       });
     } catch (err: unknown) {
