@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { mdiTimer, mdiPlay, mdiStop } from "@mdi/js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
-import { cn } from "@/lib/utils";
 import { useTimerSocket } from "@/hooks/useTimerSocket";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { cn } from "@/lib/utils";
+import { mdiPlay, mdiStop, mdiTimer } from "@mdi/js";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** SVG progress ring constants */
 const RING_SIZE = 160;
@@ -275,3 +275,7 @@ export function TimerCard() {
     </Card>
   );
 }
+
+
+// Main export
+export default TimerCard;
