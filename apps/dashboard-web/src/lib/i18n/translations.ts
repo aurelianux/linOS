@@ -73,6 +73,8 @@ export const translations = {
     "quickToggle.selectRooms": "Räume auswählen",
     "quickToggle.selectMode": "Modus wählen",
     "quickToggle.noSelection": "Räume & Modus wählen",
+    "quickToggle.allRooms": "Alle",
+    "quickToggle.allOff": "Alle aus",
 
     "airQuality.title": "Luftqualität",
     "airQuality.temperature": "Temperatur",
@@ -189,6 +191,8 @@ export const translations = {
     "quickToggle.selectRooms": "Select rooms",
     "quickToggle.selectMode": "Select mode",
     "quickToggle.noSelection": "Select rooms & mode",
+    "quickToggle.allRooms": "All",
+    "quickToggle.allOff": "All off",
 
     "airQuality.title": "Air Quality",
     "airQuality.temperature": "Temperature",

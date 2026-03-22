@@ -13,6 +13,8 @@ interface CollapsiblePanelProps {
   icon: string;
   title: string;
   children: ReactNode;
+  /** Custom action buttons rendered in the header (stop-propagation handled internally) */
+  headerActions?: ReactNode;
   /** Optional refresh callback — shows refresh button + timestamp */
   onRefresh?: () => void;
   loading?: boolean;
@@ -31,6 +33,7 @@ export function CollapsiblePanel({
   icon,
   title,
   children,
+  headerActions,
   onRefresh,
   loading = false,
   lastUpdated,
@@ -57,6 +60,16 @@ export function CollapsiblePanel({
         <span className="text-sm font-semibold text-slate-100 flex-1 truncate">
           {title}
         </span>
+
+        {/* Custom header actions */}
+        {headerActions && !collapsed && (
+          <span
+            className="flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {headerActions}
+          </span>
+        )}
 
         {/* Refresh + timestamp (if panel supports it) */}
         {onRefresh && !collapsed && (
