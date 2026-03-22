@@ -7,6 +7,15 @@ import { type ServicesConfig, type DashboardConfig } from "./config/app-config.j
 import { headersMiddleware } from "./middleware/headers.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/errors.js";
+
+/**
+ * Register catch-all error handlers.
+ * Must be called AFTER all routes (including late-mounted features like timer).
+ */
+export function finalize(app: Express, logger: pino.Logger): void {
+  app.use(notFoundMiddleware);
+  app.use(errorMiddleware(logger));
+}
 import { createRouter } from "./routes/index.js";
 
 /** 300 req/min — generous for a local dashboard, blocks runaway pollers */
@@ -65,11 +74,8 @@ export function createApp(
   // ─────────────────────────────────────
   app.use(createRouter(servicesConfig, logger, dashboardConfig));
 
-  // ─────────────────────────────────────
-  // Error handling (must be last)
-  // ─────────────────────────────────────
-  app.use(notFoundMiddleware);
-  app.use(errorMiddleware(logger));
+  // NOTE: notFound + error middleware registered via finalize() in index.ts
+  // after all late-mounted features (timer, etc.) are attached.
 
   return { app, logger };
 }
