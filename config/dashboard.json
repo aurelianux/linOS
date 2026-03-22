@@ -45,14 +45,7 @@
       "icon": "mdiHomeVariant",
       "entities": [
         "light.flur"
-      ],
-      "airQuality": {
-        "temperature": "sensor.bewegungsmelder_flur_illuminance",
-        "humidity": "sensor.bewegungsmelder_flur_device_temperature",
-        "secondary": [
-          "sensor.bewegungsmelder_flur_battery"
-        ]
-      }
+      ]
     },
     {
       "id": "badezimmer",
