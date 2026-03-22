@@ -76,7 +76,10 @@ export function CompactRoomCard({
 
             {/* Entity cards in compact grid */}
             {filteredEntities.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div
+                className="grid gap-2"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+              >
                 {filteredEntities.map((entityId) => {
                   const domain = entityId.split(".")[0] ?? "";
                   const EntityCard = getCardForDomain(domain);
