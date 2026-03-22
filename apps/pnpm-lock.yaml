@@ -29,6 +29,9 @@ importers:
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
+      ws:
+        specifier: ^8.20.0
+        version: 8.20.0
       zod:
         specifier: ^4.2.1
         version: 4.3.6
@@ -42,6 +45,9 @@ importers:
       '@types/node':
         specifier: ^24.10.4
         version: 24.11.0
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       eslint:
         specifier: ^9.39.2
         version: 9.39.3(jiti@1.21.7)
@@ -65,7 +71,7 @@ importers:
     dependencies:
       '@hakit/core':
         specifier: ^6.0.2
-        version: 6.0.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@iconify/react@6.0.2(react@19.2.4))(home-assistant-js-websocket@9.6.0)(lodash@4.17.23)(prettier@3.7.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-debounce@10.1.0(react@19.2.4))(ws@8.19.0)(yargs@17.7.2)(zustand@5.0.11(@types/react@19.2.14)(react@19.2.4))
+        version: 6.0.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@iconify/react@6.0.2(react@19.2.4))(home-assistant-js-websocket@9.6.0)(lodash@4.17.23)(prettier@3.7.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-debounce@10.1.0(react@19.2.4))(ws@8.20.0)(yargs@17.7.2)(zustand@5.0.11(@types/react@19.2.14)(react@19.2.4))
       '@mdi/js':
         specifier: ^7.4.47
         version: 7.4.47
@@ -1110,6 +1116,9 @@ packages:
 
   '@types/uuid@9.0.8':
     resolution: {integrity: sha512-jg+97EGIcY9AGHJJRaaPVgetKDsrTgbRjQ5Msgjh/DQKEFl0DtyRr/VCOyD1T2R1MNeWPK/u7JoGhlDZnKBAfA==}
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@typescript-eslint/eslint-plugin@8.56.1':
     resolution: {integrity: sha512-Jz9ZztpB37dNC+HU2HI28Bs9QXpzCz+y/twHOwhyrIRdbuVDxSytJNDl6z/aAKlaRIwC7y8wJdkBv7FxYGgi0A==}
@@ -2400,6 +2409,7 @@ packages:
   rolldown-vite@7.2.5:
     resolution: {integrity: sha512-u09tdk/huMiN8xwoiBbig197jKdCamQTtOruSalOzbqGje3jdHiV0njQlAW0YvzoahkirFePNQ4RYlfnRQpXZA==}
     engines: {node: ^20.19.0 || >=22.12.0}
+    deprecated: Use 7.3.1 for migration purposes. For the most recent updates, migrate to Vite 8 once you're ready.
     hasBin: true
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
@@ -2769,8 +2779,8 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  ws@8.19.0:
-    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+  ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -3263,7 +3273,7 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@hakit/core@6.0.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@iconify/react@6.0.2(react@19.2.4))(home-assistant-js-websocket@9.6.0)(lodash@4.17.23)(prettier@3.7.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-debounce@10.1.0(react@19.2.4))(ws@8.19.0)(yargs@17.7.2)(zustand@5.0.11(@types/react@19.2.14)(react@19.2.4))':
+  '@hakit/core@6.0.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@iconify/react@6.0.2(react@19.2.4))(home-assistant-js-websocket@9.6.0)(lodash@4.17.23)(prettier@3.7.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-debounce@10.1.0(react@19.2.4))(ws@8.20.0)(yargs@17.7.2)(zustand@5.0.11(@types/react@19.2.14)(react@19.2.4))':
     dependencies:
       '@emotion/react': 11.14.0(@types/react@19.2.14)(react@19.2.4)
       '@emotion/styled': 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
@@ -3274,7 +3284,7 @@ snapshots:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       use-debounce: 10.1.0(react@19.2.4)
-      ws: 8.19.0
+      ws: 8.20.0
       yargs: 17.7.2
       zustand: 5.0.11(@types/react@19.2.14)(react@19.2.4)
 
@@ -3538,7 +3548,7 @@ snapshots:
       recast: 0.23.11
       semver: 7.7.4
       util: 0.12.5
-      ws: 8.19.0
+      ws: 8.20.0
     optionalDependencies:
       prettier: 3.7.4
     transitivePeerDependencies:
@@ -3710,6 +3720,10 @@ snapshots:
       '@types/node': 24.11.0
 
   '@types/uuid@9.0.8': {}
+
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 24.11.0
 
   '@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.3(jiti@1.21.7))(typescript@5.9.3)':
     dependencies:
@@ -5411,7 +5425,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@8.19.0: {}
+  ws@8.20.0: {}
 
   y18n@5.0.8: {}
 
