@@ -69,6 +69,10 @@ export const translations = {
     "quickToggle.mode.chill": "Chill",
     "quickToggle.mode.aus": "Aus",
     "quickToggle.error": "Modus konnte nicht gesetzt werden",
+    "quickToggle.execute": "Ausführen",
+    "quickToggle.selectRooms": "Räume auswählen",
+    "quickToggle.selectMode": "Modus wählen",
+    "quickToggle.noSelection": "Räume & Modus wählen",
 
     "airQuality.title": "Luftqualität",
     "airQuality.temperature": "Temperatur",
@@ -181,6 +185,10 @@ export const translations = {
     "quickToggle.mode.chill": "Chill",
     "quickToggle.mode.aus": "Off",
     "quickToggle.error": "Failed to set mode",
+    "quickToggle.execute": "Execute",
+    "quickToggle.selectRooms": "Select rooms",
+    "quickToggle.selectMode": "Select mode",
+    "quickToggle.noSelection": "Select rooms & mode",
 
     "airQuality.title": "Air Quality",
     "airQuality.temperature": "Temperature",
