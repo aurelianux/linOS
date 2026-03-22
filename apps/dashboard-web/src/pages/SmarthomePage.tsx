@@ -13,6 +13,10 @@ import { HA_CONFIGURED } from "@/lib/ha/config";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
+import { useEntity } from "@hakit/core";
+import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum } from "@mdi/js";
+import { useCallback, useState } from "react";
+import TimerCard from "../components/panels/TimerCard";
 
 function buildQuickToggleMap(
   quickToggles: QuickToggleConfig | undefined
@@ -92,6 +96,9 @@ export function SmarthomePage() {
         {t("nav.dashboard")}
       </h2>
 
+      {/* Timer */}
+      <TimerCard />
+      
       {/* Quick Access + Vacuum — 2-col on desktop */}
       {HA_CONFIGURED && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

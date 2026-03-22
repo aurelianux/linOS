@@ -1,6 +1,7 @@
 import { loadEnv } from "./config/env.js";
 import { loadAppConfig, loadServicesConfig, loadDashboardConfig } from "./config/app-config.js";
 import { createApp } from "./app.js";
+import { setupTimer } from "./timer-setup.js";
 
 /**
  * Bootstrap the dashboard API
@@ -38,10 +39,13 @@ async function main() {
   );
 
   // Start server
-  app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, () => {
     logger.info(`✓ Dashboard API listening on http://localhost:${env.PORT}`);
     logger.debug({ appConfig }, "App config loaded");
   });
+
+  // Attach timer feature (REST routes + WebSocket)
+  setupTimer(app, server, logger);
 }
 
 main().catch((err) => {
