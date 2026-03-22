@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { useEntity, useHass } from "@hakit/core";
+import { useHass } from "@hakit/core";
 import { mdiCheck } from "@mdi/js";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
 import { useScrollSuppression } from "@/hooks/useScrollSuppression";
 import { ToggleChip } from "@/components/ui/toggle-chip";
-import { SegmentToggle } from "@/components/ui/segment-toggle";
-import type { QuickToggleConfig, DashboardRoom } from "@/lib/api/types";
+import type { QuickToggleConfig } from "@/lib/api/types";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
 const MODE_OPTIONS: Array<{
@@ -23,18 +22,10 @@ const MODE_OPTIONS: Array<{
 
 type ExecutionState = "idle" | "executing" | "success" | "error";
 
-/** Reads the current mode of a single room entity. */
-function useRoomEntityState(entityId: `input_select.${string}` | undefined) {
-  const entity = useEntity(entityId ?? ("input_select.__noop__" as `input_select.${string}`), {
-    returnNullIfNotFound: true,
-  });
-  if (!entityId) return null;
-  return entity;
-}
-
 export function QuickAccessPanel() {
   const { t } = useTranslation();
-  const { helpers } = useHass();
+  const helpers = useHass((s) => s.helpers);
+  const entities = useHass((s) => s.entities);
   const { data: config } = useDashboardConfig();
   const suppressTaps = useScrollSuppression();
 
@@ -63,10 +54,10 @@ export function QuickAccessPanel() {
   // Read current mode from the first selected room's entity to preselect
   const firstSelectedRoomId = Array.from(selectedRoomIds)[0];
   const firstEntityId = firstSelectedRoomId ? roomToggleMap.get(firstSelectedRoomId) : undefined;
-  const firstEntity = useRoomEntityState(firstEntityId);
+  const firstEntityState = firstEntityId ? (entities[firstEntityId]?.state as string | undefined) : undefined;
 
   // Auto-preselect mode from entity state when user hasn't chosen yet
-  const effectiveMode = selectedMode ?? firstEntity?.state ?? null;
+  const effectiveMode = selectedMode ?? firstEntityState ?? null;
 
   if (!quickToggles) return null;
 
