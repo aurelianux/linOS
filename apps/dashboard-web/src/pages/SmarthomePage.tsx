@@ -1,12 +1,16 @@
+import { useCallback, useState } from "react";
+import { useEntity } from "@hakit/core";
+import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum } from "@mdi/js";
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
+import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { CompactRoomCard, isLargeRoom } from "@/components/ha/CompactRoomCard";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
-import { QuickToggleBar } from "@/components/ha/QuickToggleBar";
 import { RoborockQuickPanel } from "@/components/panels/RoborockQuickPanel";
+import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
+import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +23,6 @@ function buildQuickToggleMap(
   );
 }
 
-/**
- * Build a flat list of room entries with layout hints.
- * Large rooms get full width, small rooms share a row when possible.
- */
 function buildRoomLayout(rooms: DashboardRoom[]): Array<{
   room: DashboardRoom;
   spanFull: boolean;
@@ -33,35 +33,83 @@ function buildRoomLayout(rooms: DashboardRoom[]): Array<{
   }));
 }
 
+/** Header action button: sets the global entity to "aus" (all lights off). */
+function AllOffButton({ entityId }: { entityId: `input_select.${string}` }) {
+  const entity = useEntity(entityId, { returnNullIfNotFound: true });
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+
+  const handleAllOff = useCallback(async () => {
+    if (!entity || entity.state === "unavailable" || entity.state === "unknown" || busy) return;
+    setBusy(true);
+    try {
+      await entity.service.selectOption({ serviceData: { option: "aus" } });
+    } catch (err: unknown) {
+      console.error("Failed to set all off:", err);
+    } finally {
+      setBusy(false);
+    }
+  }, [entity, busy]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleAllOff}
+      disabled={busy || !entity}
+      title={t("quickToggle.allOff")}
+      aria-label={t("quickToggle.allOff")}
+      className={cn(
+        "p-1 rounded transition-colors",
+        "text-slate-400 hover:text-red-400 hover:bg-slate-800",
+        "disabled:opacity-50 disabled:cursor-not-allowed"
+      )}
+    >
+      <Icon path={mdiLightbulbOff} size={0.75} />
+    </button>
+  );
+}
+
 export function SmarthomePage() {
   const { t } = useTranslation();
   const { data: dashConfig, loading, error } = useDashboardConfig();
-  const isMobile = useIsMobile();
   const rooms = dashConfig?.rooms ?? [];
   const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
   const roomLayout = buildRoomLayout(rooms);
+  const globalEntity = dashConfig?.quickToggles?.globalEntity;
 
   return (
     <div className="p-4 md:p-6 space-y-5">
       {/* Page header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-100">
-          {t("nav.dashboard")}
-        </h2>
-      </div>
+      <h2 className="text-2xl font-bold text-slate-100">
+        {t("nav.dashboard")}
+      </h2>
 
-      {/* Quick toggles — new panel on mobile, legacy bar on desktop */}
+      {/* Quick Access + Vacuum — 2-col on desktop */}
       {HA_CONFIGURED && (
-        <CardErrorBoundary>
-          {isMobile ? <QuickAccessPanel /> : <QuickToggleBar />}
-        </CardErrorBoundary>
-      )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <CardErrorBoundary>
+            <CollapsiblePanel
+              panelKey="quick-access"
+              icon={mdiLightbulbGroup}
+              title={t("quickToggle.title")}
+              headerActions={
+                globalEntity ? <AllOffButton entityId={globalEntity} /> : undefined
+              }
+            >
+              <QuickAccessPanel />
+            </CollapsiblePanel>
+          </CardErrorBoundary>
 
-      {/* Vacuum */}
-      {HA_CONFIGURED && (
-        <CardErrorBoundary>
-          <RoborockQuickPanel />
-        </CardErrorBoundary>
+          <CardErrorBoundary>
+            <CollapsiblePanel
+              panelKey="roborock"
+              icon={mdiRobotVacuum}
+              title={t("roborock.title")}
+            >
+              <RoborockQuickPanel />
+            </CollapsiblePanel>
+          </CardErrorBoundary>
+        </div>
       )}
 
       {/* Rooms section */}
@@ -91,10 +139,18 @@ export function SmarthomePage() {
                 key={room.id}
                 className={cn(spanFull && "md:col-span-2")}
               >
-                <CompactRoomCard
-                  room={room}
-                  quickToggleEntity={quickToggleMap.get(room.id)}
-                />
+                <CardErrorBoundary>
+                  <CollapsiblePanel
+                    panelKey={`room-${room.id}`}
+                    icon={resolveDashboardIcon(room.icon)}
+                    title={room.name}
+                  >
+                    <CompactRoomCard
+                      room={room}
+                      quickToggleEntity={quickToggleMap.get(room.id)}
+                    />
+                  </CollapsiblePanel>
+                </CardErrorBoundary>
               </div>
             ))}
           </div>

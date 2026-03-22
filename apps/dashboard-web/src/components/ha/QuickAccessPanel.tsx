@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useEntity } from "@hakit/core";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -104,7 +104,8 @@ export function QuickAccessPanel() {
   const { data: config } = useDashboardConfig();
   const suppressTaps = useScrollSuppression();
 
-  const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(new Set());
+  // null = user hasn't interacted yet, use default selection
+  const [userSelectedRoomIds, setUserSelectedRoomIds] = useState<Set<string> | null>(null);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [executing, setExecuting] = useState(false);
   const [pendingExecutions, setPendingExecutions] = useState<
@@ -124,14 +125,33 @@ export function QuickAccessPanel() {
   const quickToggles = config?.quickToggles as QuickToggleConfig | undefined;
   const rooms = config?.rooms ?? [];
 
+  const roomToggleMap = quickToggles
+    ? new Map(quickToggles.rooms.map((r) => [r.roomId, r.entity]))
+    : new Map<string, `input_select.${string}`>();
+
+  const availableRooms = rooms.filter((r) => roomToggleMap.has(r.id));
+
+  // Derive effective selection: default to wohnzimmer until user interacts
+  const defaultRoomIds = useMemo(() => {
+    const hasWohnzimmer = availableRooms.some((r) => r.id === "wohnzimmer");
+    return hasWohnzimmer ? new Set(["wohnzimmer"]) : new Set<string>();
+  }, [availableRooms]);
+
+  const selectedRoomIds = userSelectedRoomIds ?? defaultRoomIds;
+  const setSelectedRoomIds = setUserSelectedRoomIds;
+
   if (!quickToggles) return null;
 
   const modes = quickToggles.modes;
-  const roomToggleMap = new Map(
-    quickToggles.rooms.map((r) => [r.roomId, r.entity])
-  );
+  const allSelected = availableRooms.length > 0 && availableRooms.every((r) => selectedRoomIds.has(r.id));
 
-  const availableRooms = rooms.filter((r) => roomToggleMap.has(r.id));
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedRoomIds(new Set());
+    } else {
+      setSelectedRoomIds(new Set(availableRooms.map((r) => r.id)));
+    }
+  };
 
   const handleRoomToggle = (roomId: string) => {
     setSelectedRoomIds((prev) => {
@@ -176,14 +196,26 @@ export function QuickAccessPanel() {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-slate-400">
-        {t("quickToggle.title")}
-      </h3>
-
       {/* Room selection chips */}
       <div>
         <p className="text-xs text-slate-500 mb-1.5">{t("quickToggle.selectRooms")}</p>
         <div className="flex flex-wrap gap-2">
+          {/* Select all chip */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!suppressTaps) handleSelectAll();
+            }}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200",
+              "border select-none",
+              allSelected
+                ? "bg-slate-100 text-slate-950 border-slate-100"
+                : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
+            )}
+          >
+            {t("quickToggle.allRooms")}
+          </button>
           {availableRooms.map((room) => (
             <RoomChip
               key={room.id}
