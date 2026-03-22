@@ -1,3 +1,6 @@
+import { useCallback, useState } from "react";
+import { useHass } from "@hakit/core";
+import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum } from "@mdi/js";
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { CompactRoomCard, isLargeRoom } from "@/components/ha/CompactRoomCard";
@@ -36,27 +39,35 @@ function buildRoomLayout(rooms: DashboardRoom[]): Array<{
 
 /** Header action button: sets the global entity to "aus" (all lights off). */
 function AllOffButton({ entityId }: { entityId: `input_select.${string}` }) {
-  const entity = useEntity(entityId, { returnNullIfNotFound: true });
+  const helpers = useHass((s) => s.helpers);
+  const entityState = useHass((s) => s.entities[entityId]?.state as string | undefined);
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
 
+  const isUnavailable = !entityState || entityState === "unavailable" || entityState === "unknown";
+
   const handleAllOff = useCallback(async () => {
-    if (!entity || entity.state === "unavailable" || entity.state === "unknown" || busy) return;
+    if (isUnavailable || busy) return;
     setBusy(true);
     try {
-      await entity.service.selectOption({ serviceData: { option: "aus" } });
+      helpers.callService({
+        domain: "input_select",
+        service: "select_option",
+        serviceData: { option: "aus" },
+        target: { entity_id: entityId },
+      });
     } catch (err: unknown) {
       console.error("Failed to set all off:", err);
     } finally {
       setBusy(false);
     }
-  }, [entity, busy]);
+  }, [isUnavailable, busy, helpers, entityId]);
 
   return (
     <button
       type="button"
       onClick={handleAllOff}
-      disabled={busy || !entity}
+      disabled={busy || isUnavailable}
       title={t("quickToggle.allOff")}
       aria-label={t("quickToggle.allOff")}
       className={cn(
@@ -100,7 +111,7 @@ export function SmarthomePage() {
                 globalEntity ? <AllOffButton entityId={globalEntity} /> : undefined
               }
             >
-              <QuickAccessPanel />
+              {dashConfig ? <QuickAccessPanel config={dashConfig} /> : null}
             </CollapsiblePanel>
           </CardErrorBoundary>
 

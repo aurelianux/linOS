@@ -1,13 +1,12 @@
 import { useState, useCallback, useMemo } from "react";
 import { useHass } from "@hakit/core";
 import { mdiCheck } from "@mdi/js";
-import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
 import { useScrollSuppression } from "@/hooks/useScrollSuppression";
 import { ToggleChip } from "@/components/ui/toggle-chip";
-import type { QuickToggleConfig } from "@/lib/api/types";
+import type { DashboardConfig, QuickToggleConfig } from "@/lib/api/types";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
 const MODE_OPTIONS: Array<{
@@ -22,25 +21,35 @@ const MODE_OPTIONS: Array<{
 
 type ExecutionState = "idle" | "executing" | "success" | "error";
 
-export function QuickAccessPanel() {
+interface QuickAccessPanelProps {
+  config: DashboardConfig;
+}
+
+export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const { t } = useTranslation();
   const helpers = useHass((s) => s.helpers);
   const entities = useHass((s) => s.entities);
-  const { data: config } = useDashboardConfig();
   const suppressTaps = useScrollSuppression();
 
   const [userSelectedRoomIds, setUserSelectedRoomIds] = useState<Set<string> | null>(null);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [executionState, setExecutionState] = useState<ExecutionState>("idle");
 
-  const quickToggles = config?.quickToggles as QuickToggleConfig | undefined;
-  const rooms = config?.rooms ?? [];
+  const quickToggles = config.quickToggles as QuickToggleConfig | undefined;
+  const rooms = config.rooms;
 
-  const roomToggleMap = quickToggles
-    ? new Map(quickToggles.rooms.map((r) => [r.roomId, r.entity]))
-    : new Map<string, `input_select.${string}`>();
+  const roomToggleMap = useMemo(
+    () =>
+      quickToggles
+        ? new Map(quickToggles.rooms.map((r) => [r.roomId, r.entity]))
+        : new Map<string, `input_select.${string}`>(),
+    [quickToggles]
+  );
 
-  const availableRooms = rooms.filter((r) => roomToggleMap.has(r.id));
+  const availableRooms = useMemo(
+    () => rooms.filter((r) => roomToggleMap.has(r.id)),
+    [rooms, roomToggleMap]
+  );
 
   // Derive effective selection: default to wohnzimmer until user interacts
   const defaultRoomIds = useMemo(() => {
