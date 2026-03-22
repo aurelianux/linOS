@@ -3,17 +3,18 @@ import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { CompactRoomCard, isLargeRoom } from "@/components/ha/CompactRoomCard";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
 import { RoborockQuickPanel } from "@/components/panels/RoborockQuickPanel";
+import TimerCard from "@/components/panels/TimerCard";
 import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
+import { useTimerSocket } from "@/hooks/useTimerSocket";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { useHass } from "@hakit/core";
-import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum } from "@mdi/js";
+import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum, mdiTimer } from "@mdi/js";
 import { useCallback, useState } from "react";
-import TimerCard from "../components/panels/TimerCard";
 
 function buildQuickToggleMap(
   quickToggles: QuickToggleConfig | undefined
@@ -81,10 +82,13 @@ function AllOffButton({ entityId }: { entityId: `input_select.${string}` }) {
 export function SmarthomePage() {
   const { t } = useTranslation();
   const { data: dashConfig, loading, error } = useDashboardConfig();
+  const { state: timerState } = useTimerSocket();
   const rooms = dashConfig?.rooms ?? [];
   const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
   const roomLayout = buildRoomLayout(rooms);
   const globalEntity = dashConfig?.quickToggles?.globalEntity;
+
+  const isTimerActive = timerState?.running === true || timerState?.alerting === true;
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -94,7 +98,15 @@ export function SmarthomePage() {
       </h2>
 
       {/* Timer */}
-      <TimerCard />
+      <CollapsiblePanel
+        panelKey="timer"
+        icon={mdiTimer}
+        title={t("timer.title")}
+        defaultCollapsed
+        forceExpanded={isTimerActive}
+      >
+        <TimerCard />
+      </CollapsiblePanel>
       
       {/* Quick Access + Vacuum — 2-col on desktop */}
       {HA_CONFIGURED && (
