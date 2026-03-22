@@ -1,9 +1,6 @@
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
-import { Card, CardContent } from "@/components/ui/card";
-import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
-import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { AirQualitySensorCard } from "./AirQualitySensorCard";
 import { getCardForDomain } from "./domainCards";
@@ -23,13 +20,16 @@ function getAirQualityEntityIds(room: DashboardRoom): Set<string> {
   ]);
 }
 
+/**
+ * Room content — entity cards + air quality + quick toggle.
+ * Intended to be wrapped in a CollapsiblePanel by the parent page.
+ */
 export function CompactRoomCard({
   room,
   quickToggleEntity,
 }: CompactRoomCardProps) {
   const { t } = useTranslation();
   const { data: config } = useDashboardConfig();
-  const iconPath = resolveDashboardIcon(room.icon);
   const quickToggles = config?.quickToggles as QuickToggleConfig | undefined;
 
   const airQualityIds = getAirQualityEntityIds(room);
@@ -39,66 +39,48 @@ export function CompactRoomCard({
   const hasContent =
     filteredEntities.length > 0 || !!room.airQuality || !!quickToggleEntity;
 
+  if (!hasContent) {
+    return <p className="text-xs text-slate-500">{t("rooms.noEntities")}</p>;
+  }
+
   return (
-    <Card className="border-slate-800 bg-slate-900 h-full">
-      <CardContent className="p-3">
-        {/* Room header */}
-        <div className="flex items-center gap-2 mb-2">
-          <Icon
-            path={iconPath}
-            size={0.8}
-            className="text-slate-400 shrink-0"
+    <div className="space-y-2">
+      {/* Quick toggle for this room */}
+      {quickToggleEntity && (
+        <CardErrorBoundary entityId={quickToggleEntity}>
+          <QuickToggle
+            entityId={quickToggleEntity}
+            label={room.name}
+            modes={quickToggles?.modes}
           />
-          <span className="text-sm font-semibold text-slate-100">
-            {room.name}
-          </span>
+        </CardErrorBoundary>
+      )}
+
+      {/* Composite air quality / sensor card */}
+      {room.airQuality && (
+        <CardErrorBoundary entityId={room.airQuality.temperature}>
+          <AirQualitySensorCard config={room.airQuality} />
+        </CardErrorBoundary>
+      )}
+
+      {/* Entity cards in responsive grid */}
+      {filteredEntities.length > 0 && (
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+        >
+          {filteredEntities.map((entityId) => {
+            const domain = entityId.split(".")[0] ?? "";
+            const EntityCard = getCardForDomain(domain);
+            return (
+              <CardErrorBoundary key={entityId} entityId={entityId}>
+                <EntityCard entityId={entityId} />
+              </CardErrorBoundary>
+            );
+          })}
         </div>
-
-        {hasContent && (
-          <div className="space-y-2">
-            {/* Quick toggle for this room */}
-            {quickToggleEntity && (
-              <CardErrorBoundary entityId={quickToggleEntity}>
-                <QuickToggle
-                  entityId={quickToggleEntity}
-                  label={room.name}
-                  modes={quickToggles?.modes}
-                />
-              </CardErrorBoundary>
-            )}
-
-            {/* Composite air quality / sensor card */}
-            {room.airQuality && (
-              <CardErrorBoundary entityId={room.airQuality.temperature}>
-                <AirQualitySensorCard config={room.airQuality} />
-              </CardErrorBoundary>
-            )}
-
-            {/* Entity cards in compact grid */}
-            {filteredEntities.length > 0 && (
-              <div
-                className="grid gap-2"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
-              >
-                {filteredEntities.map((entityId) => {
-                  const domain = entityId.split(".")[0] ?? "";
-                  const EntityCard = getCardForDomain(domain);
-                  return (
-                    <CardErrorBoundary key={entityId} entityId={entityId}>
-                      <EntityCard entityId={entityId} />
-                    </CardErrorBoundary>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {!hasContent && (
-          <p className="text-xs text-slate-500">{t("rooms.noEntities")}</p>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
 
