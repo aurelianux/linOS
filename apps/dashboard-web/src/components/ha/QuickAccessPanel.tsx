@@ -176,10 +176,6 @@ export function QuickAccessPanel() {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-slate-400">
-        {t("quickToggle.title")}
-      </h3>
-
       {/* Room selection chips */}
       <div>
         <p className="text-xs text-slate-500 mb-1.5">{t("quickToggle.selectRooms")}</p>

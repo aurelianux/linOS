@@ -1,6 +1,6 @@
 import { mdiDocker, mdiAlertCircleOutline } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
-import { Panel } from "@/components/common/Panel";
+import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { LoadingState } from "@/components/common/LoadingState";
 import { useDockerContainers } from "@/hooks/useDockerContainers";
 import type { ContainerInfo } from "@/lib/api/types";
@@ -95,17 +95,14 @@ function DockerUnavailableNotice({
 
 // ─── Main component ────────────────────────────────────────────────────────
 
-/**
- * Panel that lists running Docker containers from GET /api/system/containers.
- * Shows a helpful setup message when the Docker socket is not accessible.
- * Auto-refreshes every 30 seconds via useDockerContainers().
- */
 export function DockerPanel() {
   const { data, loading, error, lastUpdated, refresh } = useDockerContainers();
   const { t } = useTranslation();
 
   return (
-    <Panel
+    <CollapsiblePanel
+      panelKey="docker"
+      icon={mdiDocker}
       title={t("docker.title")}
       onRefresh={refresh}
       loading={loading}
@@ -138,6 +135,6 @@ export function DockerPanel() {
           ))}
         </div>
       )}
-    </Panel>
+    </CollapsiblePanel>
   );
 }

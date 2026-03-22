@@ -1,6 +1,6 @@
 import { mdiServer } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
-import { Panel } from "@/components/common/Panel";
+import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { LoadingState } from "@/components/common/LoadingState";
 import { useSystemInfo } from "@/hooks/useSystemInfo";
 import type { SystemInfo } from "@/lib/api/types";
@@ -77,15 +77,13 @@ function SystemInfoBody({ info }: { info: SystemInfo }) {
 
 // ─── Main component ────────────────────────────────────────────────────────
 
-/**
- * Panel that displays host system metrics from GET /api/system/info.
- * Auto-refreshes every 30 seconds via useSystemInfo().
- */
 export function SystemInfoPanel() {
   const { data, loading, error, lastUpdated, refresh } = useSystemInfo();
 
   return (
-    <Panel
+    <CollapsiblePanel
+      panelKey="system-info"
+      icon={mdiServer}
       title="System Info"
       onRefresh={refresh}
       loading={loading}
@@ -101,6 +99,6 @@ export function SystemInfoPanel() {
       )}
 
       {data && <SystemInfoBody info={data} />}
-    </Panel>
+    </CollapsiblePanel>
   );
 }
