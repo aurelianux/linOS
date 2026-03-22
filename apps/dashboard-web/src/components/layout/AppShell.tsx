@@ -30,8 +30,8 @@ export function AppShell({ children }: AppShellProps) {
         </main>
       </div>
 
-      {/* Bottom nav - mobile only (below md) */}
-      <nav className="md:hidden border-t border-slate-700 bg-slate-950">
+      {/* Bottom nav - mobile only (below md), with safe-area padding for browser chrome */}
+      <nav className="md:hidden border-t border-slate-700 bg-slate-950 shrink-0">
         <BottomNav />
       </nav>
     </div>
