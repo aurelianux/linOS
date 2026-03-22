@@ -25,6 +25,9 @@ const DEFAULT_BRIGHTNESS = 255;
 const DEFAULT_ON_MS = 500;
 const DEFAULT_OFF_MS = 500;
 
+/** Timeout for individual HA API calls (ms) */
+const HA_CALL_TIMEOUT_MS = 3_000;
+
 /** Internal session state */
 interface Session {
   options: Required<Pick<LightSessionOptions, "entityIds" | "pattern" | "color" | "brightness" | "onMs" | "offMs">>;
@@ -34,6 +37,8 @@ interface Session {
   blinkTimeout: ReturnType<typeof setTimeout> | null;
   /** Handle for auto-expiry timeout */
   expiryTimeout: ReturnType<typeof setTimeout> | null;
+  /** AbortController for cancelling in-flight HA requests on stop */
+  abortController: AbortController;
 }
 
 /**
@@ -42,6 +47,10 @@ interface Session {
  * Session-based: each consumer calls start() and gets a session ID.
  * Multiple sessions can run in parallel. Each session controls its own
  * set of entity IDs with its own pattern and color.
+ *
+ * Blink ticks are serialized: the next tick only fires after the current
+ * HA call completes (or times out). This prevents command flooding when
+ * HA is slow to respond.
  *
  * Reusable by any feature (timer, washer, doorbell, …).
  */
@@ -74,6 +83,7 @@ export class LightNotificationService {
       isOn: false,
       blinkTimeout: null,
       expiryTimeout: null,
+      abortController: new AbortController(),
     };
 
     this.sessions.set(sessionId, session);
@@ -120,10 +130,13 @@ export class LightNotificationService {
     // For blink sessions, the next tick will pick up the new color
   }
 
-  /** Stop a session and turn off its lights */
+  /** Stop a session: abort in-flight requests, clear timers, turn off lights */
   async stop(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) return;
+
+    // Abort any in-flight HA requests immediately
+    session.abortController.abort();
 
     // Clear timers
     if (session.blinkTimeout !== null) {
@@ -137,7 +150,7 @@ export class LightNotificationService {
 
     this.sessions.delete(sessionId);
 
-    // Turn off lights
+    // Send a final turn_off with a fresh AbortController (not the aborted one)
     await this.callHaService(session.options.entityIds, "turn_off");
 
     this.logger.info({ sessionId }, "Light session stopped");
@@ -162,52 +175,82 @@ export class LightNotificationService {
 
   /** Apply the current color to a session's entities */
   private applyColor(session: Session): void {
-    this.callHaService(session.options.entityIds, "turn_on", {
-      rgb_color: session.options.color,
-      brightness: session.options.brightness,
-    }).catch(() => {
+    this.callHaService(
+      session.options.entityIds,
+      "turn_on",
+      { rgb_color: session.options.color, brightness: session.options.brightness },
+      session.abortController.signal
+    ).catch(() => {
       // Errors already logged in callHaService
     });
   }
 
   /**
    * Recursive blink tick — alternates on/off using setTimeout.
-   * Uses recursive setTimeout (not setInterval) to avoid timing drift.
+   *
+   * IMPORTANT: Awaits the HA call before scheduling the next tick.
+   * This prevents command flooding when HA is slow to respond.
+   * The AbortController ensures in-flight calls are cancelled on stop.
    */
-  private blinkTick(sessionId: string): void {
+  private async blinkTick(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
     session.isOn = !session.isOn;
 
+    // Await the HA call — don't schedule next tick until this completes
     if (session.isOn) {
-      this.callHaService(session.options.entityIds, "turn_on", {
-        rgb_color: session.options.color,
-        brightness: session.options.brightness,
-      }).catch(() => {
-        // Errors logged in callHaService
-      });
+      await this.callHaService(
+        session.options.entityIds,
+        "turn_on",
+        { rgb_color: session.options.color, brightness: session.options.brightness },
+        session.abortController.signal
+      );
     } else {
-      this.callHaService(session.options.entityIds, "turn_off").catch(() => {
-        // Errors logged in callHaService
-      });
+      await this.callHaService(
+        session.options.entityIds,
+        "turn_off",
+        undefined,
+        session.abortController.signal
+      );
     }
 
-    // Schedule next tick with the appropriate delay
+    // Check if session is still alive after await (may have been stopped)
+    if (!this.sessions.has(sessionId)) return;
+
+    // Schedule next tick
     const delay = session.isOn ? session.options.onMs : session.options.offMs;
     session.blinkTimeout = setTimeout(() => {
-      this.blinkTick(sessionId);
+      this.blinkTick(sessionId).catch(() => {
+        // Errors handled in callHaService
+      });
     }, delay);
   }
 
-  /** Send a service call to HA. entity_id is sent as an array. */
+  /**
+   * Send a service call to HA with timeout.
+   * entity_id is sent as an array (HA accepts arrays).
+   * Aborted calls (from session stop) are silently ignored.
+   */
   private async callHaService(
     entityIds: string[],
     service: "turn_on" | "turn_off",
-    data?: Record<string, unknown>
+    data?: Record<string, unknown>,
+    signal?: AbortSignal
   ): Promise<void> {
     const url = `${this.haUrl}/api/services/light/${service}`;
     const body = { entity_id: entityIds, ...data };
+
+    // Per-call timeout via AbortController (layered with session abort)
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), HA_CALL_TIMEOUT_MS);
+
+    // If the session signal is already aborted, bail immediately
+    if (signal?.aborted) return;
+
+    // Listen for session abort to also cancel this specific call
+    const onSessionAbort = () => timeoutController.abort();
+    signal?.addEventListener("abort", onSessionAbort, { once: true });
 
     try {
       const response = await fetch(url, {
@@ -217,6 +260,7 @@ export class LightNotificationService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
+        signal: timeoutController.signal,
       });
 
       if (!response.ok) {
@@ -226,11 +270,17 @@ export class LightNotificationService {
         );
       }
     } catch (err: unknown) {
+      // Silently ignore aborted requests (expected on session stop)
+      if (err instanceof Error && err.name === "AbortError") return;
+
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.warn(
         { entityIds, service, err: msg },
         "HA light service call error"
       );
+    } finally {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", onSessionAbort);
     }
   }
 }
