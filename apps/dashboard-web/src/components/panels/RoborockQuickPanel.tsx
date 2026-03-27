@@ -44,15 +44,6 @@ const FAN_SPEED_TO_POWER: Record<string, number> = {
   max_plus: 106,
 };
 
-const POWER_TO_FAN_SPEED: Record<number, string> = {
-  101: "silent",
-  102: "balanced",
-  103: "turbo",
-  104: "max",
-  105: "custom",
-  106: "max_plus",
-};
-
 const VACUUM_STATE_KEYS: Record<string, TranslationKey> = {
   docked: "roborock.state.docked",
   cleaning: "roborock.state.cleaning",
@@ -96,9 +87,6 @@ function getAttr(
   if (!entity) return undefined;
   return (entity.attributes as Record<string, unknown>)[key];
 }
-
-const delay = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // ─── Panel body ───────────────────────────────────────────────────────────────
 
@@ -178,29 +166,21 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
     if (!entity || selectedRooms.length === 0 || isUnavailable) return;
     setIsStarting(true);
     try {
-      // 1. Set fan speed via standard HA vacuum service
-      const fanSpeedName = POWER_TO_FAN_SPEED[fanPower] ?? "balanced";
-      await entity.service.setFanSpeed({
-        serviceData: { fan_speed: fanSpeedName },
-      });
-
-      // 2. Set water box mode via Roborock-native command
+      // Single atomic app_segment_clean with all settings inline.
+      // Sending separate setFanSpeed / set_water_box_custom_mode first
+      // wakes the vacuum and it returns to dock before the clean command arrives.
       const waterMode = cleaningMode === "vacuum" ? 200 : waterBoxMode;
       await entity.service.sendCommand({
         serviceData: {
-          command: "set_water_box_custom_mode",
-          params: [waterMode],
-        },
-      });
-
-      // 3. Wait for device to apply settings before starting
-      await delay(1500);
-
-      // 4. Start segment cleaning — flat segment ID array
-      await entity.service.sendCommand({
-        serviceData: {
           command: "app_segment_clean",
-          params: selectedRooms,
+          params: [
+            {
+              segments: selectedRooms,
+              repeat: 1,
+              fan_power: fanPower,
+              water_box_mode: waterMode,
+            },
+          ],
         },
       });
     } catch (err: unknown) {
