@@ -70,9 +70,6 @@ input_boolean:
   quiet_mode:
     name: Quiet Mode
     icon: mdi:volume-off
-  movie_night:
-    name: Filmabend
-    icon: mdi:movie-open
 
 
 ########################################
@@ -129,54 +126,65 @@ group:
 
 
 ########################################
-# SCENES (deine bestehenden, + Beispiel "Feuer")
+# SCENES
+########################################
+# YAML-Anchors als Constants (beim ersten Vorkommen definiert):
+#
+#   Farben:
+#     &ct_warmweiss 370        warm white (color_temp in mireds)
+#     &hs_orange [30, 90]      bright orange (hs_color [hue, sat])
+#
+#   Helligkeit Chill:
+#     &br_chill_accent 2       links, rechts, nachttisch
+#     &br_chill_ambient 10     kuche, notenschlussel, flur
+#     &br_chill_bildschirm 13  bildschirm
+#
+#   Helligkeit Hell:
+#     &br_hell_main 60         links, rechts, nachttisch
+#     &br_hell_bright 70       bildschirm, flur
+#     &br_hell_accent 80       kuche, notenschlussel
 ########################################
 scene:
+  # ── Wohnzimmer ─────────────────────
   - id: sz_wohnzimmer_chill
     name: Wohnzimmer Chill
     entities:
       light.bidschirm:
         state: "on"
-        brightness: 40
-        hs_color: [25, 70]
+        brightness_pct: &br_chill_bildschirm 13
+        color_temp: &ct_warmweiss 370
       light.links:
         state: "on"
-        brightness: 10
-        effect: "Rainbow"
+        brightness_pct: &br_chill_accent 2
+        hs_color: &hs_orange [30, 90]
       light.rechts:
         state: "on"
-        brightness: 20
-        color_temp: 380
+        brightness_pct: *br_chill_accent
+        hs_color: *hs_orange
       light.notenschlussel:
         state: "on"
-        brightness: 10
-        color_temp: 380
-      light.klavier:
-        state: "off"
+        brightness_pct: &br_chill_ambient 10
+        color_temp: *ct_warmweiss
 
   - id: sz_wohnzimmer_hell
     name: Wohnzimmer Hell
     entities:
       light.bidschirm:
         state: "on"
-        brightness: 255
-        color_temp: 380
+        brightness_pct: &br_hell_bright 70
+        color_temp: *ct_warmweiss
       light.links:
         state: "on"
-        brightness: 255
-        color_temp: 380
+        brightness_pct: &br_hell_main 60
+        color_temp: *ct_warmweiss
       light.rechts:
         state: "on"
-        brightness: 255
-        color_temp: 380
+        brightness_pct: *br_hell_main
+        color_temp: *ct_warmweiss
       light.notenschlussel:
         state: "on"
-        brightness: 50
-        hs_color: [210, 25]
-      light.klavier:
-        state: "off"
-        brightness: 60
-        color_temp: 380
+        brightness_pct: &br_hell_accent 80
+        color_temp: *ct_warmweiss
 
   - id: sz_wohnzimmer_aus
     name: Wohnzimmer Aus
@@ -189,9 +197,8 @@ scene:
         state: "off"
       light.notenschlussel:
         state: "off"
-      light.klavier:
-        state: "off"
 
+  # ── Küche ──────────────────────────
   - id: sz_kuche_aus
     name: Küche Aus
     entities:
@@ -202,16 +209,19 @@ scene:
     name: Küche Chill
     entities:
       light.kuche:
-        state: "off"
+        state: "on"
+        brightness_pct: *br_chill_ambient
+        color_temp: *ct_warmweiss
 
   - id: sz_kuche_hell
     name: Küche Hell
     entities:
       light.kuche:
         state: "on"
-        brightness_pct: 70
-        color_temp: 380
+        brightness_pct: *br_hell_accent
+        color_temp: *ct_warmweiss
 
+  # ── Flur ───────────────────────────
   - id: sz_flur_aus
     name: Flur Aus
     entities:
@@ -223,17 +233,18 @@ scene:
     entities:
       light.flur:
         state: "on"
-        brightness_pct: 30
-        hs_color: [210, 25]
+        brightness_pct: *br_chill_ambient
+        color_temp: *ct_warmweiss
 
   - id: sz_flur_hell
     name: Flur Hell
     entities:
       light.flur:
         state: "on"
-        brightness_pct: 70
-        hs_color: [25, 70]
+        brightness_pct: *br_hell_bright
+        color_temp: *ct_warmweiss
 
+  # ── Schlafzimmer ───────────────────
   - id: sz_schlafzimmer_aus
     name: Schlafzimmer Aus
     entities:
@@ -244,16 +255,19 @@ scene:
     name: Schlafzimmer Chill
     entities:
       light.nachttisch:
-        state: "off"
+        state: "on"
+        brightness_pct: *br_chill_accent
+        hs_color: *hs_orange
 
   - id: sz_schlafzimmer_hell
     name: Schlafzimmer Hell
     entities:
       light.nachttisch:
         state: "on"
-        brightness_pct: 70
-        color_temp: 380
+        brightness_pct: *br_hell_main
+        color_temp: *ct_warmweiss
 
+  # ── Wohnung (global) ──────────────
   - id: sz_wohnung_abwesend
     name: Wohnung Abwesend
     entities:
@@ -270,16 +284,6 @@ scene:
       group.lights_schlafzimmer:
         state: "on"
         brightness_pct: 10
-
-  # Beispiel: Govee "Feuer" als Scene auf dem Notenschlüssel
-  # (funktioniert nur, wenn dein Light in HA ein effect/effect_list hat)
-  - id: sz_notenschlussel_feuer
-    name: Notenschlüssel Feuer
-    entities:
-      light.notenschlussel:
-        state: "on"
-        brightness_pct: 25
-        effect: "Fire"
 
 
 ########################################
@@ -659,34 +663,6 @@ automation:
       - service: script.set_house_mode
         data:
           mode: sleep
-    mode: single
-
-  # Filmabend
-  - id: auto_movie_night
-    alias: Filmabend – Licht + Fire TV
-    trigger:
-      - platform: state
-        entity_id: input_boolean.movie_night
-        from: "off"
-        to: "on"
-    action:
-      - service: script.set_house_mode
-        data:
-          mode: home
-      - service: input_boolean.turn_on
-        target:
-          entity_id: input_boolean.quiet_mode
-      - service: scene.turn_on
-        target:
-          entity_id: scene.filmabend
-      - service: media_player.turn_on
-        target:
-          entity_id: media_player.fire_tv
-      - service: androidtv.adb_command
-        target:
-          entity_id: media_player.fire_tv
-        data:
-          command: HOME
     mode: single
 
   # Lichtmodus geändert -> anwenden (damit dein Dashboard-Toggle sofort wirkt)
