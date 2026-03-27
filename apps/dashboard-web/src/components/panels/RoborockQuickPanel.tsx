@@ -1,6 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useEntity } from "@hakit/core";
-import { mdiBattery, mdiPause, mdiStop, mdiHome } from "@mdi/js";
+import {
+  mdiAlertCircle,
+  mdiBattery,
+  mdiHome,
+  mdiMapMarker,
+  mdiPause,
+  mdiStop,
+} from "@mdi/js";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
@@ -37,6 +44,15 @@ const FAN_SPEED_TO_POWER: Record<string, number> = {
   max_plus: 106,
 };
 
+const POWER_TO_FAN_SPEED: Record<number, string> = {
+  101: "silent",
+  102: "balanced",
+  103: "turbo",
+  104: "max",
+  105: "custom",
+  106: "max_plus",
+};
+
 const VACUUM_STATE_KEYS: Record<string, TranslationKey> = {
   docked: "roborock.state.docked",
   cleaning: "roborock.state.cleaning",
@@ -46,7 +62,10 @@ const VACUUM_STATE_KEYS: Record<string, TranslationKey> = {
   error: "roborock.state.error",
 };
 
-const VACUUM_STATE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "secondary"> = {
+const VACUUM_STATE_VARIANTS: Record<
+  string,
+  "default" | "success" | "warning" | "destructive" | "secondary"
+> = {
   docked: "secondary",
   cleaning: "success",
   returning: "default",
@@ -68,12 +87,18 @@ const ROOM_TRANSLATION_KEYS: Record<string, TranslationKey> = {
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { SegmentToggle } from "@/components/ui/segment-toggle";
 
-// ─── Helper: extract typed attribute ──────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getAttr(entity: { attributes: Record<string, unknown> } | null, key: string): unknown {
+function getAttr(
+  entity: { attributes: Record<string, unknown> } | null,
+  key: string
+): unknown {
   if (!entity) return undefined;
   return (entity.attributes as Record<string, unknown>)[key];
 }
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // ─── Panel body ───────────────────────────────────────────────────────────────
 
@@ -93,9 +118,10 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
     !entity || entity.state === "unavailable" || entity.state === "unknown";
 
   const vacuumState = entity?.state ?? "unavailable";
-  const battery = typeof getAttr(entity, "battery_level") === "number"
-    ? (getAttr(entity, "battery_level") as number)
-    : null;
+  const battery =
+    typeof getAttr(entity, "battery_level") === "number"
+      ? (getAttr(entity, "battery_level") as number)
+      : null;
   const currentFanSpeed = getAttr(entity, "fan_speed") as string | undefined;
 
   // ─── Local state ──────────────────────────────────────────────────────────
@@ -110,6 +136,7 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   const [fanPower, setFanPower] = useState(config.defaultFanPower);
   const [waterBoxMode, setWaterBoxMode] = useState(config.defaultWaterBoxMode);
   const [hasSyncedFromEntity, setHasSyncedFromEntity] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   // Sync fan speed from entity on first load (read actual device state)
   useEffect(() => {
@@ -121,12 +148,18 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
     setHasSyncedFromEntity(true);
   }, [currentFanSpeed, hasSyncedFromEntity]);
 
+  // Clear optimistic "starting" state once HA confirms cleaning or reports error
+  useEffect(() => {
+    if (isStarting && (vacuumState === "cleaning" || vacuumState === "error")) {
+      setIsStarting(false);
+    }
+  }, [isStarting, vacuumState]);
+
   // ─── Room name resolution (translated) ───────────────────────────────────
 
   const resolveRoomName = (roomId: string): string => {
     const translationKey = ROOM_TRANSLATION_KEYS[roomId];
     if (translationKey) return t(translationKey);
-    // Fallback: look up config room name
     const room = dashConfig?.rooms.find((r) => r.id === roomId);
     return room?.name ?? roomId;
   };
@@ -143,25 +176,35 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
 
   const handleStart = async () => {
     if (!entity || selectedRooms.length === 0 || isUnavailable) return;
+    setIsStarting(true);
     try {
-      // Single app_segment_clean command with all settings inline.
-      // Avoids timing issues from sequential setFanSpeed + set_water_box_custom_mode
-      // and uses the correct Roborock params format ({ segments, repeat, ... }).
+      // 1. Set fan speed via standard HA vacuum service
+      const fanSpeedName = POWER_TO_FAN_SPEED[fanPower] ?? "balanced";
+      await entity.service.setFanSpeed({
+        serviceData: { fan_speed: fanSpeedName },
+      });
+
+      // 2. Set water box mode via Roborock-native command
       const waterMode = cleaningMode === "vacuum" ? 200 : waterBoxMode;
       await entity.service.sendCommand({
         serviceData: {
+          command: "set_water_box_custom_mode",
+          params: [waterMode],
+        },
+      });
+
+      // 3. Wait for device to apply settings before starting
+      await delay(1500);
+
+      // 4. Start segment cleaning — flat segment ID array
+      await entity.service.sendCommand({
+        serviceData: {
           command: "app_segment_clean",
-          params: [
-            {
-              segments: selectedRooms,
-              repeat: 1,
-              fan_power: fanPower,
-              water_box_mode: waterMode,
-            },
-          ],
+          params: selectedRooms,
         },
       });
     } catch (err: unknown) {
+      setIsStarting(false);
       console.error("Failed to start vacuum:", err);
     }
   };
@@ -204,20 +247,45 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
 
   // ─── Derived state ────────────────────────────────────────────────────────
 
-  const stateKey = VACUUM_STATE_KEYS[vacuumState];
-  const stateLabel = stateKey ? t(stateKey) : vacuumState;
-  const stateVariant = VACUUM_STATE_VARIANTS[vacuumState] ?? "secondary";
-
   const isCleaning = vacuumState === "cleaning";
   const isPaused = vacuumState === "paused";
-  const isActive = isCleaning || isPaused || vacuumState === "returning";
+  const isDocked = vacuumState === "docked";
+  const isError = vacuumState === "error";
+  const isActive =
+    isCleaning || isPaused || vacuumState === "returning" || isStarting;
   const canStart = !isUnavailable && selectedRooms.length > 0 && !isActive;
 
-  // Current room from entity attributes (Roborock exposes this during cleaning)
-  const currentSegment = getAttr(entity, "current_segment") as number | undefined;
+  // Status badge: optimistic "starting" while waiting for HA confirmation
+  const displayState =
+    isStarting && !isCleaning ? "starting" : vacuumState;
+  const stateKey =
+    displayState === "starting"
+      ? ("roborock.state.starting" as TranslationKey)
+      : VACUUM_STATE_KEYS[vacuumState];
+  const stateLabel = stateKey ? t(stateKey) : vacuumState;
+  const stateVariant =
+    displayState === "starting"
+      ? ("default" as const)
+      : (VACUUM_STATE_VARIANTS[vacuumState] ?? "secondary");
+
+  // Current room from entity attributes
+  const currentSegment = getAttr(entity, "current_segment") as
+    | number
+    | undefined;
   const currentRoomSegment = currentSegment
     ? config.segments.find((s) => s.id === currentSegment)
     : undefined;
+
+  // Show room whenever vacuum is not docked and segment info is available
+  const showCurrentRoom = !!currentRoomSegment && !isDocked;
+  const roomLabelKey: TranslationKey = isCleaning
+    ? "roborock.currentRoom"
+    : isPaused
+      ? "roborock.pausedIn"
+      : "roborock.location";
+
+  // Error details from entity attributes (Roborock exposes a status string)
+  const errorStatus = getAttr(entity, "status") as string | undefined;
 
   return (
     <div className={cn("space-y-4", isUnavailable && "opacity-50")}>
@@ -234,160 +302,215 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
         </div>
       </div>
 
-        {/* Current room indicator when cleaning */}
-        {isCleaning && currentRoomSegment && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-400/5 border border-amber-900/50">
-            <span className="text-xs text-amber-400">
-              {t("roborock.currentRoom")}: {resolveRoomName(currentRoomSegment.roomId)}
-            </span>
-          </div>
-        )}
+      {/* Error details */}
+      {isError && errorStatus && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-400/5 border border-red-900/50">
+          <Icon
+            path={mdiAlertCircle}
+            size={0.7}
+            className="text-red-400 shrink-0"
+          />
+          <span className="text-xs text-red-400">{errorStatus}</span>
+        </div>
+      )}
 
-        {/* Active controls — pause / stop / dock */}
-        {isActive && (
-          <div className="flex gap-2">
-            {isCleaning && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={handlePause}
-              >
-                <Icon path={mdiPause} size={0.7} className="mr-1" />
-                {t("roborock.pause")}
-              </Button>
-            )}
-            {isPaused && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950"
-                onClick={handleResume}
-              >
-                {t("roborock.resume")}
-              </Button>
-            )}
+      {/* Current room — shown whenever not docked and segment is known */}
+      {showCurrentRoom && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-400/5 border border-amber-900/50">
+          <Icon
+            path={mdiMapMarker}
+            size={0.7}
+            className="text-amber-400 shrink-0"
+          />
+          <span className="text-xs text-amber-400">
+            {t(roomLabelKey)}: {resolveRoomName(currentRoomSegment.roomId)}
+          </span>
+        </div>
+      )}
+
+      {/* Active controls — pause / resume / stop / dock */}
+      {isActive && !isStarting && (
+        <div className="flex gap-2">
+          {isCleaning && (
             <Button
               variant="secondary"
               size="sm"
               className="flex-1"
-              onClick={handleStop}
+              onClick={handlePause}
             >
-              <Icon path={mdiStop} size={0.7} className="mr-1" />
-              {t("roborock.stop")}
+              <Icon path={mdiPause} size={0.7} className="mr-1" />
+              {t("roborock.pause")}
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-              onClick={handleDock}
-            >
-              <Icon path={mdiHome} size={0.7} className="mr-1" />
-              {t("roborock.dock")}
-            </Button>
-          </div>
-        )}
-
-        {/* Room selection */}
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap gap-2">
-            {config.segments.map((seg) => (
-              <ToggleChip
-                key={seg.id}
-                label={resolveRoomName(seg.roomId)}
-                selected={selectedRooms.includes(seg.id)}
-                disabled={isUnavailable || isActive}
-                onClick={() => toggleRoom(seg.id)}
-              />
-            ))}
-          </div>
-          {selectedRooms.length === 0 && !isUnavailable && !isActive && (
-            <p className="text-xs text-amber-400">{t("roborock.noRooms")}</p>
           )}
-        </div>
-
-        {/* Cleaning mode toggle */}
-        <div className="flex rounded-lg overflow-hidden border border-slate-700">
-          <button
-            type="button"
-            disabled={isUnavailable || isActive}
-            onClick={() => setCleaningMode("vacuum")}
-            className={cn(
-              "flex-1 py-2 text-xs font-medium transition-colors",
-              cleaningMode === "vacuum"
-                ? "bg-slate-700 text-slate-100"
-                : "bg-slate-800 text-slate-500 hover:text-slate-400",
-              (isUnavailable || isActive) && "cursor-not-allowed opacity-50"
-            )}
+          {isPaused && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950"
+              onClick={handleResume}
+            >
+              {t("roborock.resume")}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            onClick={handleStop}
           >
-            {t("roborock.mode.vacuum")}
-          </button>
-          <button
-            type="button"
-            disabled={isUnavailable || isActive}
-            onClick={() => setCleaningMode("vacuum_and_mop")}
-            className={cn(
-              "flex-1 py-2 text-xs font-medium transition-colors border-l border-slate-700",
-              cleaningMode === "vacuum_and_mop"
-                ? "bg-slate-700 text-slate-100"
-                : "bg-slate-800 text-slate-500 hover:text-slate-400",
-              (isUnavailable || isActive) && "cursor-not-allowed opacity-50"
-            )}
+            <Icon path={mdiStop} size={0.7} className="mr-1" />
+            {t("roborock.stop")}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            onClick={handleDock}
           >
-            {t("roborock.mode.vacuumAndMop")}
-          </button>
+            <Icon path={mdiHome} size={0.7} className="mr-1" />
+            {t("roborock.dock")}
+          </Button>
         </div>
+      )}
 
-        {/* Suction power */}
+      {/* Starting indicator */}
+      {isStarting && (
+        <div className="w-full py-3 rounded-lg text-sm font-semibold text-center bg-slate-800 text-slate-400 border border-slate-700 animate-pulse">
+          {t("roborock.state.starting")}
+        </div>
+      )}
+
+      {/* Dock button when idle/error away from dock */}
+      {!isDocked && !isUnavailable && !isActive && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full"
+          onClick={handleDock}
+        >
+          <Icon path={mdiHome} size={0.7} className="mr-1" />
+          {t("roborock.dock")}
+        </Button>
+      )}
+
+      {/* Room selection */}
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap gap-2">
+          {config.segments.map((seg) => (
+            <ToggleChip
+              key={seg.id}
+              label={resolveRoomName(seg.roomId)}
+              selected={selectedRooms.includes(seg.id)}
+              disabled={isUnavailable || isActive}
+              onClick={() => toggleRoom(seg.id)}
+            />
+          ))}
+        </div>
+        {selectedRooms.length === 0 && !isUnavailable && !isActive && (
+          <p className="text-xs text-amber-400">{t("roborock.noRooms")}</p>
+        )}
+      </div>
+
+      {/* Cleaning mode toggle */}
+      <div className="flex rounded-lg overflow-hidden border border-slate-700">
+        <button
+          type="button"
+          disabled={isUnavailable || isActive}
+          onClick={() => setCleaningMode("vacuum")}
+          className={cn(
+            "flex-1 py-2 text-xs font-medium transition-colors",
+            cleaningMode === "vacuum"
+              ? "bg-slate-700 text-slate-100"
+              : "bg-slate-800 text-slate-500 hover:text-slate-400",
+            (isUnavailable || isActive) && "cursor-not-allowed opacity-50"
+          )}
+        >
+          {t("roborock.mode.vacuum")}
+        </button>
+        <button
+          type="button"
+          disabled={isUnavailable || isActive}
+          onClick={() => setCleaningMode("vacuum_and_mop")}
+          className={cn(
+            "flex-1 py-2 text-xs font-medium transition-colors border-l border-slate-700",
+            cleaningMode === "vacuum_and_mop"
+              ? "bg-slate-700 text-slate-100"
+              : "bg-slate-800 text-slate-500 hover:text-slate-400",
+            (isUnavailable || isActive) && "cursor-not-allowed opacity-50"
+          )}
+        >
+          {t("roborock.mode.vacuumAndMop")}
+        </button>
+      </div>
+
+      {/* Suction power */}
+      <div className="space-y-1">
+        <span className="text-xs text-slate-500">{t("roborock.suction")}</span>
+        <SegmentToggle
+          options={FAN_POWER_OPTIONS}
+          value={fanPower}
+          disabled={isUnavailable || isActive}
+          onChange={setFanPower}
+        />
+      </div>
+
+      {/* Mop intensity — only in vacuum_and_mop mode */}
+      {cleaningMode === "vacuum_and_mop" && (
         <div className="space-y-1">
-          <span className="text-xs text-slate-500">{t("roborock.suction")}</span>
+          <span className="text-xs text-slate-500">{t("roborock.mop")}</span>
           <SegmentToggle
-            options={FAN_POWER_OPTIONS}
-            value={fanPower}
+            options={WATER_BOX_OPTIONS}
+            value={waterBoxMode}
             disabled={isUnavailable || isActive}
-            onChange={setFanPower}
+            onChange={setWaterBoxMode}
           />
         </div>
+      )}
 
-        {/* Mop intensity — only in vacuum_and_mop mode */}
-        {cleaningMode === "vacuum_and_mop" && (
-          <div className="space-y-1">
-            <span className="text-xs text-slate-500">{t("roborock.mop")}</span>
-            <SegmentToggle
-              options={WATER_BOX_OPTIONS}
-              value={waterBoxMode}
-              disabled={isUnavailable || isActive}
-              onChange={setWaterBoxMode}
-            />
-          </div>
-        )}
+      {/* Start button — hidden when active */}
+      {!isActive && (
+        <button
+          type="button"
+          disabled={!canStart}
+          onClick={handleStart}
+          className={cn(
+            "w-full py-3 rounded-lg text-sm font-semibold transition-all duration-200",
+            "border select-none",
+            canStart
+              ? "bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 active:bg-amber-500"
+              : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
+          )}
+        >
+          {t("roborock.start")}
+        </button>
+      )}
 
-        {/* Start button — hidden when active */}
-        {!isActive && (
-          <button
-            type="button"
-            disabled={!canStart}
-            onClick={handleStart}
-            className={cn(
-              "w-full py-3 rounded-lg text-sm font-semibold transition-all duration-200",
-              "border select-none",
-              canStart
-                ? "bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 active:bg-amber-500"
-                : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
-            )}
-          >
-            {t("roborock.start")}
-          </button>
-        )}
-
-        {/* Unavailable message */}
-        {isUnavailable && (
-          <p className="text-xs text-slate-500 text-center">
-            {t("entity.unavailable")}
-          </p>
-        )}
+      {/* Unavailable message */}
+      {isUnavailable && (
+        <p className="text-xs text-slate-500 text-center">
+          {t("entity.unavailable")}
+        </p>
+      )}
     </div>
   );
+}
+
+// ─── Vacuum active hook (for auto-expanding panel) ────────────────────────────
+
+/**
+ * Returns true when the vacuum is actively cleaning, paused, or returning.
+ * Used by SmarthomePage to force-expand the vacuum panel during activity.
+ */
+export function useIsVacuumActive(
+  entityId: string | undefined
+): boolean {
+  const entity = useEntity(
+    (entityId ?? "vacuum._none_") as `vacuum.${string}`,
+    { returnNullIfNotFound: true }
+  );
+  if (!entityId) return false;
+  const state = entity?.state;
+  return state === "cleaning" || state === "paused" || state === "returning";
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

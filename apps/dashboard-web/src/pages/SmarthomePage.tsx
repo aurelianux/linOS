@@ -2,7 +2,10 @@ import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { CompactRoomCard, isLargeRoom } from "@/components/ha/CompactRoomCard";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
-import { RoborockQuickPanel } from "@/components/panels/RoborockQuickPanel";
+import {
+  RoborockQuickPanel,
+  useIsVacuumActive,
+} from "@/components/panels/RoborockQuickPanel";
 import TimerCard from "@/components/panels/TimerCard";
 import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
@@ -89,6 +92,7 @@ export function SmarthomePage() {
   const globalEntity = dashConfig?.quickToggles?.globalEntity;
 
   const isTimerActive = timerState?.running === true || timerState?.alerting === true;
+  const isVacuumActive = useIsVacuumActive(dashConfig?.roborock?.entityId);
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -129,6 +133,7 @@ export function SmarthomePage() {
               panelKey="roborock"
               icon={mdiRobotVacuum}
               title={t("roborock.title")}
+              forceExpanded={isVacuumActive}
             >
               <RoborockQuickPanel />
             </CollapsiblePanel>
