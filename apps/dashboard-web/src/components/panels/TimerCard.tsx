@@ -13,7 +13,7 @@ const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 /** Quick-set timer presets in minutes */
-const QUICK_SET_MINUTES = [8, 10, 12, 15, 20, 30] as const;
+const QUICK_SET_MINUTES = [8, 10, 12, 15, 20, 30, 270] as const;
 
 const ONE_MINUTE_MS = 60_000;
 
@@ -242,7 +242,7 @@ export function TimerCard() {
               "hover:bg-slate-700 hover:text-slate-100 transition-colors"
             )}
           >
-            {mins} {t("timer.minuteShort")}
+            {mins > 60 ? `${Math.floor(mins / 60)}h ${mins % 60}` : `${mins}`} {t("timer.minuteShort")}
           </button>
         ))}
       </div>
