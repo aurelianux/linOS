@@ -116,6 +116,9 @@ export const translations = {
     "roborock.state.paused": "Pausiert",
     "roborock.state.idle": "Bereit",
     "roborock.state.error": "Fehler",
+    "roborock.state.starting": "Startet",
+    "roborock.pausedIn": "Pausiert in",
+    "roborock.location": "Standort",
 
     "timer.title": "Timer",
     "timer.minutes": "Minuten",
@@ -246,6 +249,9 @@ export const translations = {
     "roborock.state.paused": "Paused",
     "roborock.state.idle": "Idle",
     "roborock.state.error": "Error",
+    "roborock.state.starting": "Starting",
+    "roborock.pausedIn": "Paused in",
+    "roborock.location": "Location",
 
     "timer.title": "Timer",
     "timer.minutes": "Minutes",
