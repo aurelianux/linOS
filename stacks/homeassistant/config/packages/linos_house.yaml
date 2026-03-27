@@ -67,9 +67,6 @@ input_boolean:
   guest_mode:
     name: Besuch da
     icon: mdi:account-group
-  quiet_mode:
-    name: Quiet Mode
-    icon: mdi:volume-off
 
 
 ########################################
@@ -469,84 +466,6 @@ script:
         target:
           entity_id: vacuum.s7_max_ultra
 
-  wohnung_awake:
-    alias: Wohnung – Awake (Morgenroutine)
-    mode: single
-    sequence:
-      - service: script.set_house_mode
-        data:
-          mode: home
-      - service: light.turn_on
-        target:
-          entity_id: light.nachttisch
-        data:
-          brightness_pct: 30
-          hs_color: [25, 90]
-      - service: climate.set_temperature
-        target:
-          entity_id: group.thermostats_all
-        data:
-          temperature: 22
-
-  # Licht-Farbvoreinstellung auf ein bestimmtes Licht anwenden
-  apply_light_color_preset:
-    alias: Licht-Farbvoreinstellung anwenden
-    mode: parallel
-    max: 10
-    fields:
-      target_light:
-        description: Entity-ID des Lichts
-        example: light.bidschirm
-      preset:
-        description: "warmweiss / neutral / kaltweiss / orange / blau"
-        example: warmweiss
-    sequence:
-      - choose:
-          - conditions:
-              - condition: template
-                value_template: "{{ preset == 'warmweiss' }}"
-            sequence:
-              - service: light.turn_on
-                target:
-                  entity_id: "{{ target_light }}"
-                data:
-                  color_temp: 370
-          - conditions:
-              - condition: template
-                value_template: "{{ preset == 'neutral' }}"
-            sequence:
-              - service: light.turn_on
-                target:
-                  entity_id: "{{ target_light }}"
-                data:
-                  color_temp: 250
-          - conditions:
-              - condition: template
-                value_template: "{{ preset == 'kaltweiss' }}"
-            sequence:
-              - service: light.turn_on
-                target:
-                  entity_id: "{{ target_light }}"
-                data:
-                  color_temp: 153
-          - conditions:
-              - condition: template
-                value_template: "{{ preset == 'orange' }}"
-            sequence:
-              - service: light.turn_on
-                target:
-                  entity_id: "{{ target_light }}"
-                data:
-                  hs_color: [30, 90]
-          - conditions:
-              - condition: template
-                value_template: "{{ preset == 'blau' }}"
-            sequence:
-              - service: light.turn_on
-                target:
-                  entity_id: "{{ target_light }}"
-                data:
-                  hs_color: [220, 60]
 
 ########################################
 # AUTOMATIONS (Presence/Webhooks -> set mode, Router führt aus)
@@ -674,42 +593,6 @@ automation:
     action:
       - service: script.apply_lighting_mode
     mode: restart
-
-  # Webhooks -> setzen nur den Modus / rufen scripts
-  - id: wh_wohnung_abwesend
-    alias: Webhook – Wohnung Abwesend
-    trigger:
-      - platform: webhook
-        webhook_id: linos_wohnung_abwesend
-    action:
-      - service: script.set_house_mode
-        data:
-          mode: away
-    mode: single
-
-  - id: wh_wohnung_chill
-    alias: Webhook – Wohnung Chill
-    trigger:
-      - platform: webhook
-        webhook_id: linos_wohnung_chill
-    action:
-      - service: script.set_lighting_mode
-        data:
-          mode: chill
-      - service: script.apply_lighting_mode
-    mode: single
-
-  - id: wh_wohnung_hell
-    alias: Webhook – Wohnung Hell
-    trigger:
-      - platform: webhook
-        webhook_id: linos_wohnung_hell
-    action:
-      - service: script.set_lighting_mode
-        data:
-          mode: hell
-      - service: script.apply_lighting_mode
-    mode: single
 
   ########################################
   # Per-Room Lighting Mode Automations
