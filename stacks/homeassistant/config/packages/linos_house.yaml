@@ -3,18 +3,9 @@
 ###############################################################################
 
 ########################################
-# HELPERS (Dashboard-States)
+# HELPERS (linBoard Lighting Modes)
 ########################################
 input_select:
-  house_mode:
-    name: House Mode
-    options:
-      - home
-      - away
-      - sleep
-    initial: home
-    icon: mdi:home-account
-
   lighting_mode:
     name: Lichtmodus
     options:
@@ -59,67 +50,6 @@ input_select:
       - aus
     initial: chill
     icon: mdi:lightbulb-group
-
-input_boolean:
-  dog_is_home:
-    name: Charlie zuhause
-    icon: mdi:dog
-  guest_mode:
-    name: Besuch da
-    icon: mdi:account-group
-
-
-########################################
-# GROUPS (= deine "constants")
-########################################
-group:
-  thermostats_all:
-    name: Thermostate – alle
-    entities:
-      - climate.thermostat_wz
-      - climate.thermostat_bad
-
-  lights_wohnzimmer:
-    name: Lichter – Wohnzimmer
-    entities:
-      - light.bidschirm
-      - light.links
-      - light.rechts
-      - light.notenschlussel
-      - light.klavier
-
-  lights_flur:
-    name: Lichter – Flur
-    entities:
-      - light.flur
-
-  lights_kuche:
-    name: Lichter – Küche
-    entities:
-      - light.kuche
-
-  lights_schlafzimmer:
-    name: Lichter – Schlafzimmer
-    entities:
-      - light.nachttisch
-
-  lights_all:
-    name: Lichter – Wohnung
-    entities:
-      - group.lights_wohnzimmer
-      - group.lights_flur
-      - group.lights_kuche
-      - group.lights_schlafzimmer
-
-  media_pause_on_mode_change:
-    name: Media – pause on mode change
-    entities:
-      - media_player.arbeitszimmer
-
-  media_off_on_away:
-    name: Media – off on away
-    entities:
-      - media_player.fire_tv
 
 
 ########################################
@@ -264,63 +194,16 @@ scene:
         brightness_pct: *br_hell_main
         color_temp: *ct_warmweiss
 
-  # ── Wohnung (global) ──────────────
-  - id: sz_wohnung_abwesend
-    name: Wohnung Abwesend
-    entities:
-      group.lights_all:
-        state: "off"
-
-  - id: sz_wohnung_nacht
-    name: Wohnung Nacht
-    entities:
-      group.lights_wohnzimmer:
-        state: "off"
-      group.lights_kuche:
-        state: "off"
-      group.lights_schlafzimmer:
-        state: "on"
-        brightness_pct: 10
-
 
 ########################################
-# SCRIPTS (Router + Modus-Implementierung)
+# SCRIPTS
 ########################################
 script:
-  set_house_mode:
-    alias: House Mode setzen
-    mode: single
-    fields:
-      mode:
-        description: home/away/sleep
-        example: away
-    sequence:
-      - service: input_select.select_option
-        target:
-          entity_id: input_select.house_mode
-        data:
-          option: "{{ mode }}"
-
-  set_lighting_mode:
-    alias: Lichtmodus setzen
-    mode: single
-    fields:
-      mode:
-        description: hell/chill/aus
-        example: chill
-    sequence:
-      - service: input_select.select_option
-        target:
-          entity_id: input_select.lighting_mode
-        data:
-          option: "{{ mode }}"
-
-  # Lichtmodus -> passende Szenen + sync per-room selectors
+  # Global mode → sync per-room selectors + activate scenes
   apply_lighting_mode:
     alias: Lichtmodus anwenden
     mode: restart
     sequence:
-      # Sync per-room selectors to match global mode
       - service: input_select.select_option
         target:
           entity_id:
@@ -368,223 +251,12 @@ script:
                     - scene.flur_aus
                     - scene.schlafzimmer_aus
 
-  wohnung_home:
-    alias: Wohnung – Home
-    mode: single
-    sequence:
-      - service: script.set_lighting_mode
-        data:
-          mode: "chill"
-      - service: script.apply_lighting_mode
-      - service: climate.set_temperature
-        target:
-          entity_id: group.thermostats_all
-        data:
-          temperature: 22
-      - service: media_player.media_pause
-        target:
-          entity_id: group.media_pause_on_mode_change
-
-  wohnung_away:
-    alias: Wohnung – Away (mit Charlie/Besuch Logik)
-    mode: single
-    sequence:
-      # Besuch da? Dann KEIN away-hardcut.
-      - choose:
-          - conditions:
-              - condition: state
-                entity_id: input_boolean.guest_mode
-                state: "on"
-            sequence:
-              - stop: "Besuch ist da – Away wird nicht ausgeführt."
-
-      # Basis: Licht aus + Temp runter + Media
-      - service: scene.turn_on
-        target:
-          entity_id: scene.wohnung_abwesend
-      - service: climate.set_temperature
-        target:
-          entity_id: group.thermostats_all
-        data:
-          temperature: 18
-      - service: media_player.media_pause
-        target:
-          entity_id: group.media_pause_on_mode_change
-      - service: media_player.turn_off
-        target:
-          entity_id: group.media_off_on_away
-
-      # Charlie zuhause? Dann kleines "Charlie allein"-Profil (Flur dim + Temp 20)
-      - choose:
-          - conditions:
-              - condition: state
-                entity_id: input_boolean.dog_is_home
-                state: "on"
-            sequence:
-              - service: light.turn_on
-                target:
-                  entity_id: light.flur
-                data:
-                  brightness_pct: 10
-                  color_temp: 380
-              - service: climate.set_temperature
-                target:
-                  entity_id: group.thermostats_all
-                data:
-                  temperature: 20
-
-      # Vacuum: nur tagsüber + nur wenn docked
-      - choose:
-          - conditions:
-              - condition: time
-                after: "09:00:00"
-                before: "19:00:00"
-              - condition: state
-                entity_id: vacuum.s7_max_ultra
-                state: docked
-            sequence:
-              - service: vacuum.start
-                target:
-                  entity_id: vacuum.s7_max_ultra
-
-  wohnung_sleep:
-    alias: Wohnung – Sleep
-    mode: single
-    sequence:
-      - service: scene.turn_on
-        target:
-          entity_id: scene.wohnung_nacht
-      - service: climate.set_temperature
-        target:
-          entity_id: group.thermostats_all
-        data:
-          temperature: 19
-      - service: media_player.turn_off
-        target:
-          entity_id: media_player.fire_tv
-      - service: vacuum.return_to_base
-        target:
-          entity_id: vacuum.s7_max_ultra
-
 
 ########################################
-# AUTOMATIONS (Presence/Webhooks -> set mode, Router führt aus)
+# AUTOMATIONS
 ########################################
 automation:
-  # Router: wenn House Mode geändert wird -> passendes Script
-  - id: auto_house_mode_router
-    alias: House Mode Router
-    trigger:
-      - platform: state
-        entity_id: input_select.house_mode
-    action:
-      - choose:
-          - conditions:
-              - condition: state
-                entity_id: input_select.house_mode
-                state: "home"
-            sequence:
-              - service: script.wohnung_home
-          - conditions:
-              - condition: state
-                entity_id: input_select.house_mode
-                state: "away"
-            sequence:
-              - service: script.wohnung_away
-          - conditions:
-              - condition: state
-                entity_id: input_select.house_mode
-                state: "sleep"
-            sequence:
-              - service: script.wohnung_sleep
-    mode: restart
-
-  
-
-  # Sunset -> Chill (nur wenn wirklich "home")
-  - id: auto_sunset_chill
-    alias: Wohnung – Chill ab Sonnenuntergang
-    trigger:
-      - platform: sun
-        event: sunset
-        offset: "-00:20:00"
-    condition:
-      - condition: state
-        entity_id: input_select.house_mode
-        state: home
-      - condition: state
-        entity_id: device_tracker.linus_phone
-        state: home
-    action:
-      - service: script.set_lighting_mode
-        data:
-          mode: chill
-      - service: script.apply_lighting_mode
-    mode: single
-
-  # Handy verlässt Haus -> Away (nur wenn Besuch NICHT an)
-  - id: auto_away_phone_leaves
-    alias: Away-Mode – Handy verlässt Haus
-    trigger:
-      - platform: state
-        entity_id: device_tracker.linus_phone
-        from: home
-        to: not_home
-    condition:
-      - condition: state
-        entity_id: input_boolean.guest_mode
-        state: "off"
-    action:
-      - service: script.set_house_mode
-        data:
-          mode: away
-    mode: single
-
-  # Ankunft -> Home + Flurlicht kurz bei Dunkelheit
-  - id: auto_arrive_home
-    alias: Ankunft – Modus Home + Licht bei Dunkelheit
-    trigger:
-      - platform: state
-        entity_id: device_tracker.linus_phone
-        from: not_home
-        to: home
-    action:
-      - service: script.set_house_mode
-        data:
-          mode: home
-      - choose:
-          - conditions:
-              - condition: sun
-                after: sunset
-            sequence:
-              - service: light.turn_on
-                target:
-                  entity_id: light.flur
-                data:
-                  brightness_pct: 40
-              - delay: "00:03:00"
-              - service: light.turn_off
-                target:
-                  entity_id: light.flur
-    mode: restart
-
-  # Gute Nacht
-  - id: auto_good_night
-    alias: Gute Nacht – Wohnung runterfahren
-    trigger:
-      - platform: time
-        at: "23:30:00"
-    condition:
-      - condition: state
-        entity_id: device_tracker.linus_phone
-        state: home
-    action:
-      - service: script.set_house_mode
-        data:
-          mode: sleep
-    mode: single
-
-  # Lichtmodus geändert -> anwenden (damit dein Dashboard-Toggle sofort wirkt)
+  # Global mode changed → apply to all rooms
   - id: auto_lighting_mode_apply
     alias: Lichtmodus anwenden wenn geändert
     trigger:
