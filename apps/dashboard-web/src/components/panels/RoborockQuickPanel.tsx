@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useEntity } from "@hakit/core";
+import { useEntity, useHass } from "@hakit/core";
 import {
   mdiAlertCircle,
   mdiBattery,
@@ -97,6 +97,7 @@ interface PanelBodyProps {
 function RoborockPanelBody({ config }: PanelBodyProps) {
   const { t } = useTranslation();
   const { data: dashConfig } = useDashboardConfig();
+  const { helpers } = useHass();
 
   const entity = useEntity(config.entityId as `vacuum.${string}`, {
     returnNullIfNotFound: true,
@@ -162,15 +163,20 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
     );
   };
 
+  // All service calls use helpers.callService() directly instead of
+  // entity.service.* — the @hakit/core entity proxy injects automatic
+  // returnToBase calls for vacuum entities, which aborts the clean cycle.
+
+  const vacuumTarget = { entity_id: config.entityId };
+
   const handleStart = async () => {
     if (!entity || selectedRooms.length === 0 || isUnavailable) return;
     setIsStarting(true);
     try {
-      // Single atomic app_segment_clean with all settings inline.
-      // Sending separate setFanSpeed / set_water_box_custom_mode first
-      // wakes the vacuum and it returns to dock before the clean command arrives.
       const waterMode = cleaningMode === "vacuum" ? 200 : waterBoxMode;
-      await entity.service.sendCommand({
+      helpers.callService({
+        domain: "vacuum",
+        service: "send_command",
         serviceData: {
           command: "app_segment_clean",
           params: [
@@ -182,6 +188,7 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
             },
           ],
         },
+        target: vacuumTarget,
       });
     } catch (err: unknown) {
       setIsStarting(false);
@@ -192,7 +199,11 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   const handlePause = async () => {
     if (!entity || isUnavailable) return;
     try {
-      await entity.service.pause();
+      helpers.callService({
+        domain: "vacuum",
+        service: "pause",
+        target: vacuumTarget,
+      });
     } catch (err: unknown) {
       console.error("Failed to pause vacuum:", err);
     }
@@ -201,7 +212,11 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   const handleResume = async () => {
     if (!entity || isUnavailable) return;
     try {
-      await entity.service.start();
+      helpers.callService({
+        domain: "vacuum",
+        service: "start",
+        target: vacuumTarget,
+      });
     } catch (err: unknown) {
       console.error("Failed to resume vacuum:", err);
     }
@@ -210,7 +225,11 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   const handleStop = async () => {
     if (!entity || isUnavailable) return;
     try {
-      await entity.service.stop();
+      helpers.callService({
+        domain: "vacuum",
+        service: "stop",
+        target: vacuumTarget,
+      });
     } catch (err: unknown) {
       console.error("Failed to stop vacuum:", err);
     }
@@ -219,7 +238,11 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   const handleDock = async () => {
     if (!entity || isUnavailable) return;
     try {
-      await entity.service.returnToBase();
+      helpers.callService({
+        domain: "vacuum",
+        service: "return_to_base",
+        target: vacuumTarget,
+      });
     } catch (err: unknown) {
       console.error("Failed to return vacuum to dock:", err);
     }
