@@ -99,9 +99,29 @@ export interface RoborockConfig {
   defaultCleaningMode: "vacuum" | "vacuum_and_mop";
 }
 
+export interface VacuumRoutineStep {
+  mode: "vacuum" | "vacuum_and_mop";
+  segments: string[]; // room IDs (e.g., ["flur", "küche"])
+  fanPower: number;
+  waterBoxMode: number | null;
+}
+
+export interface VacuumRoutine {
+  id: string;
+  label: string;
+  description?: string | undefined;
+  steps: VacuumRoutineStep[];
+}
+
+export interface VacuumConfig {
+  returnToDockOnPause: boolean;
+  routines: VacuumRoutine[];
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig | undefined;
+  vacuum?: VacuumConfig | undefined;
   quickToggles?: QuickToggleConfig | undefined;
   lightColorPresets?: LightColorPreset[] | undefined;
 }
@@ -153,9 +173,29 @@ const roborockConfigSchema = z.object({
   defaultCleaningMode: z.enum(["vacuum", "vacuum_and_mop"]),
 });
 
+const vacuumRoutineStepSchema = z.object({
+  mode: z.enum(["vacuum", "vacuum_and_mop"]),
+  segments: z.array(z.string().min(1)).min(1),
+  fanPower: z.number().int().nonnegative(),
+  waterBoxMode: z.number().int().nonnegative().nullable(),
+});
+
+const vacuumRoutineSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string().optional(),
+  steps: z.array(vacuumRoutineStepSchema).min(1),
+});
+
+const vacuumConfigSchema = z.object({
+  returnToDockOnPause: z.boolean(),
+  routines: z.array(vacuumRoutineSchema),
+});
+
 const dashboardConfigSchema = z.object({
   rooms: z.array(dashboardRoomSchema),
   roborock: roborockConfigSchema.optional(),
+  vacuum: vacuumConfigSchema.optional(),
   quickToggles: quickToggleConfigSchema.optional(),
   lightColorPresets: z.array(lightColorPresetSchema).optional(),
 });
