@@ -6,10 +6,12 @@ import {
   RoborockQuickPanel,
   useIsVacuumActive,
 } from "@/components/panels/RoborockQuickPanel";
+import { VacuumRoutinePanel } from "@/components/panels/VacuumRoutinePanel";
 import TimerCard from "@/components/panels/TimerCard";
 import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useTimerSocket } from "@/hooks/useTimerSocket";
+import { useVacuumRoutineSocket } from "@/hooks/useVacuumRoutineSocket";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
@@ -86,6 +88,7 @@ export function SmarthomePage() {
   const { t } = useTranslation();
   const { data: dashConfig, loading, error } = useDashboardConfig();
   const { state: timerState } = useTimerSocket();
+  const { state: vacuumRoutineState } = useVacuumRoutineSocket();
   const rooms = dashConfig?.rooms ?? [];
   const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
   const roomLayout = buildRoomLayout(rooms);
@@ -93,6 +96,9 @@ export function SmarthomePage() {
 
   const isTimerActive = timerState?.running === true || timerState?.alerting === true;
   const isVacuumActive = useIsVacuumActive(dashConfig?.roborock?.entityId);
+  const isVacuumRoutineActive =
+    vacuumRoutineState?.executionState &&
+    vacuumRoutineState.executionState !== "idle";
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -139,6 +145,21 @@ export function SmarthomePage() {
             </CollapsiblePanel>
           </CardErrorBoundary>
         </div>
+      )}
+
+      {/* Vacuum routines panel */}
+      {HA_CONFIGURED && dashConfig?.vacuum && (
+        <CardErrorBoundary>
+          <CollapsiblePanel
+            panelKey="vacuum-routines"
+            icon={mdiRobotVacuum}
+            title={t("vacuum.routines.title")}
+            defaultCollapsed
+            forceExpanded={isVacuumRoutineActive}
+          >
+            <VacuumRoutinePanel />
+          </CollapsiblePanel>
+        </CardErrorBoundary>
       )}
 
       {/* Rooms section */}
