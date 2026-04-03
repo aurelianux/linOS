@@ -99,11 +99,17 @@ export interface RoborockConfig {
   defaultCleaningMode: "vacuum" | "vacuum_and_mop";
 }
 
+export interface AdminStack {
+  projectName: string;
+  label: string;
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig | undefined;
   quickToggles?: QuickToggleConfig | undefined;
   lightColorPresets?: LightColorPreset[] | undefined;
+  adminStacks?: AdminStack[] | undefined;
 }
 
 const airQualitySchema = z.object({
@@ -153,11 +159,17 @@ const roborockConfigSchema = z.object({
   defaultCleaningMode: z.enum(["vacuum", "vacuum_and_mop"]),
 });
 
+const adminStackSchema = z.object({
+  projectName: z.string().min(1),
+  label: z.string().min(1),
+});
+
 const dashboardConfigSchema = z.object({
   rooms: z.array(dashboardRoomSchema),
   roborock: roborockConfigSchema.optional(),
   quickToggles: quickToggleConfigSchema.optional(),
   lightColorPresets: z.array(lightColorPresetSchema).optional(),
+  adminStacks: z.array(adminStackSchema).optional(),
 });
 
 /**

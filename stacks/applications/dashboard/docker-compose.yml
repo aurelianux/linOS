@@ -32,7 +32,8 @@ services:
     volumes:
       - ../../../config/services.json:/app/config/services.json:ro   # ← Mount
       - ../../../config/dashboard.json:/app/config/dashboard.json:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../../../:/host-repo
     restart: unless-stopped
     networks:
       - dashboard-net

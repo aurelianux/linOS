@@ -1,5 +1,6 @@
 import { SystemInfoPanel } from "@/components/panels/SystemInfoPanel";
 import { DockerPanel } from "@/components/panels/DockerPanel";
+import { AdminActionsPanel } from "@/components/panels/AdminActionsPanel";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export function AdminPage() {
@@ -14,6 +15,7 @@ export function AdminPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <SystemInfoPanel />
         <DockerPanel />
+        <AdminActionsPanel />
       </div>
     </div>
   );
