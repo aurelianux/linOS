@@ -104,5 +104,48 @@
     "defaultFanPower": 103,
     "defaultWaterBoxMode": 203,
     "defaultCleaningMode": "vacuum_and_mop"
+  },
+  "vacuum": {
+    "returnToDockOnPause": true,
+    "routines": [
+      {
+        "id": "quick-clean",
+        "label": "Quick Clean",
+        "description": "Vacuum flur & küche",
+        "steps": [
+          {
+            "mode": "vacuum",
+            "segments": ["flur", "kueche"],
+            "fanPower": 206,
+            "waterBoxMode": null
+          }
+        ]
+      },
+      {
+        "id": "deep-clean",
+        "label": "Deep Clean",
+        "description": "Full vacuum → mop → final vacuum",
+        "steps": [
+          {
+            "mode": "vacuum",
+            "segments": ["flur", "kueche", "wohnzimmer"],
+            "fanPower": 206,
+            "waterBoxMode": null
+          },
+          {
+            "mode": "vacuum_and_mop",
+            "segments": ["flur", "kueche", "wohnzimmer"],
+            "fanPower": 103,
+            "waterBoxMode": 203
+          },
+          {
+            "mode": "vacuum",
+            "segments": ["flur", "kueche", "wohnzimmer", "schlafzimmer", "badezimmer"],
+            "fanPower": 103,
+            "waterBoxMode": null
+          }
+        ]
+      }
+    ]
   }
 }

@@ -161,6 +161,23 @@ export interface RoborockConfig {
   defaultCleaningMode: "vacuum" | "vacuum_and_mop";
 }
 
+export interface VacuumRoutineStep {
+  mode: "vacuum" | "vacuum_and_mop";
+  segments: string[];
+  fanPower: number;
+  waterBoxMode: number | null;
+}
+
+export interface VacuumRoutine {
+  id: string;
+  label: string;
+  description?: string;
+  steps: VacuumRoutineStep[];
+}
+
+export interface VacuumConfig {
+  returnToDockOnPause: boolean;
+  routines: VacuumRoutine[];
 export interface AdminStack {
   projectName: string;
   label: string;
@@ -169,6 +186,7 @@ export interface AdminStack {
 export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig;
+  vacuum?: VacuumConfig;
   quickToggles?: QuickToggleConfig;
   lightColorPresets?: LightColorPreset[];
   adminStacks?: AdminStack[];

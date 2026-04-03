@@ -3,6 +3,7 @@ import { loadAppConfig, loadServicesConfig, loadDashboardConfig } from "./config
 import { createApp, finalize } from "./app.js";
 import { setupLightNotification, registerLightNotificationShutdown } from "./light-notification-setup.js";
 import { setupTimer } from "./timer-setup.js";
+import { setupVacuumRoutines } from "./vacuum-routine-setup.js";
 
 /**
  * Bootstrap the dashboard API
@@ -55,6 +56,9 @@ async function main() {
 
   // Attach timer feature (REST routes + WebSocket)
   setupTimer(app, server, logger, lightNotification, lightEntityIds);
+
+  // Attach vacuum routine feature (REST routes + WebSocket)
+  setupVacuumRoutines(app, server, logger, dashboardConfig);
 
   // Finalize: register catch-all 404 + error handlers after all routes
   finalize(app, logger);
