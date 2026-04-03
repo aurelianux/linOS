@@ -117,6 +117,7 @@ export interface VacuumConfig {
   returnToDockOnPause: boolean;
   routines: VacuumRoutine[];
 }
+
 export interface AdminStack {
   projectName: string;
   label: string;
@@ -196,6 +197,7 @@ const vacuumConfigSchema = z.object({
   returnToDockOnPause: z.boolean(),
   routines: z.array(vacuumRoutineSchema),
 });
+
 const adminStackSchema = z.object({
   projectName: z.string().min(1),
   label: z.string().min(1),

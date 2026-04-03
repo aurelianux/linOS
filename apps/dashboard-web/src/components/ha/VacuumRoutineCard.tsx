@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo } from "react";
-import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useVacuumRoutineSocket } from "@/hooks/useVacuumRoutineSocket";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useVacuumRoutineStore } from "@/stores/useVacuumRoutineStore";
@@ -32,10 +31,10 @@ const SCHEDULE_PRESETS = [
 ];
 
 export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
-  const { t } = useTranslation();
   const { state, start, pause, resume, cancel } = useVacuumRoutineSocket();
   const { data: dashConfig } = useDashboardConfig();
-  const { isFavorite, toggleFavorite } = useVacuumRoutineStore();
+  const isFavorite = useVacuumRoutineStore((s) => s.isFavorite);
+  const toggleFavorite = useVacuumRoutineStore((s) => s.toggleFavorite);
 
   const [expanded, setExpanded] = useState(false);
   const [customHours, setCustomHours] = useState(0);
@@ -49,25 +48,20 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
   const isScheduled = executionState === "scheduled";
   const isError = executionState === "error";
 
-  // Get friendly room names
-  const getRoomName = (roomId: string): string => {
-    const room = dashConfig?.rooms.find((r) => r.id === roomId);
-    return room?.name ?? roomId;
-  };
+  const rooms = dashConfig?.rooms ?? [];
 
   const currentStep = useMemo(() => {
-    if (!isCurrentRoutine || state?.currentStepIndex === undefined) {
-      return null;
-    }
+    if (!isCurrentRoutine || state?.currentStepIndex === undefined) return null;
     return routine.steps[state.currentStepIndex] ?? null;
   }, [isCurrentRoutine, state?.currentStepIndex, routine.steps]);
 
   const currentStepRoomNames = useMemo(() => {
     if (!currentStep) return "";
-    return currentStep.segments.map(getRoomName).join(", ");
-  }, [currentStep]);
+    return currentStep.segments
+      .map((roomId) => rooms.find((r) => r.id === roomId)?.name ?? roomId)
+      .join(", ");
+  }, [currentStep, rooms]);
 
-  // Handle start with optional delay
   const handleStart = useCallback(
     async (delayMs?: number) => {
       try {
@@ -80,19 +74,13 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
     [start, routine.id]
   );
 
-  // Handle custom schedule
   const handleCustomStart = useCallback(async () => {
     const totalMs = customHours * 60 * 60 * 1000 + customMinutes * 60 * 1000;
-    if (totalMs === 0) {
-      await handleStart();
-    } else {
-      await handleStart(totalMs);
-    }
+    await handleStart(totalMs > 0 ? totalMs : undefined);
     setCustomHours(0);
     setCustomMinutes(0);
   }, [customHours, customMinutes, handleStart]);
 
-  // Handle pause
   const handlePause = useCallback(async () => {
     try {
       await pause();
@@ -101,7 +89,6 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
     }
   }, [pause]);
 
-  // Handle resume
   const handleResume = useCallback(async () => {
     try {
       await resume();
@@ -110,7 +97,6 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
     }
   }, [resume]);
 
-  // Handle cancel
   const handleCancel = useCallback(async () => {
     try {
       await cancel();
@@ -119,7 +105,6 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
     }
   }, [cancel]);
 
-  // State badge
   const stateBadgeVariant: "default" | "secondary" | "success" | "warning" | "destructive" =
     isError
       ? "destructive"
@@ -131,57 +116,57 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
             ? "default"
             : "secondary";
 
-  const stateLabel =
-    isError
-      ? "Error"
-      : isRunning
-        ? `Running (${state?.currentStepIndex ?? 0 + 1}/${state?.totalSteps})`
-        : isPaused
-          ? "Paused"
-          : isScheduled
-            ? "Scheduled"
-            : "Ready";
+  const stateLabel = isError
+    ? "Error"
+    : isRunning
+      ? `Step ${(state?.currentStepIndex ?? 0) + 1}/${state?.totalSteps}`
+      : isPaused
+        ? "Paused"
+        : isScheduled
+          ? "Scheduled"
+          : "Ready";
+
+  // ─── Expanded view ───────────────────────────────────────────────────────────
 
   if (expanded) {
     return (
       <Card className="col-span-full">
         <CardContent className="p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon path={mdiRobotVacuum} size={1} />
-              <div>
-                <h3 className="font-semibold text-slate-100">{routine.label}</h3>
-                {routine.description && (
-                  <p className="text-sm text-slate-400">{routine.description}</p>
-                )}
-              </div>
+          <div className="flex items-center gap-2">
+            <Icon path={mdiRobotVacuum} size={1} className="text-slate-400" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-slate-100">{routine.label}</h3>
+              {routine.description && (
+                <p className="text-sm text-slate-400">{routine.description}</p>
+              )}
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setExpanded(false)}
-              className="ml-auto"
             >
               ✕
             </Button>
           </div>
 
           {isCurrentRoutine && currentStep && (
-            <div className="space-y-2 p-2 bg-slate-800/50 rounded">
-              <p className="text-sm text-slate-400">
+            <div className="space-y-1 p-2 bg-slate-800/50 rounded">
+              <p className="text-xs text-slate-400">
                 Step {(state?.currentStepIndex ?? 0) + 1}/{state?.totalSteps}
               </p>
               <p className="text-sm text-slate-200">
-                {currentStep.mode === "vacuum_and_mop" ? "🌪️🧹" : "🌪️"}{" "}
+                {currentStep.mode === "vacuum_and_mop" ? "Vacuum & Mop" : "Vacuum"} —{" "}
                 {currentStepRoomNames}
               </p>
             </div>
           )}
 
-          {/* Schedule section (only if idle) */}
+          {/* Schedule section — only shown when idle */}
           {isIdle && (
             <div className="space-y-3 pt-2 border-t border-slate-700">
-              <p className="text-sm text-slate-400">Schedule start</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">
+                Schedule start
+              </p>
 
               <div className="flex flex-wrap gap-2">
                 {SCHEDULE_PRESETS.map((preset) => (
@@ -189,53 +174,58 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
                     key={preset.label}
                     size="sm"
                     variant={preset.delayMs === 0 ? "default" : "secondary"}
-                    onClick={() => handleStart(preset.delayMs)}
+                    onClick={() => handleStart(preset.delayMs > 0 ? preset.delayMs : undefined)}
                   >
                     {preset.label}
                   </Button>
                 ))}
               </div>
 
-              <div className="flex gap-2 items-center">
+              <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
                   max="23"
                   value={customHours}
                   onChange={(e) => setCustomHours(Number(e.target.value))}
-                  placeholder="h"
-                  className="w-12 px-2 py-1 bg-slate-700 text-slate-100 rounded text-sm"
+                  placeholder="0"
+                  className="w-14 px-2 py-1 bg-slate-700 text-slate-100 rounded text-sm border border-slate-600 focus:outline-none focus:border-slate-500"
                 />
-                <span className="text-slate-400">h</span>
+                <span className="text-slate-400 text-sm">h</span>
                 <input
                   type="number"
                   min="0"
                   max="59"
                   value={customMinutes}
                   onChange={(e) => setCustomMinutes(Number(e.target.value))}
-                  placeholder="m"
-                  className="w-12 px-2 py-1 bg-slate-700 text-slate-100 rounded text-sm"
+                  placeholder="0"
+                  className="w-14 px-2 py-1 bg-slate-700 text-slate-100 rounded text-sm border border-slate-600 focus:outline-none focus:border-slate-500"
                 />
-                <span className="text-slate-400">m</span>
-                <Button size="sm" onClick={handleCustomStart}>
-                  Go
+                <span className="text-slate-400 text-sm">m</span>
+                <Button size="sm" variant="secondary" onClick={handleCustomStart}>
+                  Schedule
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Control buttons */}
+          {/* Control buttons — shown when active */}
           {!isIdle && (
             <div className="flex gap-2 pt-2 border-t border-slate-700">
               {isRunning && (
-                <Button size="sm" variant="warning" onClick={handlePause}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="text-amber-400 hover:text-amber-300"
+                  onClick={handlePause}
+                >
                   <Icon path={mdiPause} size={0.8} />
                   Pause
                 </Button>
               )}
               {isPaused && (
                 <>
-                  <Button size="sm" variant="success" onClick={handleResume}>
+                  <Button size="sm" variant="default" onClick={handleResume}>
                     <Icon path={mdiPlay} size={0.8} />
                     Resume
                   </Button>
@@ -253,12 +243,41 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
               )}
             </div>
           )}
+
+          {/* Step overview */}
+          <div className="pt-2 border-t border-slate-700 space-y-1">
+            <p className="text-xs text-slate-400 uppercase tracking-wider">Steps</p>
+            {routine.steps.map((step, i) => {
+              const isDone =
+                isCurrentRoutine && (state?.currentStepIndex ?? 0) > i;
+              const isCurrent =
+                isCurrentRoutine && state?.currentStepIndex === i;
+              const stepRooms = step.segments
+                .map((roomId) => rooms.find((r) => r.id === roomId)?.name ?? roomId)
+                .join(", ");
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "text-sm flex items-center gap-2 py-1",
+                    isDone && "text-slate-500 line-through",
+                    isCurrent && "text-emerald-400 font-medium",
+                    !isDone && !isCurrent && "text-slate-300"
+                  )}
+                >
+                  <span className="text-slate-500 w-4 text-xs">{i + 1}.</span>
+                  {step.mode === "vacuum_and_mop" ? "Vacuum & Mop" : "Vacuum"} — {stepRooms}
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Compact view
+  // ─── Compact view ────────────────────────────────────────────────────────────
+
   return (
     <Card
       role="button"
@@ -279,11 +298,10 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
         isError && "bg-red-400/5 border-red-900/50"
       )}
     >
-      {/* Highlight glow */}
       {!isIdle && (
         <div
           className={cn(
-            "absolute inset-x-0 bottom-0 h-full bg-gradient-to-t to-transparent rounded-lg transition-opacity duration-300",
+            "absolute inset-x-0 bottom-0 h-full bg-gradient-to-t to-transparent rounded-lg",
             isRunning && "from-emerald-400/10",
             isPaused && "from-amber-400/10",
             isScheduled && "from-sky-400/10",
@@ -304,11 +322,12 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
           </div>
 
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               toggleFavorite(routine.id);
             }}
-            className="flex-shrink-0 text-slate-400 hover:text-amber-400 transition-colors"
+            className="flex-shrink-0 text-slate-500 hover:text-amber-400 transition-colors"
             title={isFavorite(routine.id) ? "Remove favorite" : "Add favorite"}
           >
             <Icon
@@ -331,11 +350,7 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
             />
           )}
           {(isPaused || isScheduled) && (
-            <Icon
-              path={mdiClock}
-              size={0.7}
-              className="text-amber-400"
-            />
+            <Icon path={mdiClock} size={0.7} className="text-amber-400" />
           )}
         </div>
       </div>
