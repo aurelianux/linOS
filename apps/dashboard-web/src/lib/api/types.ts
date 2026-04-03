@@ -161,11 +161,36 @@ export interface RoborockConfig {
   defaultCleaningMode: "vacuum" | "vacuum_and_mop";
 }
 
+export interface AdminStack {
+  projectName: string;
+  label: string;
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig;
   quickToggles?: QuickToggleConfig;
   lightColorPresets?: LightColorPreset[];
+  adminStacks?: AdminStack[];
+}
+
+export interface StackRestartResult {
+  restarted: string[];
+  failed: string[];
+}
+
+export interface GitPullResult {
+  stdout: string;
+  stderr: string;
+}
+
+export interface GitStatus {
+  branch: string;
+  lastCommit: { hash: string; message: string; relativeTime: string };
+  ahead: number;
+  behind: number;
+  dirty: number;
+  untracked: number;
 }
 
 /**
