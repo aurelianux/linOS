@@ -5,6 +5,7 @@ import { healthRouter } from "./health.js";
 import { servicesRouter } from "./services.js";
 import { systemRouter } from "./system.js";
 import { dashboardRouter } from "./dashboard.js";
+import { adminRouter } from "./admin.js";
 
 /**
  * Main router that aggregates all API routes
@@ -20,6 +21,7 @@ export function createRouter(
   router.use(servicesRouter(servicesConfig.services, logger));
   router.use(systemRouter());
   router.use(dashboardRouter(dashboardConfig));
+  router.use(adminRouter(dashboardConfig));
 
   return router;
 }

@@ -178,6 +178,9 @@ export interface VacuumRoutine {
 export interface VacuumConfig {
   returnToDockOnPause: boolean;
   routines: VacuumRoutine[];
+export interface AdminStack {
+  projectName: string;
+  label: string;
 }
 
 export interface DashboardConfig {
@@ -186,6 +189,26 @@ export interface DashboardConfig {
   vacuum?: VacuumConfig;
   quickToggles?: QuickToggleConfig;
   lightColorPresets?: LightColorPreset[];
+  adminStacks?: AdminStack[];
+}
+
+export interface StackRestartResult {
+  restarted: string[];
+  failed: string[];
+}
+
+export interface GitPullResult {
+  stdout: string;
+  stderr: string;
+}
+
+export interface GitStatus {
+  branch: string;
+  lastCommit: { hash: string; message: string; relativeTime: string };
+  ahead: number;
+  behind: number;
+  dirty: number;
+  untracked: number;
 }
 
 /**
