@@ -74,6 +74,8 @@ export interface ContainerInfo {
   status: string;
   /** Machine-readable state: "running" | "exited" | "paused" | … */
   state: string;
+  /** Docker Compose project name, or null if not a compose container */
+  project: string | null;
 }
 
 export type DockerUnavailableCode =
@@ -199,6 +201,15 @@ export interface StackRestartResult {
   failed: string[];
 }
 
+export interface ContainerRestartResult {
+  name: string;
+  success: boolean;
+}
+
+export interface ContainerLogsResult {
+  logs: string;
+}
+
 export interface GitPullResult {
   stdout: string;
   stderr: string;
@@ -217,11 +228,13 @@ export interface GitStatus {
  * API error class for typed error handling
  */
 export class ApiErrorException extends Error {
-  constructor(
-    public message: string,
-    public code?: string
-  ) {
+  public message: string;
+  public code?: string;
+
+  constructor(message: string, code?: string) {
     super(message);
+    this.message = message;
+    this.code = code;
     this.name = "ApiErrorException";
   }
 }
