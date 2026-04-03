@@ -127,10 +127,14 @@ const DOCKER_SOCKET = "/var/run/docker.sock";
  * Make an HTTP request to the Docker Engine API via the Unix socket.
  * Returns the parsed JSON response body.
  */
-function dockerApiRequest<T>(path: string, timeoutMs = 5000): Promise<T> {
+export function dockerApiRequest<T>(
+  path: string,
+  method: "GET" | "POST" = "GET",
+  timeoutMs = 5000,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const req = http.request(
-      { socketPath: DOCKER_SOCKET, path, method: "GET", timeout: timeoutMs },
+      { socketPath: DOCKER_SOCKET, path, method, timeout: timeoutMs },
       (res) => {
         const chunks: Buffer[] = [];
         res.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -138,6 +142,11 @@ function dockerApiRequest<T>(path: string, timeoutMs = 5000): Promise<T> {
           const body = Buffer.concat(chunks).toString();
           if (!res.statusCode || res.statusCode >= 400) {
             reject(new Error(`Docker API ${res.statusCode}: ${body}`));
+            return;
+          }
+          // Handle 204 No Content (e.g. container restart)
+          if (res.statusCode === 204 || body.length === 0) {
+            resolve(undefined as T);
             return;
           }
           try {

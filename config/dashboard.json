@@ -82,6 +82,16 @@
       { "roomId": "flur", "entity": "input_select.lighting_mode_flur" }
     ]
   },
+  "adminStacks": [
+    { "projectName": "dashboard", "label": "Dashboard" },
+    { "projectName": "homeassistant", "label": "Home Assistant" },
+    { "projectName": "zigbee2mqtt", "label": "Zigbee2MQTT" },
+    { "projectName": "infra", "label": "Infra (Node-RED + MQTT)" },
+    { "projectName": "dns", "label": "AdGuard Home" },
+    { "projectName": "proxy", "label": "Caddy" },
+    { "projectName": "service-index", "label": "Service Index" },
+    { "projectName": "plane-app", "label": "Plane" }
+  ],
   "roborock": {
     "entityId": "vacuum.s7_max_ultra",
     "segments": [
