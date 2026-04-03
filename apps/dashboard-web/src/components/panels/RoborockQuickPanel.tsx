@@ -164,8 +164,7 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   };
 
   // All service calls use helpers.callService() directly instead of
-  // entity.service.* — the @hakit/core entity proxy injects automatic
-  // returnToBase calls for vacuum entities, which aborts the clean cycle.
+  // entity.service.* to bypass the @hakit/core entity proxy.
 
   const vacuumTarget = { entity_id: config.entityId };
 
@@ -174,19 +173,33 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
     setIsStarting(true);
     try {
       const waterMode = cleaningMode === "vacuum" ? 200 : waterBoxMode;
+
+      // Set fan power + water box mode separately — these fields are NOT
+      // supported inline in app_segment_clean (HA Roborock integration
+      // rejects unknown params, causing the vacuum to abort and return to dock).
+      helpers.callService({
+        domain: "vacuum",
+        service: "send_command",
+        serviceData: { command: "set_custom_mode", params: [fanPower] },
+        target: vacuumTarget,
+      });
+      helpers.callService({
+        domain: "vacuum",
+        service: "send_command",
+        serviceData: { command: "set_water_box_custom_mode", params: [waterMode] },
+        target: vacuumTarget,
+      });
+
+      // Brief delay for device to process settings
+      await new Promise<void>((resolve) => setTimeout(resolve, 500));
+
+      // Start segment clean — ONLY segments + repeat (the format that works in HA Dev Tools)
       helpers.callService({
         domain: "vacuum",
         service: "send_command",
         serviceData: {
           command: "app_segment_clean",
-          params: [
-            {
-              segments: selectedRooms,
-              repeat: 1,
-              fan_power: fanPower,
-              water_box_mode: waterMode,
-            },
-          ],
+          params: [{ segments: selectedRooms, repeat: 1 }],
         },
         target: vacuumTarget,
       });
