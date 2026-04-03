@@ -178,6 +178,7 @@ export interface VacuumRoutine {
 export interface VacuumConfig {
   returnToDockOnPause: boolean;
   routines: VacuumRoutine[];
+}
 export interface AdminStack {
   projectName: string;
   label: string;
@@ -215,11 +216,13 @@ export interface GitStatus {
  * API error class for typed error handling
  */
 export class ApiErrorException extends Error {
-  constructor(
-    public message: string,
-    public code?: string
-  ) {
+  public message: string;
+  public code?: string;
+
+  constructor(message: string, code?: string) {
     super(message);
+    this.message = message;
+    this.code = code;
     this.name = "ApiErrorException";
   }
 }
