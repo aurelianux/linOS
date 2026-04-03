@@ -116,6 +116,9 @@ export interface VacuumRoutine {
 export interface VacuumConfig {
   returnToDockOnPause: boolean;
   routines: VacuumRoutine[];
+export interface AdminStack {
+  projectName: string;
+  label: string;
 }
 
 export interface DashboardConfig {
@@ -124,6 +127,7 @@ export interface DashboardConfig {
   vacuum?: VacuumConfig | undefined;
   quickToggles?: QuickToggleConfig | undefined;
   lightColorPresets?: LightColorPreset[] | undefined;
+  adminStacks?: AdminStack[] | undefined;
 }
 
 const airQualitySchema = z.object({
@@ -190,6 +194,9 @@ const vacuumRoutineSchema = z.object({
 const vacuumConfigSchema = z.object({
   returnToDockOnPause: z.boolean(),
   routines: z.array(vacuumRoutineSchema),
+const adminStackSchema = z.object({
+  projectName: z.string().min(1),
+  label: z.string().min(1),
 });
 
 const dashboardConfigSchema = z.object({
@@ -198,6 +205,7 @@ const dashboardConfigSchema = z.object({
   vacuum: vacuumConfigSchema.optional(),
   quickToggles: quickToggleConfigSchema.optional(),
   lightColorPresets: z.array(lightColorPresetSchema).optional(),
+  adminStacks: z.array(adminStackSchema).optional(),
 });
 
 /**
