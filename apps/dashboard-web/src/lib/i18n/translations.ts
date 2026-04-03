@@ -38,6 +38,19 @@ export const translations = {
     "docker.socketHintReplace":
       "Ersetze {HOST_DOCKER_SOCKET} durch /var/run/docker.sock auf Standard-Linux-Hosts.",
 
+    "infra.title": "Infrastruktur",
+    "infra.noContainers": "Keine Container gefunden.",
+    "infra.restart": "Neustarten",
+    "infra.restarting": "Wird neugestartet…",
+    "infra.restartSuccess": "Neugestartet",
+    "infra.restartError": "Neustart fehlgeschlagen",
+    "infra.logs": "Logs",
+    "infra.logsCopied": "Logs kopiert",
+    "infra.logsError": "Logs konnten nicht geladen werden",
+    "infra.containers": "Container",
+    "infra.ungrouped": "Sonstige",
+    "infra.reconnecting": "Verbindung wird wiederhergestellt…",
+
     "serviceStatus.title": "Stack Status",
     "serviceStatus.refresh": "Aktualisieren",
     "serviceStatus.updated": "Aktualisiert ",
@@ -190,6 +203,19 @@ export const translations = {
       "To enable container listing, add the following volume to the dashboard-api service in docker-compose.yml:",
     "docker.socketHintReplace":
       "Replace {HOST_DOCKER_SOCKET} with /var/run/docker.sock on standard Linux hosts.",
+
+    "infra.title": "Infrastructure",
+    "infra.noContainers": "No containers found.",
+    "infra.restart": "Restart",
+    "infra.restarting": "Restarting…",
+    "infra.restartSuccess": "Restarted",
+    "infra.restartError": "Restart failed",
+    "infra.logs": "Logs",
+    "infra.logsCopied": "Logs copied",
+    "infra.logsError": "Could not load logs",
+    "infra.containers": "containers",
+    "infra.ungrouped": "Other",
+    "infra.reconnecting": "Reconnecting…",
 
     "serviceStatus.title": "Stack Status",
     "serviceStatus.refresh": "Refresh",

@@ -74,6 +74,8 @@ export interface ContainerInfo {
   status: string;
   /** Machine-readable state: "running" | "exited" | "paused" | … */
   state: string;
+  /** Docker Compose project name, or null if not a compose container */
+  project: string | null;
 }
 
 export type DockerUnavailableCode =
@@ -177,6 +179,15 @@ export interface DashboardConfig {
 export interface StackRestartResult {
   restarted: string[];
   failed: string[];
+}
+
+export interface ContainerRestartResult {
+  name: string;
+  success: boolean;
+}
+
+export interface ContainerLogsResult {
+  logs: string;
 }
 
 export interface GitPullResult {
