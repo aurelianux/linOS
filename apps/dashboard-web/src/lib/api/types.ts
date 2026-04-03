@@ -181,6 +181,7 @@ export interface VacuumConfig {
   returnToDockOnPause: boolean;
   routines: VacuumRoutine[];
 }
+
 export interface AdminStack {
   projectName: string;
   label: string;
