@@ -54,6 +54,8 @@ export interface ContainerInfo {
   status: string;
   /** Machine-readable state: "running" | "exited" | "paused" | … */
   state: string;
+  /** Docker Compose project name (from label), or null if not a compose container */
+  project: string | null;
 }
 
 export type DockerUnavailableCode =
@@ -173,6 +175,7 @@ interface DockerApiContainer {
   Image: string;
   Status: string;
   State: string;
+  Labels: Record<string, string>;
 }
 
 /**
@@ -236,6 +239,7 @@ async function fetchContainers(): Promise<ContainersData> {
     image: c.Image,
     status: c.Status,
     state: c.State.toLowerCase(),
+    project: c.Labels["com.docker.compose.project"] ?? null,
   }));
 
   return { available: true, containers, unavailableReason: null, unavailableCode: null };

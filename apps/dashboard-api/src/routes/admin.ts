@@ -16,6 +16,15 @@ interface StackRestartResult {
   failed: string[];
 }
 
+interface ContainerRestartResult {
+  name: string;
+  success: boolean;
+}
+
+interface ContainerLogsResult {
+  logs: string;
+}
+
 interface GitPullResult {
   stdout: string;
   stderr: string;
@@ -113,6 +122,70 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
 
       const data: StackRestartResult = { restarted, failed };
       res.json({ ok: true, data } satisfies ApiResponse<StackRestartResult>);
+    },
+  );
+
+  // POST /admin/container/:containerId/restart
+  router.post(
+    "/admin/container/:containerId/restart",
+    async (req: Request, res: Response): Promise<void> => {
+      const rawParam = req.params.containerId;
+      const containerId = Array.isArray(rawParam) ? rawParam[0] : rawParam;
+
+      if (!containerId) {
+        throw new AppError("Missing container ID", 400, "INVALID_CONTAINER");
+      }
+
+      try {
+        await dockerApiRequest<undefined>(
+          `/containers/${containerId}/restart?t=10`,
+          "POST",
+          30_000,
+        );
+        const data: ContainerRestartResult = { name: containerId, success: true };
+        res.json({ ok: true, data } satisfies ApiResponse<ContainerRestartResult>);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new AppError(
+          `Failed to restart container: ${msg}`,
+          500,
+          "CONTAINER_RESTART_FAILED",
+        );
+      }
+    },
+  );
+
+  // GET /admin/container/:containerId/logs
+  router.get(
+    "/admin/container/:containerId/logs",
+    async (req: Request, res: Response): Promise<void> => {
+      const rawParam = req.params.containerId;
+      const containerId = Array.isArray(rawParam) ? rawParam[0] : rawParam;
+
+      if (!containerId) {
+        throw new AppError("Missing container ID", 400, "INVALID_CONTAINER");
+      }
+
+      try {
+        const raw = await dockerApiRequest<string>(
+          `/containers/${containerId}/logs?stdout=1&stderr=1&timestamps=1&tail=200`,
+          "GET",
+          10_000,
+        );
+        // Docker logs API returns raw bytes with stream headers — clean them up
+        const logs = typeof raw === "string" ? raw : String(raw);
+        // eslint-disable-next-line no-control-regex
+        const cleaned = logs.replace(/[\x00-\x08]/g, "");
+        const data: ContainerLogsResult = { logs: cleaned };
+        res.json({ ok: true, data } satisfies ApiResponse<ContainerLogsResult>);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new AppError(
+          `Failed to fetch logs: ${msg}`,
+          500,
+          "CONTAINER_LOGS_FAILED",
+        );
+      }
     },
   );
 
