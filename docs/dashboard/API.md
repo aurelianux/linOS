@@ -26,7 +26,7 @@ apps/dashboard-api/
 │   ├── timer-setup.ts        # Timer feature initialization (routes + WS + HA lights)
 │   ├── config/
 │   │   ├── env.ts            # Zod schema for environment validation
-│   │   ├── timer-env.ts      # Timer-specific env (HA URL, token, light entities)
+│   │   ├── light-notification-env.ts  # HA light notification env (URL, token, entities)
 │   │   └── app-config.ts     # JSON config loaders (app, services, dashboard)
 │   ├── middleware/
 │   │   ├── headers.ts        # Security headers (nosniff, referrer-policy, frame-options)
@@ -38,11 +38,18 @@ apps/dashboard-api/
 │   │   ├── system.ts         # GET /system/info, /system/vitals, /system/containers
 │   │   ├── services.ts       # GET /services/status
 │   │   ├── dashboard.ts      # GET /dashboard/config
-│   │   └── timer.ts          # GET /timer/state, POST /timer/start, POST /timer/stop
+│   │   ├── timer.ts          # GET /timer/state, POST /timer/start, POST /timer/stop
+│   │   ├── vacuum-routines.ts # Vacuum routine management
+│   │   └── admin.ts          # Admin endpoints
 │   ├── ws/
-│   │   └── timer-ws.ts       # WebSocket server for real-time timer broadcasts
+│   │   ├── timer-ws.ts       # WebSocket server for real-time timer broadcasts
+│   │   └── vacuum-routine-ws.ts # WebSocket for vacuum routine broadcasts
 │   └── services/
-│       └── timer.ts          # TimerService: in-memory timer + optional HA light feedback
+│       ├── index.ts           # Service aggregator
+│       ├── timer.ts           # TimerService: in-memory timer + optional HA light feedback
+│       ├── vacuum-routine.ts  # Vacuum routine management
+│       └── light-notification.ts # HA light notification integration
+├── .env.example              # Example environment variables
 ├── dist/                     # Compiled JS (production output)
 ├── Dockerfile                # Multistage build
 ├── package.json
@@ -456,15 +463,15 @@ All other endpoints (`/health`, `/services/status`, `/dashboard/config`, `/timer
 | `SERVICES_CONFIG_PATH` | string (optional) | — | Path to services monitoring config |
 | `DASHBOARD_CONFIG_PATH` | string (optional) | — | Path to dashboard entity config |
 
-### Timer Variables (`src/config/timer-env.ts`)
+### Light Notification Variables (`src/config/light-notification-env.ts`)
 
 | Variable | Type | Purpose |
 |----------|------|---------|
 | `LINOS_HA_URL` | string (URL, optional) | Home Assistant base URL for light feedback |
 | `LINOS_HA_TOKEN` | string (optional) | HA long-lived access token |
-| `LINOS_TIMER_LIGHT_ENTITIES` | string (CSV, optional) | Light entity IDs for timer progress feedback |
+| `LINOS_NOTIFICATION_LIGHT_ENTITIES` | string (CSV, optional) | Light entity IDs for timer/notification feedback |
 
-All timer env vars are optional — the timer feature works without HA integration.
+All light notification env vars are optional — timer and vacuum features work without HA integration.
 
 ### Configuration Files
 

@@ -91,11 +91,17 @@ curl http://localhost:4001/nonexistent
 | Route | Method | Description |
 |-------|--------|-------------|
 | `/health` | GET | Liveness probe |
-| `/services` | GET | Service health status (from `config/services.json`) |
+| `/services/status` | GET | Service health status (from `config/services.json`) |
 | `/system/info` | GET | Host system information |
 | `/system/vitals` | GET | CPU/RAM usage for header metrics |
 | `/system/containers` | GET | Docker container status (via Docker Engine API socket) |
 | `/dashboard/config` | GET | Dashboard configuration (rooms, entities, quick toggles) |
+| `/timer/state` | GET | Current timer state |
+| `/timer/start` | POST | Start a new timer |
+| `/timer/stop` | POST | Stop running timer |
+| `/ws/timer` | WS | Real-time timer state broadcasts |
+| `/vacuum-routines/*` | GET/POST | Vacuum routine management |
+| `/ws/vacuum-routine` | WS | Real-time vacuum routine broadcasts |
 
 ## Architecture
 
@@ -113,7 +119,15 @@ The API reads from `process.env`. For local dev, defaults are used:
 | `PORT` | `4001` | API server port |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `CORS_ALLOW_ORIGINS` | `http://localhost:4000,http://dashboard.lan` | CORS allowlist |
+| `LINOS_DASHBOARD_HOST` | `dashboard.lan` | Dashboard hostname |
 | `CONFIG_PATH` | (optional) | Path to JSON app config file |
+| `SERVICES_CONFIG_PATH` | (optional) | Path to services monitoring config |
+| `DASHBOARD_CONFIG_PATH` | (optional) | Path to dashboard entity config |
+| `LINOS_HA_URL` | (optional) | HA URL for timer light feedback |
+| `LINOS_HA_TOKEN` | (optional) | HA token for timer light feedback |
+| `LINOS_NOTIFICATION_LIGHT_ENTITIES` | (optional) | Light entity IDs for notifications |
+
+See also `.env.example` files in `apps/dashboard-web/` and `apps/dashboard-api/`.
 
 ## Docker Deployment
 

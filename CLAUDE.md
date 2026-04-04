@@ -449,24 +449,35 @@ volumes:               # WRONG — overrides the above
 ```
 apps/dashboard-web/src/
 ├── components/
-│   ├── common/         # CardErrorBoundary, Panel, LoadingState
-│   ├── ha/             # HA entity cards (LightCard, SwitchCard, SensorCard…)
-│   ├── layout/         # AppShell, Header, SidebarNav, BottomNav
-│   ├── panels/         # System panels (SystemInfoPanel, DockerPanel, ServicesPanel)
-│   └── ui/             # shadcn/ui base (card, button, badge, switch, slider)
-├── hooks/              # usePolledData factory + per-endpoint exports
+│   ├── common/         # CardErrorBoundary, CollapsiblePanel, LoadingState, ErrorState,
+│   │                   # EmptyState, InlineError, StatusBadge, PageErrorBoundary
+│   ├── ha/             # LightCard, ClimateCard, SwitchCard, SensorCard, AirQualitySensorCard,
+│   │                   # GenericEntityCard, CompactRoomCard, QuickToggle, QuickAccessPanel,
+│   │                   # VacuumRoutineCard, EntityIcon, domainCards
+│   ├── layout/         # AppShell, Header, SidebarNav, BottomNav, SystemMetricBadge,
+│   │                   # TimerHeaderBadge
+│   ├── panels/         # SystemInfoPanel, UnifiedInfraPanel, RoborockQuickPanel,
+│   │                   # TimerCard, VacuumRoutinePanel
+│   └── ui/             # shadcn/ui base (card, button, badge, switch, slider, icon,
+│                       # bottom-sheet, number-stepper, segment-toggle, toggle-chip)
+├── hooks/              # usePolledData factory, useSystemInfo, useSystemVitals,
+│                       # useDockerContainers, useDashboardConfig, useLightGesture,
+│                       # useMetricHistory, useOptimisticAction, useTimerSocket,
+│                       # useVacuumRoutineSocket, useIsMobile, useScrollSuppression
 ├── lib/
-│   ├── api/            # fetchJson client + ApiErrorException + types
-│   ├── ha/             # icons.ts, provider.tsx, config.ts
+│   ├── api/            # fetchJson client, endpoints, types
+│   ├── ha/             # icons.ts, dashboardIcons.ts, config.ts, provider.tsx
 │   └── i18n/           # translations.ts (DE/EN dict), useTranslation.ts hook
-├── pages/              # OverviewPage, RoomsPage, PanelsPage
-└── stores/             # Zustand stores (languageStore + feature stores)
+├── pages/              # SmarthomePage, AdminPage
+└── stores/             # languageStore, favoritesStore, layoutStore, panelStore,
+                        # useVacuumRoutineStore
 
 apps/dashboard-api/src/
-├── config/             # env.ts (Zod), app-config.ts (services.json loader)
+├── config/             # env.ts (Zod), app-config.ts, light-notification-env.ts
 ├── middleware/         # cors, headers, errors
-├── routes/             # health, services, system
-└── services/           # business logic (extracted from routes when non-trivial)
+├── routes/             # health, services, system, dashboard, timer, vacuum-routines, admin
+├── services/           # timer, vacuum-routine, light-notification
+└── ws/                 # timer-ws, vacuum-routine-ws
 ```
 
 ---
