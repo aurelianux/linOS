@@ -93,7 +93,7 @@ Browser → Vite Dev Proxy /api   → Express BFF → System-Monitoring, Config
 | Variable | Beispiel |
 |---|---|
 | `VITE_API_BASE` | `/api` |
-| `VITE_HA_URL` | `http://192.168.2.31:8123` |
+| `VITE_HA_URL` | `http://<LINOS_HOST_IP>:8123` |
 | `VITE_HA_TOKEN` | `eyJ...` |
 
 ### Backend (`apps/dashboard-api/.env`)

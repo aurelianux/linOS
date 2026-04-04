@@ -21,7 +21,7 @@ Runtime-Daten (Datenbanken, Logs, Caddy-ACME, Zigbee-DB usw.) sind über `.gitig
 ## Voraussetzungen
 
 - Linux Host mit Docker und Docker Compose
-- Zugriff per SSH auf den Host (z. B. 192.168.2.31)
+- Zugriff per SSH auf den Host (z. B. `<YOUR_HOST_IP>`)
 
 ## Erstkonfiguration
 
