@@ -1,102 +1,141 @@
 # linOS
 
-Opinionated Homelab / Smart-Home-Stack auf dem Host "Manny".
+Opinionated homelab and smart-home stack running on a Dell Wyse 5070 thin client ("Manny", Arch Linux). Container-based, reproducible, LAN-first.
 
-## Struktur
+## Structure
 
-Dieses Repository geht davon aus, dass alles unter dem Ordner `stacks/` liegt:
+```
+stacks/
+├── infra/              # Mosquitto MQTT, Node-RED, Tailscale VPN
+├── proxy/              # Caddy reverse proxy
+├── dns/                # AdGuard Home (local DNS + ad filtering)
+├── homeassistant/      # Home Assistant Core + config
+├── zigbee2mqtt/        # Zigbee2MQTT + USB coordinator
+└── applications/
+    ├── plane/          # Plane project management
+    ├── service-index/  # HTML landing page for all services
+    └── dashboard/      # linBoard dashboard (Web + API)
 
-- `stacks/infra/` – MQTT (Mosquitto), Node-RED und Tailscale-VPN
-- `stacks/proxy/` – Caddy Reverse-Proxy vor allen Web-UIs
-- `stacks/dns/` – AdGuard Home als lokaler DNS / Filter
-- `stacks/homeassistant/` – Home Assistant Core und Konfiguration
-- `stacks/zigbee2mqtt/` – Zigbee2MQTT und Koordinator
-- `stacks/applications/`
-  - `plane/` – Plane Projektmanagement
-  - `service-index/` – HTML-Übersichtsseite aller Dienste (erreichbar unter `manny.lan`)
-  - `dashboard/` – linBoard Dashboard (Web + API, erreichbar unter `dashboard.manny.lan`)
+apps/
+├── dashboard-web/      # React 19, Vite, Tailwind, @hakit/core, Zustand
+└── dashboard-api/      # Express 5, Zod, Pino — BFF for system data
 
-Runtime-Daten (Datenbanken, Logs, Caddy-ACME, Zigbee-DB usw.) sind über `.gitignore` ausgeschlossen und werden nicht committet.
+config/
+├── services.json       # Health-check definitions (consumed by dashboard-api)
+└── dashboard.json      # Room/entity layout config
 
-## Voraussetzungen
+scripts/                # smrestart, smstatus, update_index.py
+shell/                  # Host shell aliases (manny.zshrc)
+docs/                   # Architecture docs, API reference, decisions
+```
 
-- Linux Host mit Docker und Docker Compose
-- Zugriff per SSH auf den Host (z. B. 192.168.2.31)
+Runtime data (databases, logs, Caddy certs, Zigbee DB, etc.) is excluded via `.gitignore` and never committed.
 
-## Erstkonfiguration
+## Prerequisites
+
+- Linux host with Docker and Docker Compose
+- Node.js 20+ and pnpm 10+ (for dashboard development)
+- SSH access to the host
+
+## Initial Setup
 
 ```bash
-# Kopiere die Beispielkonfiguration und passe sie an:
+# 1. Clone the repository
+git clone https://github.com/aurelianux/linOS.git
+cd linOS
+
+# 2. Copy the example environment file and fill in your values
 cp .env.linos.example .env.linos
-# Trage deinen Tailscale Auth-Key und Host-IP ein.
+
+# 3. Create symlinks for each stack that needs environment variables
+for dir in stacks/dns stacks/homeassistant stacks/infra stacks/proxy stacks/zigbee2mqtt stacks/applications/service-index; do
+  ln -sf "$(pwd)/.env.linos" "$dir/.env"
+done
 ```
 
-> **Hinweis:** `.env.linos` enthält Secrets und wird nicht versioniert.  
-> Commit nie `.env.linos` direkt – nutze ausschließlich `.env.linos.example` als Vorlage.
+> **Important:** `.env.linos` contains secrets and is gitignored. Never commit it — use `.env.linos.example` as a template.
 
-## Basis-Stack starten
-
-Aus dem Repo-Root (Ordner `linOS`):
-
-- `cd stacks/infra && docker compose up -d`
-- `cd stacks/proxy && docker compose up -d`
-- `cd stacks/dns && docker compose up -d`
-- `cd stacks/homeassistant && docker compose up -d`
-- `cd stacks/zigbee2mqtt && docker compose up -d`
-
-## Anwendungen
-
-Service-Index (Landingpage):
-
-- `cd stacks/applications/service-index && docker compose up -d`
-
-Dashboard (linBoard):
-
-- `cd stacks/applications/dashboard && docker compose up --build -d`
-
-Plane:
-
-- `cd stacks/applications/plane/plane-app && docker compose up -d`
-
-## Wichtige Pfade für Backups
-
-- Home Assistant Config: `stacks/homeassistant/config/`
-- Node-RED Daten: `stacks/infra/nodered/`
-- Mosquitto Daten: `stacks/infra/mosquitto/data/`
-- AdGuard Daten: `stacks/dns/work/`
-- Zigbee2MQTT Daten: `stacks/zigbee2mqtt/data/`
-- Caddy Zertifikate/Daten: `stacks/proxy/data/` (Docker Volume `caddy_data`)
-
-## Scripts & Shell-Konfiguration für Manny
-
-### scripts/
-
-| Skript | Beschreibung |
-|---|---|
-| `scripts/smrestart` | Alle Stacks per `docker compose up -d` neu starten (liest `config/services.json`). Log → `logs/` |
-| `scripts/smstatus` | Aktuellen Container-Status anzeigen. Log → `logs/` |
-| `scripts/update_index.py` | `services.json` für den Service-Index neu generieren. |
-
-Skripte können direkt aus dem Repo ausgeführt werden – der Pfad zum Repo-Root wird automatisch aufgelöst:
+## Starting the Stacks
 
 ```bash
-~/linOS/scripts/smrestart
-~/linOS/scripts/smstatus
+# Start all stacks at once (reads config/services.json for stack paths)
+./scripts/smrestart
+
+# Or start individually:
+cd stacks/infra && docker compose up -d
+cd stacks/proxy && docker compose up -d
+cd stacks/dns && docker compose up -d
+cd stacks/homeassistant && docker compose up -d
+cd stacks/zigbee2mqtt && docker compose up -d
 ```
 
-### shell/manny.zshrc
+### Applications
 
-`shell/manny.zshrc` enthält alle Manny-spezifischen Aliases und Funktionen (Docker-Shortcuts, `smrestart`, `smstatus`, `updateindex` usw.). Einbindung in `~/.zshrc`:
+```bash
+# Service Index (landing page)
+cd stacks/applications/service-index && docker compose up -d
+
+# Dashboard (linBoard) — builds from source
+cd stacks/applications/dashboard && docker compose up --build -d
+
+# Plane (project management)
+cd stacks/applications/plane/plane-app && docker compose up -d
+```
+
+## Dashboard Development
+
+```bash
+cd apps
+pnpm install
+pnpm dev              # Start frontend :4000 + API :4001
+
+# Quality checks
+pnpm typecheck        # tsc --noEmit
+pnpm lint             # ESLint
+pnpm format           # Prettier
+pnpm build            # Production build
+```
+
+See [apps/dashboard-web/README.md](apps/dashboard-web/README.md) for frontend details and [docs/dashboard/API.md](docs/dashboard/API.md) for the API reference.
+
+## Scripts & Shell Configuration
+
+| Script | Description |
+|---|---|
+| `scripts/smrestart` | Restart all stacks via `docker compose up -d` (reads `config/services.json`) |
+| `scripts/smstatus` | Show current container status |
+| `scripts/update_index.py` | Regenerate `services.json` for the service index |
+
+Shell aliases for the host are in `shell/manny.zshrc`. Source it from `~/.zshrc`:
 
 ```zsh
 [[ -f ~/linOS/shell/manny.zshrc ]] && source ~/linOS/shell/manny.zshrc
 ```
 
-Nach einem `git pull` stehen die Änderungen in der nächsten Shell-Session automatisch zur Verfügung.
+## Backup Paths
 
-## Troubleshooting (Kurz)
+| Data | Path |
+|---|---|
+| Home Assistant config | `stacks/homeassistant/config/` |
+| Node-RED flows | `stacks/infra/nodered/` |
+| Mosquitto data | `stacks/infra/mosquitto/data/` |
+| AdGuard data | `stacks/dns/work/` |
+| Zigbee2MQTT data | `stacks/zigbee2mqtt/data/` |
+| Caddy certs | `stacks/proxy/data/` |
 
-- Logs ansehen: im jeweiligen Stack-Ordner `docker compose logs`
-- Caddy neu starten: `cd stacks/proxy && docker compose restart`
-- Home Assistant neu starten: `cd stacks/homeassistant && docker compose restart`
-- Dashboard neu starten: `cd stacks/applications/dashboard && docker compose restart`
+## Troubleshooting
+
+```bash
+# View logs for a stack
+cd stacks/<stack> && docker compose logs
+
+# Restart a single service
+cd stacks/<stack> && docker compose restart <service>
+
+# Check container status
+./scripts/smstatus
+```
+
+## License
+
+[MIT](LICENSE)

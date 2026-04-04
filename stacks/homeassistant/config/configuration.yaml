@@ -14,5 +14,6 @@ http:
   use_x_forwarded_for: true
   trusted_proxies:
     - 127.0.0.1
-    - 192.168.2.31
+    # Replace with your host IP (LINOS_HOST_IP)
+    - <LINOS_HOST_IP>
 
