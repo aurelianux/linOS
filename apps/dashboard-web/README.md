@@ -38,8 +38,8 @@ pnpm -C dashboard-api dev  # runs on http://localhost:4001
 
 | Route | Page | Description |
 |-------|------|-------------|
-| `/` | SmarthomePage | Main dashboard — quick toggles, room cards, Roborock panel |
-| `/admin` | AdminPage | System info panel, Docker container overview |
+| `/` | SmarthomePage | Main dashboard — room cards, quick toggles, Roborock panel, vacuum routines |
+| `/admin` | AdminPage | System info, Docker containers, service health, timer |
 | `*` | — | Redirects to `/` |
 
 ### Layout
@@ -68,10 +68,11 @@ pnpm -C dashboard-api dev  # runs on http://localhost:4001
 ```
 src/
 ├── pages/
-│   ├── SmarthomePage.tsx       # Main dashboard with rooms, toggles, Roborock
-│   └── AdminPage.tsx           # System info + Docker panels
+│   ├── SmarthomePage.tsx       # Main dashboard with rooms, toggles, Roborock, vacuum routines
+│   └── AdminPage.tsx           # System info, Docker containers, service health, timer
 ├── components/
-│   ├── common/                 # CardErrorBoundary, Panel, LoadingState, InlineError
+│   ├── common/                 # CardErrorBoundary, CollapsiblePanel, LoadingState, ErrorState,
+│   │                           # EmptyState, InlineError, StatusBadge, PageErrorBoundary
 │   ├── ha/                     # HA entity cards
 │   │   ├── LightCard.tsx       # Gesture-based brightness control
 │   │   ├── ClimateCard.tsx     # Temperature presets and mode selector
@@ -81,12 +82,16 @@ src/
 │   │   ├── GenericEntityCard.tsx     # Fallback for unmapped domains
 │   │   ├── CompactRoomCard.tsx       # Per-room entity grid
 │   │   ├── QuickToggle.tsx     # Single quick-toggle button
-│   │   ├── QuickToggleBar.tsx  # Bar of quick toggles per room
+│   │   ├── QuickAccessPanel.tsx # Quick access panel
+│   │   ├── VacuumRoutineCard.tsx # Roborock vacuum routine card
 │   │   ├── EntityIcon.tsx      # Icon resolver for HA entities
 │   │   └── domainCards.ts      # Domain -> card component mapping
-│   ├── layout/                 # AppShell, Header, SidebarNav, BottomNav, SystemMetricBadge
-│   ├── panels/                 # SystemInfoPanel, DockerPanel, RoborockQuickPanel
-│   └── ui/                     # shadcn/ui base (card, button, badge, switch, slider, icon)
+│   ├── layout/                 # AppShell, Header, SidebarNav, BottomNav,
+│   │                           # SystemMetricBadge, TimerHeaderBadge
+│   ├── panels/                 # SystemInfoPanel, UnifiedInfraPanel, RoborockQuickPanel,
+│   │                           # TimerCard, VacuumRoutinePanel
+│   └── ui/                     # shadcn/ui base (card, button, badge, switch, slider, icon,
+│                               # bottom-sheet, number-stepper, segment-toggle, toggle-chip)
 ├── hooks/
 │   ├── usePolledData.ts        # createPollingHook<T>() factory
 │   ├── useSystemInfo.ts        # System info polling
@@ -95,7 +100,11 @@ src/
 │   ├── useDashboardConfig.ts   # Dashboard config from API
 │   ├── useLightGesture.ts      # Pointer gesture handler for LightCard
 │   ├── useMetricHistory.ts     # Rolling history for sparkline metrics
-│   └── useOptimisticAction.ts  # Optimistic UI updates for HA actions
+│   ├── useOptimisticAction.ts  # Optimistic UI updates for HA actions
+│   ├── useTimerSocket.ts       # WebSocket hook for timer state
+│   ├── useVacuumRoutineSocket.ts # WebSocket hook for vacuum routines
+│   ├── useIsMobile.ts          # Mobile viewport detection
+│   └── useScrollSuppression.ts # Scroll suppression during gestures
 ├── lib/
 │   ├── api/
 │   │   ├── client.ts           # fetchJson wrapper with timeout + envelope
@@ -113,7 +122,9 @@ src/
 ├── stores/
 │   ├── languageStore.ts        # Language preference (DE/EN)
 │   ├── favoritesStore.ts       # Favorite entities
-│   └── layoutStore.ts          # Layout preferences
+│   ├── layoutStore.ts          # Layout preferences
+│   ├── panelStore.ts           # Panel collapse/expand state
+│   └── useVacuumRoutineStore.ts # Vacuum routine state
 ├── main.tsx                    # App entry (BrowserRouter, HaProvider, AppShell)
 └── index.css                   # Global Tailwind styles
 ```
@@ -135,8 +146,9 @@ src/
 
 - CPU and RAM usage in header bar (polled from API)
 - System info panel with host details
-- Docker container status overview
-- Service health checks
+- Unified infrastructure panel (Docker containers + service health)
+- In-memory timer with WebSocket broadcasts and optional HA light feedback
+- Vacuum routine management with real-time WebSocket updates
 
 ### Internationalization
 

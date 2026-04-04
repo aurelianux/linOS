@@ -1,76 +1,78 @@
-# linOS Architektur-Überblick
+# linOS Architecture Overview
 
-linOS bündelt mehrere Docker-Stacks zu einem homogenen Homelab- und Smart-Home-System auf dem Host "Manny".
+linOS bundles multiple Docker stacks into a cohesive homelab and smart-home system on the host "Manny" (Dell Wyse 5070, Arch Linux).
 
-## Komponenten
+## Components
 
 ### infra
 
-- Mosquitto (MQTT Broker) als zentraler Message-Bus für:
-  - Home Assistant
-  - Zigbee2MQTT
-  - Node-RED Flows
-- Node-RED für Automationen, Integrationen, HTTP-Endpoints usw.
-- Tailscale VPN-Client für sicheren Remote-Zugriff auf das LAN.
+- Mosquitto (MQTT broker) as the central message bus for Home Assistant, Zigbee2MQTT, and Node-RED.
+- Node-RED for automations, integrations, and HTTP endpoints.
+- Tailscale VPN client for secure remote access to the LAN.
 
 ### proxy
 
-- Caddy als Reverse-Proxy vor allen Web-UIs.
-- Kümmert sich um:
-  - einheitliche Hostnamen oder Pfade
-  - TLS / Zertifikate, falls später nötig
-  - Weiterleitung auf die internen Container
+- Caddy as reverse proxy in front of all web UIs.
+- Handles unified hostnames, TLS certificates, and routing to internal containers.
+- Runs in `network_mode: host`, routes by hostname via `LINOS_*_HOST` env vars.
 
 ### dns
 
-- AdGuard Home als lokaler DNS-Server und Werbe-/Tracker-Filter.
-- Überschreibt lokale Hostnamen, z. B.:
-  - `manny.lan` → Service-Index
-  - `ha.manny.lan` → Home Assistant
-  - `dns.manny.lan` → AdGuard Web UI
-  - `flow.manny.lan` → Node-RED
-  - `plane.manny.lan` → Plane
-  - `z2m.manny.lan` → Zigbee2MQTT
-  - `dashboard.lan` → linBoard Dashboard
+- AdGuard Home as local DNS server and ad/tracker filter.
+- Overrides local hostnames (configurable via `.env.linos`):
+  - `manny.lan` — Service Index
+  - `ha.manny.lan` — Home Assistant
+  - `dns.manny.lan` — AdGuard Web UI
+  - `flow.manny.lan` — Node-RED
+  - `z2m.manny.lan` — Zigbee2MQTT
+  - `plane.manny.lan` — Plane
+  - `dashboard.lan` — linBoard Dashboard
 
 ### homeassistant
 
-- Home Assistant Core mit Konfigurationsordner `stacks/homeassistant/config`.
-- Nutzt unter anderem:
-  - MQTT (Mosquitto) für Sensoren und Aktoren
-  - Zigbee2MQTT für Zigbee-Geräte
-  - Integrationen für LAN-Geräte (z. B. Govee, Roborock).
+- Home Assistant Core with configuration in `stacks/homeassistant/config`.
+- Uses MQTT (Mosquitto) for sensors/actuators, Zigbee2MQTT for Zigbee devices, and integrations for LAN devices.
 
 ### zigbee2mqtt
 
-- Bindet den Zigbee-Koordinator (USB-Stick) ein.
-- Stellt alle Zigbee-Geräte per MQTT bereit.
-- Schreibt seine Datenbank in `stacks/zigbee2mqtt/data`.
+- Connects the Zigbee coordinator (USB dongle).
+- Exposes all Zigbee devices via MQTT.
+- Stores its database in `stacks/zigbee2mqtt/data`.
 
 ### applications
 
-- **plane**: Plane App für Projekt- und Aufgabenmanagement. Läuft im Ordner `stacks/applications/plane/plane-app`.
-- **service-index**: Statische HTML-Seite, die Links auf alle relevanten Dienste sammelt. Erreichbar über den Proxy unter `manny.lan`.
-- **dashboard**: linBoard – Full-Stack-Dashboard (React + Express + TypeScript). Erreichbar über `dashboard.lan`. Quellcode in `apps/dashboard-web` und `apps/dashboard-api`.
+- **plane**: Plane app for project and task management. Located at `stacks/applications/plane/plane-app`.
+- **service-index**: Static HTML page linking to all services. Accessible via proxy at `manny.lan`.
+- **dashboard**: linBoard — full-stack dashboard (React + Express + TypeScript). Accessible at `dashboard.lan`. Source code in `apps/dashboard-web` and `apps/dashboard-api`.
 
-## Datenhaltung
+## Data Persistence
 
-Persistente Daten liegen in:
+Persistent data lives in:
 
-- Home Assistant: `stacks/homeassistant/config/`
-- Zigbee2MQTT: `stacks/zigbee2mqtt/data/`
-- MQTT (Mosquitto): `stacks/infra/mosquitto/data/`
-- AdGuard: `stacks/dns/work/`
-- Caddy: `stacks/proxy/data/` (Docker Volume `caddy_data`)
+| Data | Path |
+|---|---|
+| Home Assistant | `stacks/homeassistant/config/` |
+| Zigbee2MQTT | `stacks/zigbee2mqtt/data/` |
+| Mosquitto | `stacks/infra/mosquitto/data/` |
+| AdGuard | `stacks/dns/work/` |
+| Caddy | `stacks/proxy/data/` (Docker volume `caddy_data`) |
 
-Diese Verzeichnisse werden nicht in Git versioniert und sollten in ein Backup einfließen.
+These directories are not tracked in git and should be included in backups.
 
-## Typischer Datenfluss
+## Data Flow
 
-- Zigbee-Sensor schickt Werte an den USB-Koordinator.
-- Zigbee2MQTT schreibt die Daten als MQTT-Nachrichten in Mosquitto.
-- Home Assistant liest die MQTT-Themen und aktualisiert Entitäten.
-- Node-RED kann dieselben Topics lesen und komplexere Flows / Automationen bauen.
-- Caddy und AdGuard sorgen dafür, dass die Web-UIs unter sinnvollen Adressen im LAN erreichbar sind.
+```
+Zigbee sensor
+  → USB coordinator → Zigbee2MQTT
+  → Mosquitto MQTT :1883
+  → Home Assistant (MQTT integration)
+  → Node-RED (automations)
 
-Dieses Dokument fixiert das Big Picture, Details zu einzelnen Stacks stehen in deren `docker-compose.yml` und in der Home Assistant Konfiguration.
+Browser
+  → @hakit/core WebSocket → HA :8123   (entity state — never via BFF)
+  → fetch → dashboard-api :4001         (system/Docker data only)
+```
+
+Caddy and AdGuard ensure all web UIs are accessible under meaningful hostnames on the LAN.
+
+This document captures the big picture. Details for individual stacks are in their respective `docker-compose.yml` and configuration files.

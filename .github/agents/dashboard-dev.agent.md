@@ -14,7 +14,7 @@ Du bist ein autonomer Senior Full-Stack-Entwickler und arbeitest am **linBoard**
 
 ## Projekt-Kontext
 
-> **WICHTIG**: Lies die Datei `PROMPT.md` im Repo-Root für den vollständigen Projekt-Kontext, Tech Stack, Architektur, und die Roadmap. Dieser Agent-Prompt definiert *wie* du arbeitest. PROMPT.md definiert *was* das Projekt ist und *woraus* es besteht.
+> **WICHTIG**: Lies `PROMPT.md` im Repo-Root für den Projekt-Kontext (Tech Stack, Architektur, Roadmap) und `CLAUDE.md` für die vollständigen Coding Standards und Patterns. Dieser Agent-Prompt definiert *wie* du arbeitest. PROMPT.md definiert *was* das Projekt ist.
 
 ### Quick Reference
 
@@ -23,20 +23,18 @@ Repo-Struktur:
 ├── apps/
 │   ├── dashboard-api/     # Express BFF (TypeScript)
 │   └── dashboard-web/     # React Frontend (Vite + TypeScript)
-├── docker-compose.yml
 ├── .env.linos.example
 ├── PROMPT.md              # Projekt-Kontext & Architektur
-└── AGENT.md               # Dieses Dokument
+├── CLAUDE.md              # Coding Standards & Patterns
+└── stacks/                # Docker Compose infrastructure
 
 Tech Stack:
-- Frontend: React 18+, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- HA-Integration: @hakit/core (WebSocket, Hooks, Real-Time)
+- Frontend: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- HA-Integration: @hakit/core v6 (WebSocket, Hooks, Real-Time)
 - Icons: @mdi/react + @mdi/js (Material Design Icons, HA-kompatibel)
-- Charts: Recharts
-- Color Picker: react-colorful
-- State: Zustand (Client-State: Layout, Favorites, Prefs)
-- Grid: react-grid-layout (Drag & Drop Layouts)
-- Backend: Express, Zod
+- State: Zustand v5 (Client-State: Layout, Favorites, Prefs)
+- Backend: Express 5, Zod, Pino
+- Real-time: WebSocket (ws) for timer and vacuum routine broadcasts
 - Package Manager: pnpm (Workspaces)
 ```
 
@@ -199,18 +197,19 @@ interface DomainCardProps {
 }
 
 export function DomainCard({ entityId }: DomainCardProps) {
-  const entity = useEntity(entityId);
+  const entity = useEntity(entityId, { returnNullIfNotFound: true });
+
+  const isUnavailable = !entity || entity.state === "unavailable" || entity.state === "unknown";
 
   // 1. Handle unavailable/unknown states
-  if (entity.state === "unavailable" || entity.state === "unknown") {
+  if (isUnavailable) {
     return (
       <Card className="opacity-50">
         <CardContent className="p-4">
-          <EntityIcon entity={entity} />
           <p className="text-sm text-slate-400">
-            {entity.attributes.friendly_name ?? entityId}
+            {entity?.attributes.friendly_name ?? entityId}
           </p>
-          <p className="text-xs text-slate-500">Nicht verfügbar</p>
+          <p className="text-xs text-slate-500">Unavailable</p>
         </CardContent>
       </Card>
     );
@@ -313,7 +312,7 @@ export class CardErrorBoundary extends Component<Props, State> {
         <Card className="bg-slate-900 border-red-900/50">
           <CardContent className="p-4 flex items-center gap-2">
             <Icon path={mdiAlertCircle} size={0.8} className="text-red-400" />
-            <p className="text-sm text-red-400">Fehler beim Laden</p>
+            <p className="text-sm text-red-400">Failed to load</p>
           </CardContent>
         </Card>
       );
