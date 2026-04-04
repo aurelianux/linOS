@@ -2,8 +2,8 @@
 
 > This file is no longer the primary reference.
 >
-> **→ All coding standards, patterns, anti-patterns, and checklists are in [`CLAUDE.md`](./CLAUDE.md).**
+> **[`CLAUDE.md`](./CLAUDE.md)** — Coding standards, patterns, anti-patterns, and checklists.
 >
-> **→ Project context (tech stack, architecture, roadmap) is in [`PROMPT.md`](./PROMPT.md).**
+> **[`PROMPT.md`](./PROMPT.md)** — Project context (tech stack, architecture, roadmap).
 >
-> The tool in use is **Claude Code** (`CLAUDE.md` is loaded automatically).
+> **[`.github/agents/`](./.github/agents/)** — Specialized GitHub Copilot agent prompts.
