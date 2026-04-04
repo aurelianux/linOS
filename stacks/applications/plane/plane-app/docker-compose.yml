@@ -13,13 +13,13 @@ x-redis-env: &redis-env
   REDIS_URL: ${REDIS_URL:-redis://plane-redis:6379/}
 
 x-minio-env: &minio-env
-  MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-access-key}
-  MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-secret-key}
+  MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-<generate-an-access-key>}
+  MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-<generate-a-secret>}
 
 x-aws-s3-env: &aws-s3-env
   AWS_REGION: ${AWS_REGION:-}
-  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-access-key}
-  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-secret-key}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-<generate-an-access-key>}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-<generate-a-secret>}
   AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://plane-minio:9000}
   AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-uploads}
 
@@ -44,7 +44,7 @@ x-mq-env: &mq-env # RabbitMQ Settings
 
 x-live-env: &live-env
   API_BASE_URL: ${API_BASE_URL:-http://api:8000}
-  LIVE_SERVER_SECRET_KEY: ${LIVE_SERVER_SECRET_KEY:-2FiJk1U2aiVPEQtzLehYGlTSnTnrs7LW}
+  LIVE_SERVER_SECRET_KEY: ${LIVE_SERVER_SECRET_KEY:-<generate-a-random-secret-key>}
 
 x-app-env: &app-env
   WEB_URL: ${WEB_URL:-http://localhost}
@@ -53,11 +53,11 @@ x-app-env: &app-env
   GUNICORN_WORKERS: 1
   USE_MINIO: ${USE_MINIO:-1}
   DATABASE_URL: ${DATABASE_URL:-postgresql://plane:plane@plane-db/plane}
-  SECRET_KEY: ${SECRET_KEY:-60gp0byfz2dvffa45cxl20p1scy9xbpf6d8c5y0geejgkyp1b5}
+  SECRET_KEY: ${SECRET_KEY:-<generate-a-random-secret-key>}
   AMQP_URL: ${AMQP_URL:-amqp://plane:plane@plane-mq:5672/plane}
   API_KEY_RATE_LIMIT: ${API_KEY_RATE_LIMIT:-60/minute}
   MINIO_ENDPOINT_SSL: ${MINIO_ENDPOINT_SSL:-0}
-  LIVE_SERVER_SECRET_KEY: ${LIVE_SERVER_SECRET_KEY:-2FiJk1U2aiVPEQtzLehYGlTSnTnrs7LW}
+  LIVE_SERVER_SECRET_KEY: ${LIVE_SERVER_SECRET_KEY:-<generate-a-random-secret-key>}
 
 services:
   web:
