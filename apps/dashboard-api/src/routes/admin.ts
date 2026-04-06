@@ -1,4 +1,5 @@
 import { execFile } from "child_process";
+import path from "path";
 import { promisify } from "util";
 import { Router, type Request, type Response } from "express";
 import { type DashboardConfig } from "../config/app-config.js";
@@ -39,24 +40,6 @@ interface GitStatusResult {
   untracked: number;
 }
 
-// ─── Docker helpers ───────────────────────────────────────────────────────
-
-interface DockerApiContainer {
-  Id: string;
-  Names: string[];
-}
-
-async function getContainersByProject(
-  projectName: string,
-): Promise<DockerApiContainer[]> {
-  const filters = JSON.stringify({
-    label: [`com.docker.compose.project=${projectName}`],
-  });
-  return dockerApiRequest<DockerApiContainer[]>(
-    `/containers/json?all=true&filters=${encodeURIComponent(filters)}`,
-  );
-}
-
 // ─── Git helpers ──────────────────────────────────────────────────────────
 
 async function runGit(...args: string[]): Promise<string> {
@@ -76,6 +59,12 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
     (dashboardConfig.adminStacks ?? []).map((s) => s.projectName),
   );
 
+  const composePathByProject = new Map(
+    (dashboardConfig.adminStacks ?? [])
+      .filter((s) => s.composePath)
+      .map((s) => [s.projectName, path.join(HOST_REPO_PATH, s.composePath!)]),
+  );
+
   // POST /admin/stack/:projectName/restart
   router.post(
     "/admin/stack/:projectName/restart",
@@ -91,37 +80,27 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
         );
       }
 
-      const containers = await getContainersByProject(projectName);
-
-      if (containers.length === 0) {
+      const composePath = composePathByProject.get(projectName);
+      if (!composePath) {
         throw new AppError(
-          `No containers found for project "${projectName}"`,
-          404,
-          "NO_CONTAINERS",
+          `No composePath configured for stack: ${projectName}`,
+          400,
+          "MISSING_COMPOSE_PATH",
         );
       }
 
-      const restarted: string[] = [];
-      const failed: string[] = [];
-
-      await Promise.allSettled(
-        containers.map(async (c) => {
-          const name = (c.Names[0] ?? "").replace(/^\//, "");
-          try {
-            await dockerApiRequest<undefined>(
-              `/containers/${c.Id}/restart?t=10`,
-              "POST",
-              30_000,
-            );
-            restarted.push(name);
-          } catch {
-            failed.push(name);
-          }
-        }),
-      );
-
-      const data: StackRestartResult = { restarted, failed };
-      res.json({ ok: true, data } satisfies ApiResponse<StackRestartResult>);
+      try {
+        await execFileAsync(
+          "docker",
+          ["compose", "up", "--build", "-d"],
+          { cwd: composePath, timeout: 300_000 },
+        );
+        const data: StackRestartResult = { restarted: [projectName], failed: [] };
+        res.json({ ok: true, data } satisfies ApiResponse<StackRestartResult>);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new AppError(`Stack rebuild failed: ${msg}`, 500, "STACK_REBUILD_FAILED");
+      }
     },
   );
 

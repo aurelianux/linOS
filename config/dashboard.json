@@ -83,14 +83,14 @@
     ]
   },
   "adminStacks": [
-    { "projectName": "dashboard", "label": "Dashboard" },
-    { "projectName": "homeassistant", "label": "Home Assistant" },
-    { "projectName": "zigbee2mqtt", "label": "Zigbee2MQTT" },
-    { "projectName": "infra", "label": "Infra (Node-RED + MQTT)" },
-    { "projectName": "dns", "label": "AdGuard Home" },
-    { "projectName": "proxy", "label": "Caddy" },
-    { "projectName": "service-index", "label": "Service Index" },
-    { "projectName": "plane-app", "label": "Plane" }
+    { "projectName": "dashboard",     "label": "Dashboard",               "composePath": "stacks/applications/dashboard" },
+    { "projectName": "homeassistant", "label": "Home Assistant",          "composePath": "stacks/homeassistant" },
+    { "projectName": "zigbee2mqtt",   "label": "Zigbee2MQTT",             "composePath": "stacks/zigbee2mqtt" },
+    { "projectName": "infra",         "label": "Infra (Node-RED + MQTT)", "composePath": "stacks/infra" },
+    { "projectName": "dns",           "label": "AdGuard Home",            "composePath": "stacks/dns" },
+    { "projectName": "proxy",         "label": "Caddy",                   "composePath": "stacks/proxy" },
+    { "projectName": "service-index", "label": "Service Index",           "composePath": "stacks/applications/service-index" },
+    { "projectName": "plane-app",     "label": "Plane",                   "composePath": "stacks/applications/plane/plane-app" }
   ],
   "roborock": {
     "entityId": "vacuum.s7_max_ultra",
