@@ -133,6 +133,7 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
           })
         )
       );
+      
       setExecutionState("success");
       setTimeout(() => setExecutionState("idle"), 1500);
     } catch (err: unknown) {
