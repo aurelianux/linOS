@@ -3,7 +3,7 @@ import { promisify } from "util";
 import { Router, type Request, type Response } from "express";
 import { type DashboardConfig } from "../config/app-config.js";
 import { AppError, type ApiResponse } from "../middleware/errors.js";
-import { dockerApiRequest } from "./system.js";
+import { dockerApiRequest, dockerApiRequestRaw, parseDockerLogs } from "./system.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -167,16 +167,13 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
       }
 
       try {
-        const raw = await dockerApiRequest<string>(
+        const raw = await dockerApiRequestRaw(
           `/containers/${containerId}/logs?stdout=1&stderr=1&timestamps=1&tail=200`,
           "GET",
           10_000,
         );
-        // Docker logs API returns raw bytes with stream headers — clean them up
-        const logs = typeof raw === "string" ? raw : String(raw);
-        // eslint-disable-next-line no-control-regex
-        const cleaned = logs.replace(/[\x00-\x08]/g, "");
-        const data: ContainerLogsResult = { logs: cleaned };
+        const logs = parseDockerLogs(raw);
+        const data: ContainerLogsResult = { logs };
         res.json({ ok: true, data } satisfies ApiResponse<ContainerLogsResult>);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
