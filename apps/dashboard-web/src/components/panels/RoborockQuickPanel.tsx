@@ -516,16 +516,19 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
 /**
  * Returns true when the vacuum is actively cleaning, paused, or returning.
  * Used by SmarthomePage to force-expand the vacuum panel during activity.
+ *
+ * Reads entity state directly from the useHass Zustand store instead of
+ * useEntity — calling useEntity with a fake/noop entity ID crashes
+ * @hakit/core (it creates internal subscriptions that access .id on
+ * undefined entities).
  */
 export function useIsVacuumActive(
   entityId: string | undefined
 ): boolean {
-  const entity = useEntity(
-    (entityId ?? "vacuum._none_") as `vacuum.${string}`,
-    { returnNullIfNotFound: true }
+  const state = useHass((s) =>
+    entityId ? (s.entities[entityId]?.state as string | undefined) : undefined
   );
   if (!entityId) return false;
-  const state = entity?.state;
   return state === "cleaning" || state === "paused" || state === "returning";
 }
 
