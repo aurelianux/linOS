@@ -1,19 +1,40 @@
 import { HaStatusIndicator } from "@/components/ha/HaStatusIndicator";
+import { RoomClimateBadge, MobileClimateBadge } from "@/components/layout/RoomClimateBadge";
 import { SystemMetricBadge } from "@/components/layout/SystemMetricBadge";
 import { TimerHeaderBadge } from "@/components/layout/TimerHeaderBadge";
+import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useMetricHistory } from "@/hooks/useMetricHistory";
 import { useSystemVitals } from "@/hooks/useSystemVitals";
+import type { AirQualityConfig, DashboardRoom } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
+import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useLanguageStore } from "@/stores/languageStore";
 import { cn } from "@/lib/utils";
 
-/** Desktop header vitals — hostname + CPU/RAM sparklines */
+function extractBatteryEntityId(
+  secondary: Array<`sensor.${string}`>
+): `sensor.${string}` | undefined {
+  return secondary.find((id) => id.endsWith("_battery"));
+}
+
+function getClimateRooms(rooms: DashboardRoom[]): Array<{
+  room: DashboardRoom;
+  airQuality: AirQualityConfig;
+}> {
+  return rooms
+    .filter((r): r is DashboardRoom & { airQuality: AirQualityConfig } => !!r.airQuality);
+}
+
+/** Desktop header vitals — hostname + CPU/RAM sparklines + room climate badges */
 function HeaderVitals() {
   const { data } = useSystemVitals();
+  const { data: dashConfig } = useDashboardConfig();
   const cpuHistory = useMetricHistory(data?.cpuLoadPercent ?? null);
   const ramHistory = useMetricHistory(data?.memoryUsedPercent ?? null);
   const hostname = "Manny";
+
+  const climateRooms = HA_CONFIGURED ? getClimateRooms(dashConfig?.rooms ?? []) : [];
 
   if (!data) return null;
 
@@ -32,13 +53,33 @@ function HeaderVitals() {
           history={ramHistory}
         />
       </div>
+      {climateRooms.length > 0 && (
+        <>
+          <div className="w-px h-4 bg-slate-600" />
+          <div className="flex items-center gap-3">
+            {climateRooms.map(({ room, airQuality }) => (
+              <RoomClimateBadge
+                key={room.id}
+                roomKey={room.id}
+                icon={resolveDashboardIcon(room.icon)}
+                temperatureEntityId={airQuality.temperature}
+                humidityEntityId={airQuality.humidity}
+                batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-/** Mobile-only compact vitals badge — just CPU% + RAM%, no sparklines */
+/** Mobile-only compact vitals badge — CPU% + RAM% + room climate */
 function MobileVitalsBadge() {
   const { data } = useSystemVitals();
+  const { data: dashConfig } = useDashboardConfig();
+
+  const climateRooms = HA_CONFIGURED ? getClimateRooms(dashConfig?.rooms ?? []) : [];
 
   if (!data) return null;
 
@@ -57,6 +98,20 @@ function MobileVitalsBadge() {
       )}>
         {data.memoryUsedPercent}%
       </span>
+      {climateRooms.length > 0 && (
+        <>
+          <span className="text-slate-600">|</span>
+          {climateRooms.map(({ room, airQuality }) => (
+            <MobileClimateBadge
+              key={room.id}
+              roomKey={room.id}
+              temperatureEntityId={airQuality.temperature}
+              humidityEntityId={airQuality.humidity}
+              batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
+            />
+          ))}
+        </>
+      )}
     </div>
   );
 }
