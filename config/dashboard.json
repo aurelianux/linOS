@@ -92,6 +92,12 @@
     { "projectName": "service-index", "label": "Service Index" },
     { "projectName": "plane-app", "label": "Plane" }
   ],
+  "motionSensors": [
+    {
+      "id": "flur",
+      "entityId": "binary_sensor.bewegungsmelder_flur_occupancy"
+    }
+  ],
   "roborock": {
     "entityId": "vacuum.s7_max_ultra",
     "segments": [
