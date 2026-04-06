@@ -1,4 +1,4 @@
-import { useEntity } from "@hakit/core";
+import { useEntity, useHass } from "@hakit/core";
 import { mdiThermometer, mdiWaterPercent } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -27,14 +27,20 @@ function useEntityValue(entityId: `sensor.${string}`) {
   };
 }
 
-function useBatteryLevel(entityId?: `sensor.${string}`) {
-  const entity = useEntity(entityId ?? ("sensor.__noop__" as `sensor.${string}`), {
-    returnNullIfNotFound: true,
-  });
-  if (!entityId || !entity || entity.state === "unavailable" || entity.state === "unknown") {
+/**
+ * Read battery level directly from the useHass Zustand store instead of
+ * useEntity. Calling useEntity with a fake/noop entity ID crashes
+ * @hakit/core (it creates internal subscriptions that access .id on
+ * undefined entities). The store read is safe for missing entities.
+ */
+function useBatteryLevel(entityId: `sensor.${string}` | undefined): number | null {
+  const state = useHass((s) =>
+    entityId ? (s.entities[entityId]?.state as string | undefined) : undefined
+  );
+  if (!entityId || !state || state === "unavailable" || state === "unknown") {
     return null;
   }
-  return Number(entity.state);
+  return Number(state);
 }
 
 /** Compact climate badge for the header status bar. Reusable per room. */

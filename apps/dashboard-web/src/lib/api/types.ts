@@ -188,6 +188,21 @@ export interface AdminStack {
   composePath?: string;
 }
 
+/**
+ * Real-time vacuum routine execution state.
+ * Received via WebSocket from /ws/vacuum-routines.
+ */
+export interface VacuumRoutineState {
+  executionState: "idle" | "scheduled" | "running" | "paused" | "error";
+  currentRoutineId: string | null;
+  currentStepIndex: number;
+  totalSteps: number;
+  scheduledAt: number | null;
+  startedAt: number | null;
+  pausedAt: number | null;
+  errorMessage: string | null;
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
   roborock?: RoborockConfig;
