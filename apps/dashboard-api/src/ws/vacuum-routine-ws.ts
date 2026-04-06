@@ -15,7 +15,7 @@ export function createVacuumRoutineWebSocket(
   service: VacuumRoutineService,
   logger: pino.Logger
 ): WebSocketServer {
-  const wss = new WebSocketServer({ server, path: "/ws/vacuum-routines" });
+  const wss = new WebSocketServer({ noServer: true });
 
   const log = logger.child({ component: "vacuum-routine-ws" });
 

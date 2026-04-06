@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "node:http";
 import type pino from "pino";
+import type { WebSocketServer } from "ws";
 import { VacuumRoutineService } from "./services/vacuum-routine.js";
 import { vacuumRoutinesRouter } from "./routes/vacuum-routines.js";
 import { createVacuumRoutineWebSocket } from "./ws/vacuum-routine-ws.js";
@@ -18,7 +19,7 @@ export function setupVacuumRoutines(
   server: Server,
   logger: pino.Logger,
   dashboardConfig: DashboardConfig
-): VacuumRoutineService {
+): WebSocketServer {
   const routineLogger = logger.child({ feature: "vacuum-routines" });
 
   const vacuumRoutineService = new VacuumRoutineService(
@@ -30,13 +31,13 @@ export function setupVacuumRoutines(
   // Mount REST routes
   app.use(vacuumRoutinesRouter(vacuumRoutineService));
 
-  // Mount WebSocket
-  createVacuumRoutineWebSocket(server, vacuumRoutineService, routineLogger);
+  // Mount WebSocket (noServer mode — upgrade routing handled in index.ts)
+  const wss = createVacuumRoutineWebSocket(server, vacuumRoutineService, routineLogger);
 
   routineLogger.info({
     routinesCount: dashboardConfig.vacuum?.routines.length ?? 0,
     returnToDockOnPause: dashboardConfig.vacuum?.returnToDockOnPause ?? true,
   }, "Vacuum routine feature initialized");
 
-  return vacuumRoutineService;
+  return wss;
 }
