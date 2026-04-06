@@ -5,6 +5,7 @@ stacks/homeassistant/config/.shopping_list.json
 stacks/homeassistant/config/zigbee.db
 stacks/homeassistant/config/androidtv_remote_*.pem
 stacks/homeassistant/config/custom_components/
+stacks/homeassistant/config/www/community/
 
 # HA Database & Locks
 stacks/homeassistant/config/home-assistant_v2.db*
