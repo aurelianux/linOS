@@ -185,6 +185,7 @@ export interface VacuumConfig {
 export interface AdminStack {
   projectName: string;
   label: string;
+  composePath?: string;
 }
 
 export interface DashboardConfig {

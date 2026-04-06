@@ -121,6 +121,8 @@ export interface VacuumConfig {
 export interface AdminStack {
   projectName: string;
   label: string;
+  /** Path relative to repo root, e.g. "stacks/applications/dashboard" */
+  composePath?: string;
 }
 
 export interface DashboardConfig {
@@ -201,6 +203,7 @@ const vacuumConfigSchema = z.object({
 const adminStackSchema = z.object({
   projectName: z.string().min(1),
   label: z.string().min(1),
+  composePath: z.string().optional(),
 });
 
 const dashboardConfigSchema = z.object({
