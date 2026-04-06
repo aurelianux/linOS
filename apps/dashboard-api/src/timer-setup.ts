@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "node:http";
 import type pino from "pino";
+import type { WebSocketServer } from "ws";
 import type { LightNotificationService } from "./services/light-notification.js";
 import { TimerService } from "./services/timer.js";
 import { timerRouter } from "./routes/timer.js";
@@ -20,7 +21,7 @@ export function setupTimer(
   logger: pino.Logger,
   lightNotification: LightNotificationService | null,
   lightEntityIds: string[]
-): TimerService {
+): WebSocketServer {
   const timerLogger = logger.child({ feature: "timer" });
   const timerService = new TimerService(timerLogger);
 
@@ -34,10 +35,10 @@ export function setupTimer(
   // Mount REST routes
   app.use(timerRouter(timerService));
 
-  // Mount WebSocket
-  createTimerWebSocket(server, timerService, timerLogger);
+  // Mount WebSocket (noServer mode — upgrade routing handled in index.ts)
+  const wss = createTimerWebSocket(server, timerService, timerLogger);
 
   timerLogger.info("Timer feature initialized");
 
-  return timerService;
+  return wss;
 }
