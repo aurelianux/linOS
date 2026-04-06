@@ -21,6 +21,7 @@ import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { LoadingState } from "@/components/common/LoadingState";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useDockerContainers } from "@/hooks/useDockerContainers";
+import { useGitStatus } from "@/hooks/useGitStatus";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { fetchJson } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
@@ -484,25 +485,9 @@ export function UnifiedInfraPanel() {
   const [reconnecting, setReconnecting] = useState(false);
 
   // Git states
-  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
-  const [gitStatusLoading, setGitStatusLoading] = useState(true);
+  const { data: gitStatus, loading: gitStatusLoading, refresh: refreshGitStatus } = useGitStatus();
   const [gitPullState, setGitPullState] = useState<ActionState>("idle");
   const [gitPullMessage, setGitPullMessage] = useState("");
-
-  const fetchGitStatus = useCallback(async () => {
-    try {
-      const data = await fetchJson<GitStatus>(API_ENDPOINTS.ADMIN_GIT_STATUS);
-      setGitStatus(data);
-    } catch {
-      // Informational only
-    } finally {
-      setGitStatusLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchGitStatus();
-  }, [fetchGitStatus]);
 
   // Health poller for dashboard self-restart
   const handleReconnect = useCallback(() => {
@@ -584,7 +569,7 @@ export function UnifiedInfraPanel() {
       });
       setGitPullState("success");
       setGitPullMessage(result.stdout);
-      fetchGitStatus();
+      refreshGitStatus();
       setTimeout(() => {
         setGitPullState("idle");
         setGitPullMessage("");
@@ -597,14 +582,14 @@ export function UnifiedInfraPanel() {
         setGitPullMessage("");
       }, 5000);
     }
-  }, [t, fetchGitStatus]);
+  }, [t, refreshGitStatus]);
 
   return (
     <CollapsiblePanel
       panelKey="infra"
       icon={mdiServerNetwork}
       title={t("infra.title")}
-      onRefresh={refresh}
+      onRefresh={() => { refresh(); refreshGitStatus(); }}
       loading={dockerLoading}
       lastUpdated={lastUpdated}
     >
