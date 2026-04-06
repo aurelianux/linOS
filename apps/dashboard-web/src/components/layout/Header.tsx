@@ -23,7 +23,8 @@ function getClimateRooms(rooms: DashboardRoom[]): Array<{
   airQuality: AirQualityConfig;
 }> {
   return rooms
-    .filter((r): r is DashboardRoom & { airQuality: AirQualityConfig } => !!r.airQuality);
+    .filter((r): r is DashboardRoom & { airQuality: AirQualityConfig } => !!r.airQuality)
+    .map((r) => ({ room: r, airQuality: r.airQuality }));
 }
 
 /** Desktop header vitals — hostname + CPU/RAM sparklines + room climate badges */
