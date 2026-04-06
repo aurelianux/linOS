@@ -14,12 +14,12 @@
         "climate.thermostat_wz"
       ],
       "airQuality": {
-        "temperature": "sensor.luftsensor_wz_temperature",
-        "humidity": "sensor.luftsensor_wz_humidity",
+        "temperature": "sensor.lufsensor_wz_temperature",
+        "humidity": "sensor.lufsensor_wz_humidity",
         "secondary": [
-          "sensor.luftsensor_wz_pressure",
-          "sensor.luftsensor_wz_battery",
-          "sensor.luftsensor_wz_voltage"
+          "sensor.lufsensor_wz_pressure",
+          "sensor.lufsensor_wz_battery",
+          "sensor.lufsensor_wz_voltage"
         ]
       }
     },
