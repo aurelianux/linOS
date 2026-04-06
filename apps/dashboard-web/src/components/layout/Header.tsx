@@ -27,22 +27,21 @@ function getClimateRooms(rooms: DashboardRoom[]): Array<{
     .map((r) => ({ room: r, airQuality: r.airQuality }));
 }
 
-/** Desktop header vitals — hostname + CPU/RAM sparklines + room climate badges */
+/** Desktop header vitals — separate cards for CPU, RAM, and each room */
 function HeaderVitals() {
   const { data } = useSystemVitals();
   const { data: dashConfig } = useDashboardConfig();
   const cpuHistory = useMetricHistory(data?.cpuLoadPercent ?? null);
   const ramHistory = useMetricHistory(data?.memoryUsedPercent ?? null);
-  const hostname = "Manny";
 
   const climateRooms = HA_CONFIGURED ? getClimateRooms(dashConfig?.rooms ?? []) : [];
 
   if (!data) return null;
 
   return (
-    <div className="hidden md:flex items-center gap-4 border border-slate-700 bg-slate-800 text-xs text-slate-400 px-2 py-1 rounded">
-      <div className="text-slate-200">{hostname}</div>
-      <div className="flex items-center gap-4">
+    <div className="hidden md:flex items-center gap-2">
+      {/* System metrics card */}
+      <div className="flex items-center gap-3 px-2 py-1 rounded border border-slate-700 bg-slate-800 text-xs text-slate-400">
         <SystemMetricBadge
           label="CPU"
           percent={data.cpuLoadPercent}
@@ -54,28 +53,22 @@ function HeaderVitals() {
           history={ramHistory}
         />
       </div>
-      {climateRooms.length > 0 && (
-        <>
-          <div className="w-px h-4 bg-slate-600" />
-          <div className="flex items-center gap-3">
-            {climateRooms.map(({ room, airQuality }) => (
-              <RoomClimateBadge
-                key={room.id}
-                roomKey={room.id}
-                icon={resolveDashboardIcon(room.icon)}
-                temperatureEntityId={airQuality.temperature}
-                humidityEntityId={airQuality.humidity}
-                batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
-              />
-            ))}
-          </div>
-        </>
-      )}
+      {/* Each room climate as a separate card */}
+      {climateRooms.map(({ room, airQuality }) => (
+        <RoomClimateBadge
+          key={room.id}
+          roomKey={room.id}
+          icon={resolveDashboardIcon(room.icon)}
+          temperatureEntityId={airQuality.temperature}
+          humidityEntityId={airQuality.humidity}
+          batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
+        />
+      ))}
     </div>
   );
 }
 
-/** Mobile-only compact vitals badge — CPU% + RAM% + room climate */
+/** Mobile-only compact vitals — CPU% + RAM% card, then room climate cards */
 function MobileVitalsBadge() {
   const { data } = useSystemVitals();
   const { data: dashConfig } = useDashboardConfig();
@@ -85,34 +78,33 @@ function MobileVitalsBadge() {
   if (!data) return null;
 
   return (
-    <div className="flex md:hidden items-center gap-2 border border-slate-700 bg-slate-800 text-xs px-2 py-0.5 rounded">
-      <span className={cn(
-        "font-semibold tabular-nums",
-        data.cpuLoadPercent >= 85 ? "text-red-400" : data.cpuLoadPercent >= 60 ? "text-amber-400" : "text-emerald-400"
-      )}>
-        {data.cpuLoadPercent}%
-      </span>
-      <span className="text-slate-600">|</span>
-      <span className={cn(
-        "font-semibold tabular-nums",
-        data.memoryUsedPercent >= 85 ? "text-red-400" : data.memoryUsedPercent >= 60 ? "text-amber-400" : "text-emerald-400"
-      )}>
-        {data.memoryUsedPercent}%
-      </span>
-      {climateRooms.length > 0 && (
-        <>
-          <span className="text-slate-600">|</span>
-          {climateRooms.map(({ room, airQuality }) => (
-            <MobileClimateBadge
-              key={room.id}
-              roomKey={room.id}
-              temperatureEntityId={airQuality.temperature}
-              humidityEntityId={airQuality.humidity}
-              batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
-            />
-          ))}
-        </>
-      )}
+    <div className="flex md:hidden items-center gap-1.5">
+      {/* System metrics card */}
+      <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-slate-700 bg-slate-800 text-xs">
+        <span className={cn(
+          "font-semibold tabular-nums",
+          data.cpuLoadPercent >= 85 ? "text-red-400" : data.cpuLoadPercent >= 60 ? "text-amber-400" : "text-emerald-400"
+        )}>
+          {data.cpuLoadPercent}%
+        </span>
+        <span className="text-slate-600">|</span>
+        <span className={cn(
+          "font-semibold tabular-nums",
+          data.memoryUsedPercent >= 85 ? "text-red-400" : data.memoryUsedPercent >= 60 ? "text-amber-400" : "text-emerald-400"
+        )}>
+          {data.memoryUsedPercent}%
+        </span>
+      </div>
+      {/* Each room climate as a separate card */}
+      {climateRooms.map(({ room, airQuality }) => (
+        <MobileClimateBadge
+          key={room.id}
+          roomKey={room.id}
+          temperatureEntityId={airQuality.temperature}
+          humidityEntityId={airQuality.humidity}
+          batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
+        />
+      ))}
     </div>
   );
 }
