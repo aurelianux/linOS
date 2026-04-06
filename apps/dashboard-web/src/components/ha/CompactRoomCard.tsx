@@ -2,7 +2,6 @@ import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { AirQualitySensorCard } from "./AirQualitySensorCard";
 import { getCardForDomain } from "./domainCards";
 import { QuickToggle } from "./QuickToggle";
 
@@ -36,8 +35,7 @@ export function CompactRoomCard({
   const filteredEntities = room.entities.filter(
     (id) => !airQualityIds.has(id)
   );
-  const hasContent =
-    filteredEntities.length > 0 || !!room.airQuality || !!quickToggleEntity;
+  const hasContent = filteredEntities.length > 0 || !!quickToggleEntity;
 
   if (!hasContent) {
     return <p className="text-xs text-slate-500">{t("rooms.noEntities")}</p>;
@@ -53,13 +51,6 @@ export function CompactRoomCard({
             label={room.name}
             modes={quickToggles?.modes}
           />
-        </CardErrorBoundary>
-      )}
-
-      {/* Composite air quality / sensor card */}
-      {room.airQuality && (
-        <CardErrorBoundary entityId={room.airQuality.temperature}>
-          <AirQualitySensorCard config={room.airQuality} />
         </CardErrorBoundary>
       )}
 
@@ -89,15 +80,9 @@ export function CompactRoomCard({
  * Large rooms have >3 entities or include airQuality data.
  */
 export function isLargeRoom(room: DashboardRoom): boolean {
-  const airQualityIds = room.airQuality
-    ? new Set([
-        room.airQuality.temperature,
-        room.airQuality.humidity,
-        ...room.airQuality.secondary,
-      ])
-    : new Set<string>();
+  const airQualityIds = getAirQualityEntityIds(room);
   const filteredCount = room.entities.filter(
     (id) => !airQualityIds.has(id)
   ).length;
-  return filteredCount > 3 || (!!room.airQuality && filteredCount > 1);
+  return filteredCount > 3;
 }

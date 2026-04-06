@@ -96,6 +96,8 @@ export const translations = {
     "airQuality.battery": "Batterie",
     "airQuality.voltage": "Spannung",
 
+    "header.climate.lowBattery": "Batterie niedrig",
+
     "roborock.title": "Staubsauger",
     "roborock.start": "Starten",
     "roborock.pause": "Pause",
@@ -275,6 +277,8 @@ export const translations = {
     "airQuality.pressure": "Pressure",
     "airQuality.battery": "Battery",
     "airQuality.voltage": "Voltage",
+
+    "header.climate.lowBattery": "Low battery",
 
     "roborock.title": "Vacuum",
     "roborock.start": "Start",

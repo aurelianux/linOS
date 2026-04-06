@@ -14,12 +14,12 @@
         "climate.thermostat_wz"
       ],
       "airQuality": {
-        "temperature": "sensor.lufsensor_wz_temperature",
-        "humidity": "sensor.lufsensor_wz_humidity",
+        "temperature": "sensor.luftsensor_wz_temperature",
+        "humidity": "sensor.luftsensor_wz_humidity",
         "secondary": [
-          "sensor.lufsensor_wz_pressure",
-          "sensor.lufsensor_wz_battery",
-          "sensor.lufsensor_wz_voltage"
+          "sensor.luftsensor_wz_pressure",
+          "sensor.luftsensor_wz_battery",
+          "sensor.luftsensor_wz_voltage"
         ]
       }
     },
@@ -55,12 +55,12 @@
         "climate.thermostat_bad"
       ],
       "airQuality": {
-        "temperature": "sensor.lufsensor_bad_temperature",
-        "humidity": "sensor.lufsensor_bad_humidity",
+        "temperature": "sensor.luftsensor_bad_temperature",
+        "humidity": "sensor.luftsensor_bad_humidity",
         "secondary": [
-          "sensor.lufsensor_bad_pressure",
-          "sensor.lufsensor_bad_battery",
-          "sensor.lufsensor_bad_voltage"
+          "sensor.luftsensor_bad_pressure",
+          "sensor.luftsensor_bad_battery",
+          "sensor.luftsensor_bad_voltage"
         ]
       }
     }
