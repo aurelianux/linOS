@@ -1,13 +1,13 @@
-import { useState, useCallback, useMemo } from "react";
-import { useHass } from "@hakit/core";
-import { mdiCheck } from "@mdi/js";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
-import { useScrollSuppression } from "@/hooks/useScrollSuppression";
 import { ToggleChip } from "@/components/ui/toggle-chip";
+import { useScrollSuppression } from "@/hooks/useScrollSuppression";
 import type { DashboardConfig, QuickToggleConfig } from "@/lib/api/types";
 import type { TranslationKey } from "@/lib/i18n/translations";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { cn } from "@/lib/utils";
+import { useHass } from "@hakit/core";
+import { mdiCheck } from "@mdi/js";
+import { useCallback, useMemo, useState } from "react";
 
 const MODE_OPTIONS: Array<{
   value: string;
@@ -96,7 +96,7 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   };
 
   const handleModeSelect = (mode: string) => {
-    setSelectedMode((prev) => (prev === mode ? null : mode));
+    setSelectedMode(mode);
   };
 
   const buildSummary = (): string => {

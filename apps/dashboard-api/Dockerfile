@@ -10,6 +10,7 @@ RUN pnpm -C dashboard-api build
 
 FROM node:20-alpine AS runner
 RUN apk add --no-cache git
+RUN git config --global --add safe.directory /host-repo
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/dashboard-api/dist ./dist
