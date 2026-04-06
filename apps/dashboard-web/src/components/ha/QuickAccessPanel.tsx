@@ -60,13 +60,10 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const selectedRoomIds = userSelectedRoomIds ?? defaultRoomIds;
   const setSelectedRoomIds = setUserSelectedRoomIds;
 
-  // Read current mode from the first selected room's entity to preselect
+  // Read current mode from the first selected room's entity for display indicator
   const firstSelectedRoomId = Array.from(selectedRoomIds)[0];
   const firstEntityId = firstSelectedRoomId ? roomToggleMap.get(firstSelectedRoomId) : undefined;
-  const firstEntityState = firstEntityId ? (entities[firstEntityId]?.state as string | undefined) : undefined;
-
-  // Auto-preselect mode from entity state when user hasn't chosen yet
-  const effectiveMode = selectedMode ?? firstEntityState ?? null;
+  const currentEntityState = firstEntityId ? (entities[firstEntityId]?.state as string | undefined) : undefined;
 
   if (!quickToggles) return null;
 
@@ -100,21 +97,24 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   };
 
   const buildSummary = (): string => {
-    if (selectedRoomIds.size === 0 || !effectiveMode) {
+    if (selectedRoomIds.size === 0) {
       return t("quickToggle.noSelection");
+    }
+    if (!selectedMode) {
+      return t("quickToggle.selectMode");
     }
     const roomNames = availableRooms
       .filter((r) => selectedRoomIds.has(r.id))
       .map((r) => r.name);
-    const modeOption = MODE_OPTIONS.find((m) => m.value === effectiveMode);
-    const modeLabel = modeOption ? t(modeOption.labelKey) : effectiveMode;
+    const modeOption = MODE_OPTIONS.find((m) => m.value === selectedMode);
+    const modeLabel = modeOption ? t(modeOption.labelKey) : selectedMode;
     return `${roomNames.join(" & ")} → ${modeLabel}`;
   };
 
-  const canExecute = selectedRoomIds.size > 0 && effectiveMode !== null && executionState !== "executing";
+  const canExecute = selectedRoomIds.size > 0 && selectedMode !== null && executionState !== "executing";
 
   const handleExecute = useCallback(async () => {
-    if (!effectiveMode || selectedRoomIds.size === 0 || executionState === "executing") return;
+    if (!selectedMode || selectedRoomIds.size === 0 || executionState === "executing") return;
 
     setExecutionState("executing");
 
@@ -128,20 +128,23 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
           helpers.callService({
             domain: "input_select",
             service: "select_option",
-            serviceData: { option: effectiveMode },
+            serviceData: { option: selectedMode },
             target: { entity_id: entityId },
           })
         )
       );
-      
+
       setExecutionState("success");
-      setTimeout(() => setExecutionState("idle"), 1500);
+      setTimeout(() => {
+        setExecutionState("idle");
+        setSelectedMode(null);
+      }, 1500);
     } catch (err: unknown) {
       console.error("Failed to set quick access mode:", err);
       setExecutionState("error");
       setTimeout(() => setExecutionState("idle"), 2000);
     }
-  }, [effectiveMode, selectedRoomIds, executionState, roomToggleMap, helpers]);
+  }, [selectedMode, selectedRoomIds, executionState, roomToggleMap, helpers]);
 
   // Build mode segment options from config
   const modeSegmentOptions = modes.map((mode) => {
@@ -184,7 +187,8 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
         <p className="text-xs text-slate-500 mb-1.5">{t("quickToggle.selectMode")}</p>
         <div className="flex gap-2">
           {modeSegmentOptions.map((opt) => {
-            const isActive = effectiveMode === opt.value;
+            const isActive = selectedMode === opt.value;
+            const isCurrent = currentEntityState === opt.value && selectedMode !== opt.value;
             return (
               <button
                 key={opt.value}
@@ -197,7 +201,9 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
                   "border select-none",
                   isActive && opt.activeClass
                     ? cn(opt.activeClass, "border-transparent shadow-sm")
-                    : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
+                    : isCurrent
+                      ? "bg-slate-800 text-slate-300 border-slate-500 ring-1 ring-slate-500"
+                      : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
                 )}
               >
                 {t(opt.labelKey)}
