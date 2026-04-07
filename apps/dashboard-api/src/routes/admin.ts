@@ -1,6 +1,5 @@
 import { execFile } from "child_process";
 import { readFile } from "fs/promises";
-import path from "path";
 import { promisify } from "util";
 import { Router, type Request, type Response } from "express";
 import { Client, type ConnectConfig } from "ssh2";
@@ -46,13 +45,18 @@ interface GitPullResult {
   stderr: string;
 }
 
-interface SshGitPullConfig {
+interface SshConfig {
   host: string;
   port: number;
   username: string;
   privateKeyPath: string;
   passphrase?: string;
   remoteRepoPath: string;
+}
+
+interface SshCommandResult {
+  stdout: string;
+  stderr: string;
 }
 
 interface GitStatusResult {
@@ -103,7 +107,7 @@ function shellEscapeSingleQuoted(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function loadSshGitPullConfig(): SshGitPullConfig {
+function loadSshConfig(): SshConfig {
   const passphrase = process.env[ENV_SSH_PRIVATE_KEY_PASSPHRASE]?.trim();
   return {
     host: getRequiredEnv(ENV_SSH_HOST),
@@ -116,16 +120,24 @@ function loadSshGitPullConfig(): SshGitPullConfig {
   };
 }
 
-async function runGitPullViaSsh(config: SshGitPullConfig): Promise<GitPullResult> {
+/**
+ * Execute an arbitrary command on the host via SSH.
+ * Reuses the same SSH credentials configured for git pull.
+ * Rejects if the remote command exits with a non-zero code.
+ */
+async function runCommandViaSsh(
+  config: SshConfig,
+  command: string,
+  timeoutMs = SSH_EXEC_TIMEOUT_MS,
+): Promise<SshCommandResult> {
   const privateKey = await readFile(config.privateKeyPath, "utf-8");
-  const command = `${GIT_COMMAND} -C ${shellEscapeSingleQuoted(config.remoteRepoPath)} pull`;
 
-  return await new Promise<GitPullResult>((resolve, reject) => {
+  return await new Promise<SshCommandResult>((resolve, reject) => {
     const conn = new Client();
     let finished = false;
     let timeoutHandle: NodeJS.Timeout | undefined;
 
-    const finish = (result?: GitPullResult, err?: Error): void => {
+    const finish = (result?: SshCommandResult, err?: Error): void => {
       if (finished) return;
       finished = true;
       if (timeoutHandle) clearTimeout(timeoutHandle);
@@ -153,7 +165,7 @@ async function runGitPullViaSsh(config: SshGitPullConfig): Promise<GitPullResult
     conn.on("ready", () => {
       timeoutHandle = setTimeout(() => {
         finish(undefined, new Error("SSH command timed out"));
-      }, SSH_EXEC_TIMEOUT_MS);
+      }, timeoutMs);
 
       conn.exec(command, (execError, stream) => {
         if (execError) {
@@ -174,7 +186,7 @@ async function runGitPullViaSsh(config: SshGitPullConfig): Promise<GitPullResult
           if (code !== 0) {
             finish(
               undefined,
-              new Error(`Remote git pull exited with code ${code ?? -1}: ${stderr.trim()}`),
+              new Error(`Remote command exited with code ${code ?? -1}: ${stderr.trim()}`),
             );
             return;
           }
@@ -200,13 +212,20 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
     (dashboardConfig.adminStacks ?? []).map((s) => s.projectName),
   );
 
-  const composePathByProject = new Map(
+  // Map project name → relative composePath from config
+  const composeRelativePathByProject = new Map(
     (dashboardConfig.adminStacks ?? [])
       .filter((s) => s.composePath)
-      .map((s) => [s.projectName, path.join(HOST_REPO_PATH, s.composePath!)]),
+      .map((s) => [s.projectName, s.composePath!]),
   );
 
+  /** 5 minutes — docker compose build can be slow */
+  const STACK_REBUILD_TIMEOUT_MS = 300_000;
+
   // POST /admin/stack/:projectName/restart
+  // Runs `docker compose up --build -d` on the host via SSH.
+  // The docker CLI doesn't exist inside the API container — only the
+  // Engine API socket is mounted. SSH reuses the same credentials as git pull.
   router.post(
     "/admin/stack/:projectName/restart",
     async (req: Request, res: Response): Promise<void> => {
@@ -221,8 +240,8 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
         );
       }
 
-      const composePath = composePathByProject.get(projectName);
-      if (!composePath) {
+      const relativeComposePath = composeRelativePathByProject.get(projectName);
+      if (!relativeComposePath) {
         throw new AppError(
           `No composePath configured for stack: ${projectName}`,
           400,
@@ -231,14 +250,15 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
       }
 
       try {
-        await execFileAsync(
-          "docker",
-          ["compose", "up", "--build", "-d"],
-          { cwd: composePath, timeout: 300_000 },
-        );
+        const sshConfig = loadSshConfig();
+        // Build the absolute compose path on the host by joining remoteRepoPath + relative composePath
+        const remoteComposePath = `${sshConfig.remoteRepoPath}/${relativeComposePath}`;
+        const command = `cd ${shellEscapeSingleQuoted(remoteComposePath)} && docker compose up --build -d`;
+        await runCommandViaSsh(sshConfig, command, STACK_REBUILD_TIMEOUT_MS);
         const data: StackRestartResult = { restarted: [projectName], failed: [] };
         res.json({ ok: true, data } satisfies ApiResponse<StackRestartResult>);
       } catch (err: unknown) {
+        if (err instanceof AppError) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         throw new AppError(`Stack rebuild failed: ${msg}`, 500, "STACK_REBUILD_FAILED");
       }
@@ -311,8 +331,9 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
     "/admin/git-pull",
     async (_req: Request, res: Response): Promise<void> => {
       try {
-        const config = loadSshGitPullConfig();
-        const data = await runGitPullViaSsh(config);
+        const config = loadSshConfig();
+        const command = `${GIT_COMMAND} -C ${shellEscapeSingleQuoted(config.remoteRepoPath)} pull`;
+        const data = await runCommandViaSsh(config, command);
         res.json({ ok: true, data } satisfies ApiResponse<GitPullResult>);
       } catch (err: unknown) {
         if (err instanceof AppError) throw err;
