@@ -1,4 +1,5 @@
 import { HaStatusIndicator } from "@/components/ha/HaStatusIndicator";
+import { MotionSensorBadge, MobileMotionBadge } from "@/components/layout/MotionSensorBadge";
 import { RoomClimateBadge, MobileClimateBadge } from "@/components/layout/RoomClimateBadge";
 import { SystemMetricBadge } from "@/components/layout/SystemMetricBadge";
 import { TimerHeaderBadge } from "@/components/layout/TimerHeaderBadge";
@@ -35,6 +36,7 @@ function HeaderVitals() {
   const ramHistory = useMetricHistory(data?.memoryUsedPercent ?? null);
 
   const climateRooms = HA_CONFIGURED ? getClimateRooms(dashConfig?.rooms ?? []) : [];
+  const motionSensors = HA_CONFIGURED ? (dashConfig?.motionSensors ?? []) : [];
 
   if (!data) return null;
 
@@ -64,6 +66,14 @@ function HeaderVitals() {
           batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
         />
       ))}
+      {/* Motion sensor badges */}
+      {motionSensors.map((sensor) => (
+        <MotionSensorBadge
+          key={sensor.id}
+          entityId={sensor.entityId}
+          roomKey={sensor.id}
+        />
+      ))}
     </div>
   );
 }
@@ -74,6 +84,7 @@ function MobileVitalsBadge() {
   const { data: dashConfig } = useDashboardConfig();
 
   const climateRooms = HA_CONFIGURED ? getClimateRooms(dashConfig?.rooms ?? []) : [];
+  const motionSensors = HA_CONFIGURED ? (dashConfig?.motionSensors ?? []) : [];
 
   if (!data) return null;
 
@@ -103,6 +114,14 @@ function MobileVitalsBadge() {
           temperatureEntityId={airQuality.temperature}
           humidityEntityId={airQuality.humidity}
           batteryEntityId={extractBatteryEntityId(airQuality.secondary)}
+        />
+      ))}
+      {/* Motion sensor badges */}
+      {motionSensors.map((sensor) => (
+        <MobileMotionBadge
+          key={sensor.id}
+          entityId={sensor.entityId}
+          roomKey={sensor.id}
         />
       ))}
     </div>

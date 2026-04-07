@@ -97,6 +97,8 @@ export const translations = {
     "airQuality.voltage": "Spannung",
 
     "header.climate.lowBattery": "Batterie niedrig",
+    "header.motion.detected": "Bewegung",
+    "header.motion.clear": "Frei seit",
 
     "roborock.title": "Staubsauger",
     "roborock.start": "Starten",
@@ -279,6 +281,8 @@ export const translations = {
     "airQuality.voltage": "Voltage",
 
     "header.climate.lowBattery": "Low battery",
+    "header.motion.detected": "Motion",
+    "header.motion.clear": "Clear for",
 
     "roborock.title": "Vacuum",
     "roborock.start": "Start",

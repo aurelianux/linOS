@@ -203,8 +203,14 @@ export interface VacuumRoutineState {
   errorMessage: string | null;
 }
 
+export interface MotionSensorConfig {
+  id: string;
+  entityId: `binary_sensor.${string}`;
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
+  motionSensors?: MotionSensorConfig[];
   roborock?: RoborockConfig;
   vacuum?: VacuumConfig;
   quickToggles?: QuickToggleConfig;
