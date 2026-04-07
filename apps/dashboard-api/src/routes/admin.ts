@@ -104,14 +104,15 @@ function shellEscapeSingleQuoted(value: string): string {
 }
 
 function loadSshGitPullConfig(): SshGitPullConfig {
+  const passphrase = process.env[ENV_SSH_PRIVATE_KEY_PASSPHRASE]?.trim();
   return {
     host: getRequiredEnv(ENV_SSH_HOST),
     port: parseSshPort(process.env[ENV_SSH_PORT]),
     username: getRequiredEnv(ENV_SSH_USER),
     privateKeyPath: getRequiredEnv(ENV_SSH_PRIVATE_KEY_PATH),
-    passphrase: process.env[ENV_SSH_PRIVATE_KEY_PASSPHRASE]?.trim() || undefined,
     remoteRepoPath:
       process.env[ENV_REMOTE_REPO_PATH]?.trim() || DEFAULT_REMOTE_REPO_PATH,
+    ...(passphrase ? { passphrase } : {}),
   };
 }
 
@@ -145,8 +146,8 @@ async function runGitPullViaSsh(config: SshGitPullConfig): Promise<GitPullResult
       port: config.port,
       username: config.username,
       privateKey,
-      passphrase: config.passphrase,
       readyTimeout: SSH_READY_TIMEOUT_MS,
+      ...(config.passphrase ? { passphrase: config.passphrase } : {}),
     };
 
     conn.on("ready", () => {

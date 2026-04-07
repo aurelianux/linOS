@@ -48,12 +48,12 @@ export function VacuumRoutineCard({ routine }: VacuumRoutineCardProps) {
   const isScheduled = executionState === "scheduled";
   const isError = executionState === "error";
 
-  const rooms = dashConfig?.rooms ?? [];
+  const rooms = useMemo(() => dashConfig?.rooms ?? [], [dashConfig?.rooms]);
 
-  const currentStep = useMemo(() => {
-    if (!isCurrentRoutine || state?.currentStepIndex === undefined) return null;
-    return routine.steps[state.currentStepIndex] ?? null;
-  }, [isCurrentRoutine, state?.currentStepIndex, routine.steps]);
+  const currentStep =
+    isCurrentRoutine && state?.currentStepIndex !== undefined
+      ? routine.steps[state.currentStepIndex] ?? null
+      : null;
 
   const currentStepRoomNames = useMemo(() => {
     if (!currentStep) return "";

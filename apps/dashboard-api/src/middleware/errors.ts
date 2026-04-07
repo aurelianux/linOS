@@ -39,6 +39,8 @@ export function errorMiddleware(logger: pino.Logger) {
     res: Response,
     _next: NextFunction
   ): void => {
+    // Keep the 4-arg signature so Express treats this as error middleware.
+    void _next;
     if (!(err instanceof Error)) {
       logger.error({ err }, "Non-Error thrown");
       res.status(500).json({

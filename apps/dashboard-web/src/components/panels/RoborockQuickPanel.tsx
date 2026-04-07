@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useEntity, useHass } from "@hakit/core";
 import {
   mdiAlertCircle,
@@ -73,6 +73,8 @@ const ROOM_TRANSLATION_KEYS: Record<string, TranslationKey> = {
   badezimmer: "room.badezimmer",
 };
 
+const STARTING_INDICATOR_TIMEOUT_MS = 15_000;
+
 // ─── Shared UI components ────────────────────────────────────────────────────
 
 import { ToggleChip } from "@/components/ui/toggle-chip";
@@ -122,27 +124,23 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
 
   const [selectedRooms, setSelectedRooms] = useState<number[]>(defaultRooms);
   const [cleaningMode, setCleaningMode] = useState(config.defaultCleaningMode);
-  const [fanPower, setFanPower] = useState(config.defaultFanPower);
+  const [selectedFanPower, setSelectedFanPower] = useState<number | null>(null);
   const [waterBoxMode, setWaterBoxMode] = useState(config.defaultWaterBoxMode);
-  const [hasSyncedFromEntity, setHasSyncedFromEntity] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const startingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync fan speed from entity on first load (read actual device state)
-  useEffect(() => {
-    if (hasSyncedFromEntity || !currentFanSpeed) return;
-    const mappedPower = FAN_SPEED_TO_POWER[currentFanSpeed];
-    if (mappedPower) {
-      setFanPower(mappedPower);
-    }
-    setHasSyncedFromEntity(true);
-  }, [currentFanSpeed, hasSyncedFromEntity]);
+  const mappedFanPower = currentFanSpeed
+    ? FAN_SPEED_TO_POWER[currentFanSpeed]
+    : undefined;
+  const fanPower = selectedFanPower ?? mappedFanPower ?? config.defaultFanPower;
 
-  // Clear optimistic "starting" state once HA confirms cleaning or reports error
   useEffect(() => {
-    if (isStarting && (vacuumState === "cleaning" || vacuumState === "error")) {
-      setIsStarting(false);
-    }
-  }, [isStarting, vacuumState]);
+    return () => {
+      if (startingTimerRef.current) {
+        clearTimeout(startingTimerRef.current);
+      }
+    };
+  }, []);
 
   // ─── Room name resolution (translated) ───────────────────────────────────
 
@@ -171,6 +169,13 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   const handleStart = async () => {
     if (!entity || selectedRooms.length === 0 || isUnavailable) return;
     setIsStarting(true);
+    if (startingTimerRef.current) {
+      clearTimeout(startingTimerRef.current);
+    }
+    startingTimerRef.current = setTimeout(() => {
+      setIsStarting(false);
+      startingTimerRef.current = null;
+    }, STARTING_INDICATOR_TIMEOUT_MS);
     try {
       const waterMode = cleaningMode === "vacuum" ? 200 : waterBoxMode;
 
@@ -205,6 +210,10 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
       });
     } catch (err: unknown) {
       setIsStarting(false);
+      if (startingTimerRef.current) {
+        clearTimeout(startingTimerRef.current);
+        startingTimerRef.current = null;
+      }
       console.error("Failed to start vacuum:", err);
     }
   };
@@ -267,13 +276,14 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
   const isPaused = vacuumState === "paused";
   const isDocked = vacuumState === "docked";
   const isError = vacuumState === "error";
+  const showStartingState = isStarting && !isCleaning && !isError;
   const isActive =
-    isCleaning || isPaused || vacuumState === "returning" || isStarting;
+    isCleaning || isPaused || vacuumState === "returning" || showStartingState;
   const canStart = !isUnavailable && selectedRooms.length > 0 && !isActive;
 
   // Status badge: optimistic "starting" while waiting for HA confirmation
   const displayState =
-    isStarting && !isCleaning ? "starting" : vacuumState;
+    showStartingState ? "starting" : vacuumState;
   const stateKey =
     displayState === "starting"
       ? ("roborock.state.starting" as TranslationKey)
@@ -466,7 +476,7 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
           options={FAN_POWER_OPTIONS}
           value={fanPower}
           disabled={isUnavailable || isActive}
-          onChange={setFanPower}
+          onChange={setSelectedFanPower}
         />
       </div>
 
@@ -509,27 +519,6 @@ function RoborockPanelBody({ config }: PanelBodyProps) {
       )}
     </div>
   );
-}
-
-// ─── Vacuum active hook (for auto-expanding panel) ────────────────────────────
-
-/**
- * Returns true when the vacuum is actively cleaning, paused, or returning.
- * Used by SmarthomePage to force-expand the vacuum panel during activity.
- *
- * Reads entity state directly from the useHass Zustand store instead of
- * useEntity — calling useEntity with a fake/noop entity ID crashes
- * @hakit/core (it creates internal subscriptions that access .id on
- * undefined entities).
- */
-export function useIsVacuumActive(
-  entityId: string | undefined
-): boolean {
-  const state = useHass((s) =>
-    entityId ? (s.entities[entityId]?.state as string | undefined) : undefined
-  );
-  if (!entityId) return false;
-  return state === "cleaning" || state === "paused" || state === "returning";
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

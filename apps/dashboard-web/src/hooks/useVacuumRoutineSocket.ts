@@ -44,6 +44,7 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retriesRef = useRef(0);
+  const connectRef = useRef<() => void>(() => undefined);
 
   const connect = useCallback(() => {
     // Clean up previous
@@ -78,7 +79,7 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
       const delay = Math.min(RECONNECT_BASE_MS * 2 ** retriesRef.current, RECONNECT_MAX_MS);
       retriesRef.current += 1;
       reconnectTimerRef.current = setTimeout(() => {
-        connect();
+        connectRef.current();
       }, delay);
     };
 
@@ -86,6 +87,10 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
       // onclose will fire after onerror, triggering reconnect
     };
   }, []);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => {
     connect();

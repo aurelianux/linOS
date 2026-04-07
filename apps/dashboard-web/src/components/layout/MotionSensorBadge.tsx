@@ -23,16 +23,17 @@ function useMotionState(entityId: `binary_sensor.${string}`) {
     last_changed: string;
     attributes: Record<string, unknown>;
   } | undefined);
-  const [, setTick] = useState(0);
+  const [nowMs, setNowMs] = useState(0);
 
   const isUnavailable =
     !entity || entity.state === "unavailable" || entity.state === "unknown";
   const isMotion = entity?.state === "on";
 
   const lastChanged = entity?.last_changed;
-  const elapsedSeconds = lastChanged
-    ? Math.max(0, Math.floor((Date.now() - new Date(lastChanged).getTime()) / 1000))
-    : 0;
+  const elapsedSeconds =
+    lastChanged && nowMs > 0
+      ? Math.max(0, Math.floor((nowMs - new Date(lastChanged).getTime()) / 1000))
+      : 0;
 
   const isRecent = !isMotion && !isUnavailable && elapsedSeconds < MOTION_GRACE_PERIOD_S;
   const isActive = isMotion || isRecent;
@@ -40,10 +41,12 @@ function useMotionState(entityId: `binary_sensor.${string}`) {
   useEffect(() => {
     // Only tick when state is "off" — need to update elapsed display.
     // When "on", HA WebSocket push triggers re-renders via the store.
-    if (isUnavailable || isMotion) return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    if (isUnavailable || isMotion || !lastChanged) return;
+    const updateNow = () => setNowMs(Date.now());
+    updateNow();
+    const id = setInterval(updateNow, 1000);
     return () => clearInterval(id);
-  }, [isUnavailable, isMotion]);
+  }, [isUnavailable, isMotion, lastChanged]);
 
   return { isMotion, isActive, elapsedSeconds, isUnavailable };
 }
