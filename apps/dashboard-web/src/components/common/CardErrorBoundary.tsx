@@ -13,7 +13,7 @@ interface State {
   hasError: boolean;
 }
 
-function ErrorFallback({ onRetry }: { onRetry: () => void }) {
+function ErrorFallbackCard({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
   return (
     <Card className="bg-slate-900 border-red-900/50">
@@ -49,8 +49,10 @@ export class CardErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return <ErrorFallback onRetry={this.handleRetry} />;
+      return <ErrorFallbackCard onRetry={this.handleRetry} />;
     }
     return this.props.children;
   }
 }
+
+export default CardErrorBoundary;

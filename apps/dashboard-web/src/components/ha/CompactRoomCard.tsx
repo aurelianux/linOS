@@ -4,19 +4,11 @@ import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getCardForDomain } from "./domainCards";
 import { QuickToggle } from "./QuickToggle";
+import { getAirQualityEntityIds } from "./roomHelpers";
 
 interface CompactRoomCardProps {
   room: DashboardRoom;
   quickToggleEntity?: `input_select.${string}`;
-}
-
-function getAirQualityEntityIds(room: DashboardRoom): Set<string> {
-  if (!room.airQuality) return new Set();
-  return new Set([
-    room.airQuality.temperature,
-    room.airQuality.humidity,
-    ...room.airQuality.secondary,
-  ]);
 }
 
 /**
@@ -73,16 +65,4 @@ export function CompactRoomCard({
       )}
     </div>
   );
-}
-
-/**
- * Determine if a room is "large" (should span full width on desktop).
- * Large rooms have >3 entities or include airQuality data.
- */
-export function isLargeRoom(room: DashboardRoom): boolean {
-  const airQualityIds = getAirQualityEntityIds(room);
-  const filteredCount = room.entities.filter(
-    (id) => !airQualityIds.has(id)
-  ).length;
-  return filteredCount > 3;
 }

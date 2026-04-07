@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useVacuumRoutineSocket } from "@/hooks/useVacuumRoutineSocket";
 import { useVacuumRoutineStore } from "@/stores/useVacuumRoutineStore";
@@ -9,6 +9,7 @@ export function VacuumRoutinePanel() {
   const { data: dashConfig } = useDashboardConfig();
   const { state } = useVacuumRoutineSocket();
   const favoriteRoutineIds = useVacuumRoutineStore((s) => s.favoriteRoutineIds);
+  const [nowMs, setNowMs] = useState(0);
 
   const routines = useMemo<VacuumRoutine[]>(
     () => dashConfig?.vacuum?.routines ?? [],
@@ -27,10 +28,6 @@ export function VacuumRoutinePanel() {
     [routines, favoriteRoutineIds]
   );
 
-  if (routines.length === 0) {
-    return null;
-  }
-
   const isActiveState =
     !!state?.executionState && state.executionState !== "idle";
 
@@ -39,6 +36,25 @@ export function VacuumRoutinePanel() {
       ? routines.find((r) => r.id === state.currentRoutineId)?.label ??
         state.currentRoutineId
       : null;
+
+  const scheduledAt = state?.scheduledAt;
+
+  useEffect(() => {
+    if (!scheduledAt) return;
+    const updateNow = () => setNowMs(Date.now());
+    updateNow();
+    const id = setInterval(updateNow, 1000);
+    return () => clearInterval(id);
+  }, [scheduledAt]);
+
+  const remainingSeconds =
+    scheduledAt && scheduledAt > nowMs
+      ? Math.ceil((scheduledAt - nowMs) / 1000)
+      : 0;
+
+  if (routines.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-3">
@@ -61,11 +77,11 @@ export function VacuumRoutinePanel() {
                 </>
               ) : null}
             </span>
-            {state?.scheduledAt && state.scheduledAt > Date.now() && (
+            {remainingSeconds > 0 && (
               <span className="text-slate-400">
                 Starts in{" "}
                 <span className="text-sky-400">
-                  {Math.ceil((state.scheduledAt - Date.now()) / 1000)}s
+                  {remainingSeconds}s
                 </span>
               </span>
             )}

@@ -50,16 +50,18 @@ export function ClimateCard({ entityId }: ClimateCardProps) {
   const colorClass = HVAC_COLORS[hvacAction] ?? "text-slate-400";
   const isHeating = hvacAction === "heating";
 
-  // Clear pending when HA confirms the target temperature
+  const hasPendingConfirmation =
+    pendingTemp !== null && targetTemp === pendingTemp;
+
+  // Stop the timeout once HA confirms the target temperature.
+  // Rendering derives the confirmed display state without a sync state update.
   useEffect(() => {
-    if (pendingTemp !== null && targetTemp === pendingTemp) {
-      setPendingTemp(null);
-      if (pendingTimer.current) {
-        clearTimeout(pendingTimer.current);
-        pendingTimer.current = null;
-      }
+    if (!hasPendingConfirmation) return;
+    if (pendingTimer.current) {
+      clearTimeout(pendingTimer.current);
+      pendingTimer.current = null;
     }
-  }, [targetTemp, pendingTemp]);
+  }, [hasPendingConfirmation]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -95,8 +97,8 @@ export function ClimateCard({ entityId }: ClimateCardProps) {
     [isUnavailable, entityId, helpers]
   );
 
-  const displayTarget = pendingTemp ?? targetTemp;
-  const isPending = pendingTemp !== null && pendingTemp !== targetTemp;
+  const displayTarget = hasPendingConfirmation ? targetTemp : pendingTemp ?? targetTemp;
+  const isPending = pendingTemp !== null && !hasPendingConfirmation;
 
   return (
     <Card
