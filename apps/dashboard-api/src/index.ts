@@ -4,6 +4,7 @@ import { createApp, finalize } from "./app.js";
 import { setupLightNotification, registerLightNotificationShutdown } from "./light-notification-setup.js";
 import { setupTimer } from "./timer-setup.js";
 import { setupVacuumRoutines } from "./vacuum-routine-setup.js";
+import { createContainerLogsWebSocket } from "./ws/container-logs-ws.js";
 
 /**
  * Bootstrap the dashboard API
@@ -60,6 +61,9 @@ async function main() {
   // Attach vacuum routine feature (REST routes + WebSocket)
   const vacuumWss = setupVacuumRoutines(app, server, logger, dashboardConfig);
 
+  // Attach container logs WebSocket (live log streaming)
+  const containerLogsWss = createContainerLogsWebSocket(server, logger);
+
   // Route WebSocket upgrade requests to the correct WSS.
   // ws@8 with { server, path } aborts non-matching paths, breaking
   // co-located WebSocket servers. noServer + manual routing fixes this.
@@ -73,6 +77,10 @@ async function main() {
     } else if (pathname === "/ws/vacuum-routines") {
       vacuumWss.handleUpgrade(req, socket, head, (ws) => {
         vacuumWss.emit("connection", ws, req);
+      });
+    } else if (pathname === "/ws/container-logs") {
+      containerLogsWss.handleUpgrade(req, socket, head, (ws) => {
+        containerLogsWss.emit("connection", ws, req);
       });
     } else {
       socket.destroy();
