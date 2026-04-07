@@ -12,13 +12,14 @@ import {
   mdiChevronDown,
   mdiTextBoxOutline,
   mdiAlertCircleOutline,
-  mdiContentCopy,
+  mdiRocketLaunchOutline,
 } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { LoadingState } from "@/components/common/LoadingState";
+import { ContainerLogViewer } from "@/components/panels/ContainerLogViewer";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useDockerContainers } from "@/hooks/useDockerContainers";
 import { useGitStatus } from "@/hooks/useGitStatus";
@@ -30,7 +31,6 @@ import type {
   ContainerInfo,
   AdminStack,
   ContainerRestartResult,
-  ContainerLogsResult,
   StackRestartResult,
   GitPullResult,
   GitStatus,
@@ -40,24 +40,30 @@ import type {
 
 type ActionState = "idle" | "loading" | "success" | "error";
 
-// ─── State dot ────────────────────────────────────────────────────────────
+/** Container for which we're viewing live logs */
+interface LogTarget {
+  id: string;
+  name: string;
+}
 
-const STATE_COLOR: Record<string, string> = {
-  running: "bg-emerald-400",
-  paused: "bg-amber-400",
-  restarting: "bg-amber-400",
-  exited: "bg-red-400",
-  dead: "bg-red-400",
-  created: "bg-slate-500",
+// ─── State badge ──────────────────────────────────────────────────────────
+
+/** Maps container state to a visible badge variant + display label */
+const STATE_BADGE_MAP: Record<string, { variant: "success" | "warning" | "destructive" | "secondary"; label: string }> = {
+  running: { variant: "success", label: "Running" },
+  paused: { variant: "warning", label: "Paused" },
+  restarting: { variant: "warning", label: "Restarting" },
+  exited: { variant: "destructive", label: "Exited" },
+  dead: { variant: "destructive", label: "Dead" },
+  created: { variant: "secondary", label: "Created" },
 };
 
-function StateDot({ state }: { state: string }) {
-  const color = STATE_COLOR[state] ?? "bg-slate-500";
+function StateBadge({ state }: { state: string }) {
+  const info = STATE_BADGE_MAP[state] ?? { variant: "secondary" as const, label: state };
   return (
-    <span
-      className={cn("h-2 w-2 rounded-full shrink-0", color)}
-      aria-hidden="true"
-    />
+    <Badge variant={info.variant} className="text-[10px] px-1.5 py-0 capitalize">
+      {info.label}
+    </Badge>
   );
 }
 
@@ -139,87 +145,70 @@ function GitStatusSection({
 function ContainerRow({
   container,
   restartState,
-  logsState,
   onRestart,
-  onCopyLogs,
+  onViewLogs,
 }: {
   container: ContainerInfo;
   restartState: ActionState;
-  logsState: ActionState;
   onRestart: () => void;
-  onCopyLogs: () => void;
+  onViewLogs: () => void;
 }) {
   const { t } = useTranslation();
 
   return (
     <div className="flex items-center gap-2 py-1.5 pl-4">
-      <StateDot state={container.state} />
+      <StateBadge state={container.state} />
       <span
         className="text-sm text-slate-200 truncate min-w-0 flex-1"
         title={container.name}
       >
         {container.name}
       </span>
-      <span className="text-xs text-slate-500 shrink-0 hidden sm:inline">
+      <span className="text-xs text-slate-500 shrink-0 hidden sm:inline tabular-nums">
         {container.status}
       </span>
 
-      {/* Logs copy feedback */}
-      {logsState === "success" && (
-        <span className="text-xs text-emerald-400 shrink-0">{t("infra.logsCopied")}</span>
-      )}
-      {logsState === "error" && (
-        <span className="text-xs text-red-400 shrink-0">{t("infra.logsError")}</span>
-      )}
-
-      {/* Logs button */}
+      {/* View Logs button — text label for clarity */}
       <button
         type="button"
-        onClick={onCopyLogs}
-        disabled={logsState === "loading"}
-        className="shrink-0 h-6 w-6 flex items-center justify-center rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
+        onClick={onViewLogs}
+        className="shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
         aria-label={`${t("infra.logs")} ${container.name}`}
-        title={t("infra.logs")}
+        title={t("infra.viewLogs")}
       >
-        <Icon
-          path={logsState === "loading" ? mdiLoading : logsState === "success" ? mdiContentCopy : mdiTextBoxOutline}
-          size={0.6}
-          className={cn(
-            logsState === "loading" && "animate-spin text-slate-400",
-            logsState === "success" && "text-emerald-400",
-            logsState === "error" && "text-red-400",
-            logsState === "idle" && "text-slate-500 hover:text-slate-300",
-          )}
-        />
+        <Icon path={mdiTextBoxOutline} size={0.5} />
+        <span className="hidden sm:inline">{t("infra.logs")}</span>
       </button>
 
-      {/* Restart feedback */}
-      {restartState === "success" && (
-        <span className="text-xs text-emerald-400 shrink-0">{t("infra.restartSuccess")}</span>
-      )}
-      {restartState === "error" && (
-        <span className="text-xs text-red-400 shrink-0">{t("infra.restartError")}</span>
-      )}
-
-      {/* Restart button */}
+      {/* Restart button — clearer with text + state feedback */}
       <button
         type="button"
         onClick={onRestart}
         disabled={restartState === "loading"}
-        className="shrink-0 h-6 w-6 flex items-center justify-center rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
+        className={cn(
+          "shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors",
+          restartState === "idle" && "text-slate-400 hover:text-slate-200 hover:bg-slate-800",
+          restartState === "loading" && "text-slate-400 bg-slate-800",
+          restartState === "success" && "text-emerald-400 bg-emerald-900/30",
+          restartState === "error" && "text-red-400 bg-red-900/30",
+        )}
         aria-label={`${t("infra.restart")} ${container.name}`}
         title={t("infra.restart")}
       >
         <Icon
           path={restartState === "loading" ? mdiLoading : restartState === "success" ? mdiCheck : mdiRestart}
-          size={0.6}
-          className={cn(
-            restartState === "loading" && "animate-spin text-slate-400",
-            restartState === "success" && "text-emerald-400",
-            restartState === "error" && "text-red-400",
-            restartState === "idle" && "text-slate-500 hover:text-slate-300",
-          )}
+          size={0.5}
+          className={cn(restartState === "loading" && "animate-spin")}
         />
+        <span className="hidden sm:inline">
+          {restartState === "loading"
+            ? t("infra.restarting")
+            : restartState === "success"
+              ? t("infra.restartSuccess")
+              : restartState === "error"
+                ? t("infra.restartError")
+                : t("infra.restart")}
+        </span>
       </button>
     </div>
   );
@@ -234,10 +223,9 @@ function StackGroup({
   onToggle,
   stackRestartState,
   containerStates,
-  logsStates,
   onStackRestart,
   onContainerRestart,
-  onCopyLogs,
+  onViewLogs,
 }: {
   stack: AdminStack;
   containers: ContainerInfo[];
@@ -245,14 +233,17 @@ function StackGroup({
   onToggle: () => void;
   stackRestartState: ActionState;
   containerStates: Record<string, ActionState>;
-  logsStates: Record<string, ActionState>;
   onStackRestart: () => void;
   onContainerRestart: (id: string) => void;
-  onCopyLogs: (id: string) => void;
+  onViewLogs: (id: string, name: string) => void;
 }) {
   const { t } = useTranslation();
   const allRunning = containers.length > 0 && containers.every((c) => c.state === "running");
   const someDown = containers.some((c) => c.state !== "running");
+
+  // Summary counts for the stack header
+  const runningCount = containers.filter((c) => c.state === "running").length;
+  const totalCount = containers.length;
 
   return (
     <div className="border-b border-slate-800 last:border-0">
@@ -278,37 +269,38 @@ function StackGroup({
             variant={containers.length === 0 ? "secondary" : allRunning ? "success" : someDown ? "warning" : "secondary"}
             className="text-[10px] px-1.5 py-0"
           >
-            {containers.length}
+            {runningCount}/{totalCount}
           </Badge>
         </button>
 
-        {/* Stack-level restart */}
+        {/* Stack-level build & restart — now with clear label */}
         <div className="flex items-center gap-1 shrink-0">
-          {stackRestartState === "success" && (
-            <span className="text-xs text-emerald-400">{t("infra.restartSuccess")}</span>
-          )}
-          {stackRestartState === "error" && (
-            <span className="text-xs text-red-400">{t("infra.restartError")}</span>
-          )}
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onStackRestart}
             disabled={stackRestartState === "loading" || containers.length === 0}
-            className="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
-            aria-label={`${t("infra.restart")} ${stack.label}`}
-            title={`${t("infra.restart")} ${stack.label}`}
+            className={cn(
+              "gap-1 text-xs h-7 px-2",
+              stackRestartState === "success" && "text-emerald-400",
+              stackRestartState === "error" && "text-red-400",
+            )}
+            aria-label={`${t("infra.buildRestart")} ${stack.label}`}
+            title={t("infra.buildRestartHint")}
           >
             <Icon
-              path={stackRestartState === "loading" ? mdiLoading : stackRestartState === "success" ? mdiCheck : mdiRestart}
-              size={0.7}
-              className={cn(
-                stackRestartState === "loading" && "animate-spin text-slate-400",
-                stackRestartState === "success" && "text-emerald-400",
-                stackRestartState === "error" && "text-red-400",
-                stackRestartState === "idle" && "text-slate-400",
-              )}
+              path={stackRestartState === "loading" ? mdiLoading : stackRestartState === "success" ? mdiCheck : mdiRocketLaunchOutline}
+              size={0.6}
+              className={cn(stackRestartState === "loading" && "animate-spin")}
             />
-          </button>
+            {stackRestartState === "loading"
+              ? t("infra.building")
+              : stackRestartState === "success"
+                ? t("infra.buildSuccess")
+                : stackRestartState === "error"
+                  ? t("infra.buildError")
+                  : t("infra.buildRestart")}
+          </Button>
         </div>
       </div>
 
@@ -320,9 +312,8 @@ function StackGroup({
               key={c.id}
               container={c}
               restartState={containerStates[c.id] ?? "idle"}
-              logsState={logsStates[c.id] ?? "idle"}
               onRestart={() => onContainerRestart(c.id)}
-              onCopyLogs={() => onCopyLogs(c.id)}
+              onViewLogs={() => onViewLogs(c.id, c.name)}
             />
           ))}
         </div>
@@ -453,6 +444,9 @@ export function UnifiedInfraPanel() {
     return new Set(stacks.map((s) => s.projectName));
   });
 
+  // Live log viewer target
+  const [logTarget, setLogTarget] = useState<LogTarget | null>(null);
+
   // Update expanded set when stacks config changes
   useEffect(() => {
     setExpandedStacks((prev) => {
@@ -481,7 +475,6 @@ export function UnifiedInfraPanel() {
   // Container & stack restart states
   const [containerRestartStates, setContainerRestart] = useAutoResetState();
   const [stackRestartStates, setStackRestart] = useAutoResetState();
-  const [logsStates, setLogsState] = useAutoResetState();
   const [reconnecting, setReconnecting] = useState(false);
 
   // Git states
@@ -517,7 +510,7 @@ export function UnifiedInfraPanel() {
     [setContainerRestart],
   );
 
-  // Stack restart handler
+  // Stack restart handler (runs docker compose up --build -d)
   const handleStackRestart = useCallback(
     async (projectName: string) => {
       setStackRestart(projectName, "loading");
@@ -542,22 +535,10 @@ export function UnifiedInfraPanel() {
     [setStackRestart],
   );
 
-  // Copy logs handler
-  const handleCopyLogs = useCallback(
-    async (containerId: string) => {
-      setLogsState(containerId, "loading");
-      try {
-        const result = await fetchJson<ContainerLogsResult>(
-          `${API_ENDPOINTS.ADMIN_CONTAINER}/${containerId}/logs`,
-        );
-        await navigator.clipboard.writeText(result.logs);
-        setLogsState(containerId, "success");
-      } catch {
-        setLogsState(containerId, "error");
-      }
-    },
-    [setLogsState],
-  );
+  // Open live log viewer for a container
+  const handleViewLogs = useCallback((id: string, name: string) => {
+    setLogTarget({ id, name });
+  }, [setLogTarget]);
 
   // Git pull handler
   const handleGitPull = useCallback(async () => {
@@ -659,12 +640,22 @@ export function UnifiedInfraPanel() {
               onToggle={() => toggleStack(stack.projectName)}
               stackRestartState={stackRestartStates[stack.projectName] ?? "idle"}
               containerStates={containerRestartStates}
-              logsStates={logsStates}
               onStackRestart={() => handleStackRestart(stack.projectName)}
               onContainerRestart={handleContainerRestart}
-              onCopyLogs={handleCopyLogs}
+              onViewLogs={handleViewLogs}
             />
           ))}
+        </div>
+      )}
+
+      {/* Live Log Viewer — shown below the stack list when a container is selected */}
+      {logTarget && (
+        <div className="pt-3">
+          <ContainerLogViewer
+            containerId={logTarget.id}
+            containerName={logTarget.name}
+            onClose={() => setLogTarget(null)}
+          />
         </div>
       )}
     </CollapsiblePanel>
