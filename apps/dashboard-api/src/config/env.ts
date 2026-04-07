@@ -28,6 +28,14 @@ const envSchema = z.object({
   // Optional path to dashboard entity config file
   // Defaults to config/dashboard.json at the repo root
   DASHBOARD_CONFIG_PATH: z.string().optional(),
+
+  // Optional SSH target used by /admin/git-pull endpoint
+  LINOS_GIT_PULL_SSH_HOST: z.string().optional(),
+  LINOS_GIT_PULL_SSH_PORT: z.coerce.number().int().positive().optional(),
+  LINOS_GIT_PULL_SSH_USER: z.string().optional(),
+  LINOS_GIT_PULL_SSH_PRIVATE_KEY_PATH: z.string().optional(),
+  LINOS_GIT_PULL_SSH_PRIVATE_KEY_PASSPHRASE: z.string().optional(),
+  LINOS_GIT_PULL_REMOTE_REPO_PATH: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

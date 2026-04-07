@@ -1,8 +1,9 @@
 import { execFile } from "child_process";
-import { access } from "fs/promises";
+import { readFile } from "fs/promises";
 import path from "path";
 import { promisify } from "util";
 import { Router, type Request, type Response } from "express";
+import { Client, type ConnectConfig } from "ssh2";
 import { type DashboardConfig } from "../config/app-config.js";
 import { AppError, type ApiResponse } from "../middleware/errors.js";
 import { dockerApiRequest, dockerApiRequestRaw, parseDockerLogs } from "./system.js";
@@ -12,8 +13,17 @@ const execFileAsync = promisify(execFile);
 const HOST_REPO_PATH = "/host-repo";
 const DEFAULT_LOCALE = "C";
 const GIT_COMMAND = "git";
-const SSH_MISSING_ERROR_FRAGMENT = "cannot run ssh";
-const SSH_CANDIDATE_PATHS = ["/usr/bin/ssh", "/bin/ssh"] as const;
+const DEFAULT_SSH_PORT = 22;
+const DEFAULT_REMOTE_REPO_PATH = "/host-repo";
+const SSH_READY_TIMEOUT_MS = 10_000;
+const SSH_EXEC_TIMEOUT_MS = 30_000;
+
+const ENV_SSH_HOST = "LINOS_GIT_PULL_SSH_HOST";
+const ENV_SSH_PORT = "LINOS_GIT_PULL_SSH_PORT";
+const ENV_SSH_USER = "LINOS_GIT_PULL_SSH_USER";
+const ENV_SSH_PRIVATE_KEY_PATH = "LINOS_GIT_PULL_SSH_PRIVATE_KEY_PATH";
+const ENV_SSH_PRIVATE_KEY_PASSPHRASE = "LINOS_GIT_PULL_SSH_PRIVATE_KEY_PASSPHRASE";
+const ENV_REMOTE_REPO_PATH = "LINOS_GIT_PULL_REMOTE_REPO_PATH";
 
 // ─── Response types ───────────────────────────────────────────────────────
 
@@ -36,6 +46,15 @@ interface GitPullResult {
   stderr: string;
 }
 
+interface SshGitPullConfig {
+  host: string;
+  port: number;
+  username: string;
+  privateKeyPath: string;
+  passphrase?: string;
+  remoteRepoPath: string;
+}
+
 interface GitStatusResult {
   branch: string;
   lastCommit: { hash: string; message: string; relativeTime: string };
@@ -55,60 +74,120 @@ async function runGit(...args: string[]): Promise<string> {
   return stdout.trim();
 }
 
-async function resolveSshBinary(): Promise<string | null> {
-  for (const candidate of SSH_CANDIDATE_PATHS) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Continue checking fallback paths.
-    }
+function parseSshPort(rawPort: string | undefined): number {
+  if (!rawPort) return DEFAULT_SSH_PORT;
+  const parsed = Number(rawPort);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new AppError(
+      `${ENV_SSH_PORT} must be a positive integer`,
+      500,
+      "GIT_PULL_CONFIG_INVALID",
+    );
   }
-  return null;
+  return parsed;
 }
 
-function buildGitEnv(extraEnv?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new AppError(
+      `Git pull SSH is not configured: missing ${name}`,
+      500,
+      "GIT_PULL_CONFIG_MISSING",
+    );
+  }
+  return value;
+}
+
+function shellEscapeSingleQuoted(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function loadSshGitPullConfig(): SshGitPullConfig {
   return {
-    ...process.env,
-    LC_ALL: DEFAULT_LOCALE,
-    ...extraEnv,
+    host: getRequiredEnv(ENV_SSH_HOST),
+    port: parseSshPort(process.env[ENV_SSH_PORT]),
+    username: getRequiredEnv(ENV_SSH_USER),
+    privateKeyPath: getRequiredEnv(ENV_SSH_PRIVATE_KEY_PATH),
+    passphrase: process.env[ENV_SSH_PRIVATE_KEY_PASSPHRASE]?.trim() || undefined,
+    remoteRepoPath:
+      process.env[ENV_REMOTE_REPO_PATH]?.trim() || DEFAULT_REMOTE_REPO_PATH,
   };
 }
 
-async function runGitPullWithFallback(): Promise<GitPullResult> {
-  try {
-    const { stdout, stderr } = await execFileAsync(
-      GIT_COMMAND,
-      ["-C", HOST_REPO_PATH, "pull"],
-      { timeout: 30_000, env: buildGitEnv() },
-    );
-    return { stdout: stdout.trim(), stderr: stderr.trim() };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    const sshMissing = message.includes(SSH_MISSING_ERROR_FRAGMENT);
-    if (!sshMissing) throw err;
+async function runGitPullViaSsh(config: SshGitPullConfig): Promise<GitPullResult> {
+  const privateKey = await readFile(config.privateKeyPath, "utf-8");
+  const command = `${GIT_COMMAND} -C ${shellEscapeSingleQuoted(config.remoteRepoPath)} pull`;
 
-    const sshBinaryPath = await resolveSshBinary();
-    if (!sshBinaryPath) {
-      throw new AppError(
-        "Git pull failed: SSH client is missing in the API runtime. Install openssh-client or mount an ssh binary into the container.",
-        500,
-        "GIT_PULL_FAILED",
-      );
-    }
+  return await new Promise<GitPullResult>((resolve, reject) => {
+    const conn = new Client();
+    let finished = false;
+    let timeoutHandle: NodeJS.Timeout | undefined;
 
-    const { stdout, stderr } = await execFileAsync(
-      GIT_COMMAND,
-      ["-C", HOST_REPO_PATH, "pull"],
-      {
-        timeout: 30_000,
-        env: buildGitEnv({
-          GIT_SSH_COMMAND: sshBinaryPath,
-        }),
-      },
-    );
-    return { stdout: stdout.trim(), stderr: stderr.trim() };
-  }
+    const finish = (result?: GitPullResult, err?: Error): void => {
+      if (finished) return;
+      finished = true;
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      conn.end();
+      if (err) {
+        reject(err);
+        return;
+      }
+      if (!result) {
+        reject(new Error("SSH command finished without result"));
+        return;
+      }
+      resolve(result);
+    };
+
+    const connectConfig: ConnectConfig = {
+      host: config.host,
+      port: config.port,
+      username: config.username,
+      privateKey,
+      passphrase: config.passphrase,
+      readyTimeout: SSH_READY_TIMEOUT_MS,
+    };
+
+    conn.on("ready", () => {
+      timeoutHandle = setTimeout(() => {
+        finish(undefined, new Error("SSH command timed out"));
+      }, SSH_EXEC_TIMEOUT_MS);
+
+      conn.exec(command, (execError, stream) => {
+        if (execError) {
+          finish(undefined, execError);
+          return;
+        }
+
+        let stdout = "";
+        let stderr = "";
+
+        stream.on("data", (chunk: Buffer) => {
+          stdout += chunk.toString();
+        });
+        stream.stderr.on("data", (chunk: Buffer) => {
+          stderr += chunk.toString();
+        });
+        stream.on("close", (code: number | null) => {
+          if (code !== 0) {
+            finish(
+              undefined,
+              new Error(`Remote git pull exited with code ${code ?? -1}: ${stderr.trim()}`),
+            );
+            return;
+          }
+          finish({ stdout: stdout.trim(), stderr: stderr.trim() });
+        });
+      });
+    });
+
+    conn.on("error", (err: Error) => {
+      finish(undefined, err);
+    });
+
+    conn.connect(connectConfig);
+  });
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────
@@ -231,7 +310,8 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
     "/admin/git-pull",
     async (_req: Request, res: Response): Promise<void> => {
       try {
-        const data = await runGitPullWithFallback();
+        const config = loadSshGitPullConfig();
+        const data = await runGitPullViaSsh(config);
         res.json({ ok: true, data } satisfies ApiResponse<GitPullResult>);
       } catch (err: unknown) {
         if (err instanceof AppError) throw err;
