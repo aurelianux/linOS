@@ -203,7 +203,7 @@ const vacuumConfigSchema = z.object({
 const adminStackSchema = z.object({
   projectName: z.string().min(1),
   label: z.string().min(1),
-  composePath: z.string().optional(),
+  composePath: z.string(),
 });
 
 const dashboardConfigSchema = z.object({

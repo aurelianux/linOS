@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchJson } from "@/lib/api/client";
 import type { VacuumRoutineState } from "@/lib/api/types";
 
-const RECONNECT_DELAY_MS = 3000;
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
 
 function getWsUrl(): string {
   const apiBase = import.meta.env.VITE_API_BASE ?? "/api";
@@ -42,6 +43,7 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retriesRef = useRef(0);
 
   const connect = useCallback(() => {
     // Clean up previous
@@ -56,6 +58,7 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
 
     ws.onopen = () => {
       setConnected(true);
+      retriesRef.current = 0;
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -71,10 +74,12 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
       setConnected(false);
       wsRef.current = null;
 
-      // Auto-reconnect
+      // Exponential backoff reconnect
+      const delay = Math.min(RECONNECT_BASE_MS * 2 ** retriesRef.current, RECONNECT_MAX_MS);
+      retriesRef.current += 1;
       reconnectTimerRef.current = setTimeout(() => {
         connect();
-      }, RECONNECT_DELAY_MS);
+      }, delay);
     };
 
     ws.onerror = () => {

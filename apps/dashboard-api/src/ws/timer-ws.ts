@@ -15,7 +15,7 @@ export function createTimerWebSocket(
   timerService: TimerService,
   logger: pino.Logger
 ): WebSocketServer {
-  const wss = new WebSocketServer({ server, path: "/ws/timer" });
+  const wss = new WebSocketServer({ noServer: true });
 
   const log = logger.child({ component: "timer-ws" });
 

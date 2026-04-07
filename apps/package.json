@@ -16,5 +16,10 @@
   "devDependencies": {
     "concurrently": "^9.2.1",
     "prettier": "^3.7.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

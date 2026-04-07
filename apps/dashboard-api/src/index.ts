@@ -55,10 +55,29 @@ async function main() {
   }
 
   // Attach timer feature (REST routes + WebSocket)
-  setupTimer(app, server, logger, lightNotification, lightEntityIds);
+  const timerWss = setupTimer(app, server, logger, lightNotification, lightEntityIds);
 
   // Attach vacuum routine feature (REST routes + WebSocket)
-  setupVacuumRoutines(app, server, logger, dashboardConfig);
+  const vacuumWss = setupVacuumRoutines(app, server, logger, dashboardConfig);
+
+  // Route WebSocket upgrade requests to the correct WSS.
+  // ws@8 with { server, path } aborts non-matching paths, breaking
+  // co-located WebSocket servers. noServer + manual routing fixes this.
+  server.on("upgrade", (req, socket, head) => {
+    const { pathname } = new URL(req.url ?? "/", "http://localhost");
+
+    if (pathname === "/ws/timer") {
+      timerWss.handleUpgrade(req, socket, head, (ws) => {
+        timerWss.emit("connection", ws, req);
+      });
+    } else if (pathname === "/ws/vacuum-routines") {
+      vacuumWss.handleUpgrade(req, socket, head, (ws) => {
+        vacuumWss.emit("connection", ws, req);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
 
   // Finalize: register catch-all 404 + error handlers after all routes
   finalize(app, logger);
