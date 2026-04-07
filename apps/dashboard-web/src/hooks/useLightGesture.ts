@@ -83,14 +83,6 @@ export function useLightGesture({
   const directionLocked = useRef<GestureDirection>("none");
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Stable refs for callbacks that change frequently
-  const onBrightnessCommitRef = useRef(onBrightnessCommit);
-  onBrightnessCommitRef.current = onBrightnessCommit;
-  const onColorSelectRef = useRef(onColorSelect);
-  onColorSelectRef.current = onColorSelect;
-  const onTurnOffRef = useRef(onTurnOff);
-  onTurnOffRef.current = onTurnOff;
-
   const resetGesture = useCallback(() => {
     setShowHints(false);
     setDirection("none");
@@ -233,17 +225,17 @@ export function useLightGesture({
       if (el) el.releasePointerCapture(e.pointerId);
 
       if (dir === "vertical" && currentDragBrightness !== null) {
-        onBrightnessCommitRef.current(currentDragBrightness);
+        onBrightnessCommit(currentDragBrightness);
       } else if (dir === "left" && currentColorIndex !== null) {
-        onColorSelectRef.current?.(currentColorIndex);
+        onColorSelect?.(currentColorIndex);
       } else if (dir === "right") {
-        onTurnOffRef.current?.();
+        onTurnOff?.();
       }
       // dir === "none" (tap): do nothing
 
       resetGesture();
     },
-    [cardRef, dragBrightness, colorIndex, resetGesture]
+    [cardRef, dragBrightness, colorIndex, onBrightnessCommit, onColorSelect, onTurnOff, resetGesture]
   );
 
   const onPointerCancel = useCallback(
@@ -258,7 +250,7 @@ export function useLightGesture({
   );
 
   const onLostPointerCapture = useCallback(
-    (_e: ReactPointerEvent<HTMLDivElement>) => {
+    () => {
       resetGesture();
     },
     [resetGesture]

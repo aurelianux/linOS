@@ -1,11 +1,12 @@
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
-import { CompactRoomCard, isLargeRoom } from "@/components/ha/CompactRoomCard";
+import { CompactRoomCard } from "@/components/ha/CompactRoomCard";
+import { isLargeRoom } from "@/components/ha/roomHelpers";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
 import {
   RoborockQuickPanel,
-  useIsVacuumActive,
 } from "@/components/panels/RoborockQuickPanel";
+import { isVacuumActiveState } from "@/components/panels/roborockState";
 import { VacuumRoutinePanel } from "@/components/panels/VacuumRoutinePanel";
 import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
@@ -90,8 +91,12 @@ export function SmarthomePage() {
   const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
   const roomLayout = buildRoomLayout(rooms);
   const globalEntity = dashConfig?.quickToggles?.globalEntity;
+  const roborockEntityId = dashConfig?.roborock?.entityId;
+  const roborockState = useHass((s) =>
+    roborockEntityId ? (s.entities[roborockEntityId]?.state as string | undefined) : undefined
+  );
 
-  const isVacuumActive = useIsVacuumActive(dashConfig?.roborock?.entityId);
+  const isVacuumActive = isVacuumActiveState(roborockState);
   const isVacuumRoutineActive =
     vacuumRoutineState?.executionState &&
     vacuumRoutineState.executionState !== "idle";

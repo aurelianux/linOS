@@ -65,9 +65,7 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const firstEntityId = firstSelectedRoomId ? roomToggleMap.get(firstSelectedRoomId) : undefined;
   const currentEntityState = firstEntityId ? (entities[firstEntityId]?.state as string | undefined) : undefined;
 
-  if (!quickToggles) return null;
-
-  const modes = quickToggles.modes;
+  const modes = quickToggles?.modes ?? [];
   const allSelected = availableRooms.length > 0 && availableRooms.every((r) => selectedRoomIds.has(r.id));
 
   const handleSelectAll = () => {
@@ -155,6 +153,8 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
       activeClass: opt?.activeClass,
     };
   });
+
+  if (!quickToggles) return null;
 
   return (
     <div className="space-y-3">
