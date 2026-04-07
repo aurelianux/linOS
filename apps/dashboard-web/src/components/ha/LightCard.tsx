@@ -174,6 +174,9 @@ export function LightCard({ entityId }: LightCardProps) {
       style={{ height: CARD_HEIGHT, touchAction: "none" }}
       className={cn(
         "cursor-pointer select-none",
+        // Extra horizontal margin on mobile so users can scroll the page
+        // without accidentally triggering the brightness gesture
+        "mx-2 md:mx-0",
         isOn ? "border-amber-900/40" : "border-slate-700",
         isUnavailable && "opacity-50 pointer-events-none"
       )}

@@ -9,3 +9,12 @@
 body {
   @apply bg-slate-950 text-slate-100;
 }
+
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
