@@ -163,6 +163,18 @@ export const translations = {
     "timer.minuteShort": "min",
     "timer.errorMinDuration": "Dauer muss mindestens 1 Sekunde sein",
 
+    "automations.title": "Automationen",
+    "automations.noAutomations": "Keine Automationen konfiguriert",
+    "automations.noAutomationsHint":
+      "Füge HA-Automationen in config/dashboard.json hinzu, um sie hier zu steuern.",
+    "automations.lastTriggered": "Zuletzt ausgelöst",
+    "automations.never": "Nie",
+    "automations.enabled": "Aktiv",
+    "automations.disabled": "Deaktiviert",
+    "automations.trigger": "Auslösen",
+    "automations.triggerError": "Auslösen fehlgeschlagen",
+    "automations.toggleError": "Umschalten fehlgeschlagen",
+
     "admin.actions.title": "Stack-Aktionen",
     "admin.actions.restart": "Neustarten",
     "admin.actions.restarting": "Wird neugestartet…",
@@ -346,6 +358,18 @@ export const translations = {
     "timer.timesUp": "Time's up!",
     "timer.minuteShort": "min",
     "timer.errorMinDuration": "Duration must be at least 1 second",
+
+    "automations.title": "Automations",
+    "automations.noAutomations": "No automations configured",
+    "automations.noAutomationsHint":
+      "Add HA automations in config/dashboard.json to control them here.",
+    "automations.lastTriggered": "Last triggered",
+    "automations.never": "Never",
+    "automations.enabled": "Enabled",
+    "automations.disabled": "Disabled",
+    "automations.trigger": "Trigger",
+    "automations.triggerError": "Failed to trigger",
+    "automations.toggleError": "Failed to toggle",
 
     "admin.actions.title": "Stack Actions",
     "admin.actions.restart": "Restart",

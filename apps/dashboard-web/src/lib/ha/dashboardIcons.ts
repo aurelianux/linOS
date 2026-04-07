@@ -4,6 +4,8 @@ import {
   mdiBed,
   mdiHomeVariant,
   mdiLightbulb,
+  mdiLightbulbGroup,
+  mdiMotionSensor,
   mdiShower,
 } from "@mdi/js";
 
@@ -17,6 +19,8 @@ const DASHBOARD_ICON_MAP: Record<string, string> = {
   mdiBed,
   mdiHomeVariant,
   mdiLightbulb,
+  mdiLightbulbGroup,
+  mdiMotionSensor,
   mdiShower,
 };
 

@@ -92,6 +92,26 @@
     { "projectName": "service-index", "label": "Service Index",           "composePath": "stacks/applications/service-index" },
     { "projectName": "plane-app",     "label": "Plane",                   "composePath": "stacks/applications/plane/plane-app" }
   ],
+  "automations": {
+    "groups": [
+      {
+        "id": "motion",
+        "label": "Motion",
+        "icon": "mdiMotionSensor",
+        "entities": [
+          { "entityId": "automation.flur_bewegung_chill_2min" }
+        ]
+      },
+      {
+        "id": "lighting",
+        "label": "Lighting",
+        "icon": "mdiLightbulbGroup",
+        "entities": [
+          { "entityId": "automation.wohnzimmer_abendlicht" }
+        ]
+      }
+    ]
+  },
   "motionSensors": [
     {
       "id": "flur",

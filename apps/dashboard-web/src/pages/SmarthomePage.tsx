@@ -3,6 +3,7 @@ import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { CompactRoomCard } from "@/components/ha/CompactRoomCard";
 import { isLargeRoom } from "@/components/ha/roomHelpers";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
+import { AutomationsPanel } from "@/components/panels/AutomationsPanel";
 import {
   RoborockQuickPanel,
 } from "@/components/panels/RoborockQuickPanel";
@@ -164,6 +165,13 @@ export function SmarthomePage() {
           >
             <VacuumRoutinePanel />
           </CollapsiblePanel>
+        </CardErrorBoundary>
+      )}
+
+      {/* HA Automations — control plane for automations living in HA */}
+      {HA_CONFIGURED && dashConfig?.automations && (
+        <CardErrorBoundary>
+          <AutomationsPanel />
         </CardErrorBoundary>
       )}
 

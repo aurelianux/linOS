@@ -208,6 +208,36 @@ export interface MotionSensorConfig {
   entityId: `binary_sensor.${string}`;
 }
 
+/**
+ * A single HA automation entity registered in the dashboard.
+ * The automation itself lives in HA (YAML/UI) — the dashboard acts as
+ * control plane: toggle enable/disable, show last triggered, manual trigger.
+ */
+export interface AutomationEntry {
+  entityId: `automation.${string}`;
+}
+
+/**
+ * A named group of HA automations displayed together in the panel.
+ * Groups provide logical categorization (e.g. "Motion", "Lighting", "Schedules").
+ */
+export interface AutomationGroup {
+  id: string;
+  /** Display label — shown as group heading */
+  label: string;
+  /** MDI icon name string, e.g. "mdiMotionSensor" — resolved via resolveDashboardIcon() */
+  icon: string;
+  entities: AutomationEntry[];
+}
+
+/**
+ * Top-level automations config in dashboard.json.
+ * Controls which HA automations appear in the Automations Panel.
+ */
+export interface AutomationsConfig {
+  groups: AutomationGroup[];
+}
+
 export interface DashboardConfig {
   rooms: DashboardRoom[];
   motionSensors?: MotionSensorConfig[];
@@ -216,6 +246,7 @@ export interface DashboardConfig {
   quickToggles?: QuickToggleConfig;
   lightColorPresets?: LightColorPreset[];
   adminStacks?: AdminStack[];
+  automations?: AutomationsConfig;
 }
 
 export interface StackRestartResult {
