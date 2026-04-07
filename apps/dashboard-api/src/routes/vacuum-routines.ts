@@ -42,7 +42,8 @@ export function vacuumRoutinesRouter(
         );
       }
 
-      const parsed = vacuumRoutineStartSchema.safeParse(req.body);
+      // Treat missing/null body as empty object — "start now" sends no payload
+      const parsed = vacuumRoutineStartSchema.safeParse(req.body ?? {});
 
       if (!parsed.success) {
         throw new AppError(
