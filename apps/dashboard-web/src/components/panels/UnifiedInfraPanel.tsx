@@ -439,29 +439,25 @@ export function UnifiedInfraPanel() {
   const stacks = useMemo(() => config?.adminStacks ?? [], [config?.adminStacks]);
   const containers = dockerData?.containers ?? [];
 
-  // Expanded stacks (default all expanded)
-  const [expandedStacks, setExpandedStacks] = useState<Set<string>>(() => {
-    return new Set(stacks.map((s) => s.projectName));
-  });
+  // Track collapsed stacks — all expanded by default, derived via useMemo
+  const [collapsedStacks, setCollapsedStacks] = useState<Set<string>>(
+    () => new Set()
+  );
+  const expandedStacks = useMemo(() => {
+    const expanded = new Set<string>();
+    for (const stack of stacks) {
+      if (!collapsedStacks.has(stack.projectName)) {
+        expanded.add(stack.projectName);
+      }
+    }
+    return expanded;
+  }, [stacks, collapsedStacks]);
 
   // Live log viewer target
   const [logTarget, setLogTarget] = useState<LogTarget | null>(null);
 
-  // Update expanded set when stacks config changes
-  useEffect(() => {
-    setExpandedStacks((prev) => {
-      const updated = new Set(prev);
-      for (const s of stacks) {
-        if (!prev.has(s.projectName) && prev.size === 0) {
-          updated.add(s.projectName);
-        }
-      }
-      return updated.size !== prev.size ? updated : prev;
-    });
-  }, [stacks]);
-
   const toggleStack = useCallback((projectName: string) => {
-    setExpandedStacks((prev) => {
+    setCollapsedStacks((prev) => {
       const next = new Set(prev);
       if (next.has(projectName)) {
         next.delete(projectName);

@@ -1,16 +1,15 @@
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
-import { CompactRoomCard, isLargeRoom } from "@/components/ha/CompactRoomCard";
+import { CompactRoomCard } from "@/components/ha/CompactRoomCard";
+import { isLargeRoom } from "@/components/ha/roomHelpers";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
 import {
   RoborockQuickPanel,
-  useIsVacuumActive,
 } from "@/components/panels/RoborockQuickPanel";
+import { isVacuumActiveState } from "@/components/panels/roborockState";
 import { VacuumRoutinePanel } from "@/components/panels/VacuumRoutinePanel";
-import TimerCard from "@/components/panels/TimerCard";
 import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
-import { useTimerSocket } from "@/hooks/useTimerSocket";
 import { useVacuumRoutineSocket } from "@/hooks/useVacuumRoutineSocket";
 import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
@@ -18,7 +17,7 @@ import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { useHass } from "@hakit/core";
-import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum, mdiTimer } from "@mdi/js";
+import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum } from "@mdi/js";
 import { useCallback, useState } from "react";
 
 function buildQuickToggleMap(
@@ -87,15 +86,17 @@ function AllOffButton({ entityId }: { entityId: `input_select.${string}` }) {
 export function SmarthomePage() {
   const { t } = useTranslation();
   const { data: dashConfig, loading, error } = useDashboardConfig();
-  const { state: timerState } = useTimerSocket();
   const { state: vacuumRoutineState } = useVacuumRoutineSocket();
   const rooms = dashConfig?.rooms ?? [];
   const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
   const roomLayout = buildRoomLayout(rooms);
   const globalEntity = dashConfig?.quickToggles?.globalEntity;
+  const roborockEntityId = dashConfig?.roborock?.entityId;
+  const roborockState = useHass((s) =>
+    roborockEntityId ? (s.entities[roborockEntityId]?.state as string | undefined) : undefined
+  );
 
-  const isTimerActive = timerState?.running === true || timerState?.alerting === true;
-  const isVacuumActive = useIsVacuumActive(dashConfig?.roborock?.entityId);
+  const isVacuumActive = isVacuumActiveState(roborockState);
   const isVacuumRoutineActive =
     vacuumRoutineState?.executionState &&
     vacuumRoutineState.executionState !== "idle";
@@ -107,47 +108,23 @@ export function SmarthomePage() {
         {t("nav.dashboard")}
       </h2>
 
-      {/* Timer */}
-      <CollapsiblePanel
-        panelKey="timer"
-        icon={mdiTimer}
-        title={t("timer.title")}
-        defaultCollapsed
-        forceExpanded={isTimerActive}
-      >
-        <TimerCard />
-      </CollapsiblePanel>
-      
-      {/* Quick Access + Vacuum — 2-col on desktop */}
+      {/* 1. Schnellzugriff (Quick Access) */}
       {HA_CONFIGURED && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <CardErrorBoundary>
-            <CollapsiblePanel
-              panelKey="quick-access"
-              icon={mdiLightbulbGroup}
-              title={t("quickToggle.title")}
-              headerActions={
-                globalEntity ? <AllOffButton entityId={globalEntity} /> : undefined
-              }
-            >
-              {dashConfig ? <QuickAccessPanel config={dashConfig} /> : null}
-            </CollapsiblePanel>
-          </CardErrorBoundary>
-
-          <CardErrorBoundary>
-            <CollapsiblePanel
-              panelKey="roborock"
-              icon={mdiRobotVacuum}
-              title={t("roborock.title")}
-              forceExpanded={isVacuumActive}
-            >
-              <RoborockQuickPanel />
-            </CollapsiblePanel>
-          </CardErrorBoundary>
-        </div>
+        <CardErrorBoundary>
+          <CollapsiblePanel
+            panelKey="quick-access"
+            icon={mdiLightbulbGroup}
+            title={t("quickToggle.title")}
+            headerActions={
+              globalEntity ? <AllOffButton entityId={globalEntity} /> : undefined
+            }
+          >
+            {dashConfig ? <QuickAccessPanel config={dashConfig} /> : null}
+          </CollapsiblePanel>
+        </CardErrorBoundary>
       )}
 
-      {/* Vacuum routines panel */}
+      {/* 2. Reinigungsroutinen (Cleaning Routines) */}
       {HA_CONFIGURED && dashConfig?.vacuum && (
         <CardErrorBoundary>
           <CollapsiblePanel
@@ -158,6 +135,20 @@ export function SmarthomePage() {
             forceExpanded={isVacuumRoutineActive}
           >
             <VacuumRoutinePanel />
+          </CollapsiblePanel>
+        </CardErrorBoundary>
+      )}
+
+      {/* 3. Staubsauger (Vacuum) */}
+      {HA_CONFIGURED && (
+        <CardErrorBoundary>
+          <CollapsiblePanel
+            panelKey="roborock"
+            icon={mdiRobotVacuum}
+            title={t("roborock.title")}
+            forceExpanded={isVacuumActive}
+          >
+            <RoborockQuickPanel />
           </CollapsiblePanel>
         </CardErrorBoundary>
       )}
@@ -194,6 +185,7 @@ export function SmarthomePage() {
                     panelKey={`room-${room.id}`}
                     icon={resolveDashboardIcon(room.icon)}
                     title={room.name}
+                    defaultCollapsed
                   >
                     <CompactRoomCard
                       room={room}

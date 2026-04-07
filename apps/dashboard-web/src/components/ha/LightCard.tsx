@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useLightGesture } from "@/hooks/useLightGesture";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface LightCardProps {
   entityId: `light.${string}`;
@@ -38,7 +38,10 @@ export function LightCard({ entityId }: LightCardProps) {
   const { data: dashConfig } = useDashboardConfig();
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const presets = dashConfig?.lightColorPresets ?? [];
+  const presets = useMemo(
+    () => dashConfig?.lightColorPresets ?? [],
+    [dashConfig?.lightColorPresets]
+  );
 
   const isUnavailable =
     !entity ||
@@ -56,19 +59,18 @@ export function LightCard({ entityId }: LightCardProps) {
   const [optimisticBrightness, setOptimisticBrightness] = useState<number | null>(null);
   const optimisticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clear optimistic value when HA confirms the brightness
+  const hasConfirmedOptimisticBrightness =
+    optimisticBrightness !== null &&
+    brightnessToPercent(brightness) === optimisticBrightness;
+
+  // Stop the optimistic timeout once HA confirms brightness.
   useEffect(() => {
-    if (
-      optimisticBrightness !== null &&
-      brightnessToPercent(brightness) === optimisticBrightness
-    ) {
-      setOptimisticBrightness(null);
-      if (optimisticTimer.current) {
-        clearTimeout(optimisticTimer.current);
-        optimisticTimer.current = null;
-      }
+    if (!hasConfirmedOptimisticBrightness) return;
+    if (optimisticTimer.current) {
+      clearTimeout(optimisticTimer.current);
+      optimisticTimer.current = null;
     }
-  }, [brightness, optimisticBrightness]);
+  }, [hasConfirmedOptimisticBrightness]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -153,14 +155,17 @@ export function LightCard({ entityId }: LightCardProps) {
   // -- Derived values -------------------------------------------------------
 
   const actualBrightness = brightnessToPercent(brightness);
+  const effectiveOptimisticBrightness = hasConfirmedOptimisticBrightness
+    ? null
+    : optimisticBrightness;
   const displayBrightness =
     dragBrightness !== null
       ? dragBrightness
-      : optimisticBrightness ?? actualBrightness;
+      : effectiveOptimisticBrightness ?? actualBrightness;
   const fillPercent =
     dragBrightness !== null
       ? displayBrightness
-      : optimisticBrightness ?? (isOn ? actualBrightness : 0);
+      : effectiveOptimisticBrightness ?? (isOn ? actualBrightness : 0);
   const lightColor = getLightCss(rgbColor, isOn ?? false);
 
   const showBrightness = direction === "vertical";
@@ -174,6 +179,9 @@ export function LightCard({ entityId }: LightCardProps) {
       style={{ height: CARD_HEIGHT, touchAction: "none" }}
       className={cn(
         "cursor-pointer select-none",
+        // Extra horizontal margin on mobile so users can scroll the page
+        // without accidentally triggering the brightness gesture
+        "mx-2 md:mx-0",
         isOn ? "border-amber-900/40" : "border-slate-700",
         isUnavailable && "opacity-50 pointer-events-none"
       )}

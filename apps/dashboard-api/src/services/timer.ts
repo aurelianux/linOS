@@ -28,14 +28,23 @@ const LIGHT_BRIGHTNESS = 255;
 const LAST_MINUTE_MS = 60_000;
 
 /**
- * Color progression for timer lights:
- *   - Before last 60s: solid green
- *   - Last 60s: green → yellow → red (compressed)
+ * Duration of the initial green "timer started" blink.
+ * Lights flash green once then turn off until the last minute.
+ */
+const START_INDICATOR_BLINK_MS = 1_000;
+
+/**
+ * Color progression for the last-minute light feedback:
+ *   - p = 1.0 → green [0,255,0]
+ *   - p = 0.5 → yellow [255,255,0]
+ *   - p = 0.0 → red [255,0,0]
  *   - If total duration < 60s, entire duration is the transition window
  */
 function progressToColor(remainingMs: number, durationMs: number): RGB {
   const transitionWindow = Math.min(LAST_MINUTE_MS, durationMs);
 
+  // Before the transition window the lights are off — this function
+  // should not be called in that phase, but guard defensively.
   if (remainingMs > transitionWindow) {
     return [0, 255, 0];
   }
@@ -69,6 +78,11 @@ export class TimerService {
   /** Light notification session IDs */
   private solidSessionId: string | null = null;
   private blinkSessionId: string | null = null;
+
+  /** Timeout for turning off the initial green indicator blink */
+  private startIndicatorTimeout: ReturnType<typeof setTimeout> | null = null;
+  /** Timeout for scheduling the last-minute solid session */
+  private lastMinuteTimeout: ReturnType<typeof setTimeout> | null = null;
 
   private lightNotification: LightNotificationService | null = null;
   private lightEntityIds: string[] = [];
@@ -126,12 +140,9 @@ export class TimerService {
       this.complete();
     }, input.durationMs);
 
-    // Start light updates if configured
+    // Light feedback: green blink once → off → last-minute solid transition → red blink on complete
     if (this.lightNotification && this.lightEntityIds.length > 0) {
-      this.startSolidSession();
-      this.lightUpdateInterval = setInterval(() => {
-        this.updateLightColor();
-      }, LIGHT_UPDATE_INTERVAL_MS);
+      this.startIndicatorBlink(input.durationMs);
     }
 
     this.notify();
@@ -168,7 +179,7 @@ export class TimerService {
 
     const label = this.state.label;
 
-    // Stop the solid color session
+    // Stop the solid color session (if running during last minute)
     this.stopSolidSession();
 
     // Enter alerting state — keep label and duration for frontend display
@@ -196,6 +207,14 @@ export class TimerService {
       clearInterval(this.lightUpdateInterval);
       this.lightUpdateInterval = null;
     }
+    if (this.startIndicatorTimeout) {
+      clearTimeout(this.startIndicatorTimeout);
+      this.startIndicatorTimeout = null;
+    }
+    if (this.lastMinuteTimeout) {
+      clearTimeout(this.lastMinuteTimeout);
+      this.lastMinuteTimeout = null;
+    }
   }
 
   private notify(): void {
@@ -212,11 +231,62 @@ export class TimerService {
 
   // ───────────────────────────────────────────────
   // Private: light notification integration
+  //
+  // New behavior:
+  //   1. Timer starts → brief green blink (1s) as confirmation, then lights off
+  //   2. Lights stay off until the last minute (or entire duration if < 60s)
+  //   3. Last minute → solid session with green→yellow→red color transition
+  //   4. Timer completes → red blink alert
   // ───────────────────────────────────────────────
 
-  private startSolidSession(): void {
+  /**
+   * Flash green once as a "timer started" indicator, then schedule
+   * the last-minute solid session.
+   */
+  private startIndicatorBlink(durationMs: number): void {
     if (!this.lightNotification || this.lightEntityIds.length === 0) return;
-    if (this.state.startedAt === null) return;
+
+    // Brief green blink — auto-expires after START_INDICATOR_BLINK_MS
+    this.solidSessionId = this.lightNotification.start({
+      entityIds: this.lightEntityIds,
+      pattern: "solid",
+      color: [0, 255, 0],
+      brightness: LIGHT_BRIGHTNESS,
+      durationMs: START_INDICATOR_BLINK_MS,
+    });
+
+    // After the blink expires, clear the session reference
+    this.startIndicatorTimeout = setTimeout(() => {
+      this.solidSessionId = null;
+      this.startIndicatorTimeout = null;
+    }, START_INDICATOR_BLINK_MS);
+
+    // Schedule the last-minute solid session
+    const transitionWindow = Math.min(LAST_MINUTE_MS, durationMs);
+    const delayUntilLastMinute = durationMs - transitionWindow;
+
+    if (delayUntilLastMinute <= START_INDICATOR_BLINK_MS) {
+      // Timer is shorter than or equal to transition window — start
+      // the solid session right after the indicator blink
+      this.lastMinuteTimeout = setTimeout(() => {
+        this.startLastMinuteSession();
+        this.lastMinuteTimeout = null;
+      }, START_INDICATOR_BLINK_MS);
+    } else {
+      this.lastMinuteTimeout = setTimeout(() => {
+        this.startLastMinuteSession();
+        this.lastMinuteTimeout = null;
+      }, delayUntilLastMinute);
+    }
+  }
+
+  /**
+   * Start the solid color session for the last minute of the timer.
+   * Updates the color every LIGHT_UPDATE_INTERVAL_MS.
+   */
+  private startLastMinuteSession(): void {
+    if (!this.lightNotification || this.lightEntityIds.length === 0) return;
+    if (!this.state.running || this.state.startedAt === null) return;
 
     const elapsed = Date.now() - this.state.startedAt;
     const remainingMs = Math.max(0, this.state.durationMs - elapsed);
@@ -228,6 +298,13 @@ export class TimerService {
       color,
       brightness: LIGHT_BRIGHTNESS,
     });
+
+    this.logger.info("Last-minute light feedback started");
+
+    // Periodically update the color as time runs out
+    this.lightUpdateInterval = setInterval(() => {
+      this.updateLightColor();
+    }, LIGHT_UPDATE_INTERVAL_MS);
   }
 
   private updateLightColor(): void {

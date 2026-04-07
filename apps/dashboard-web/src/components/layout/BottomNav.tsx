@@ -5,6 +5,7 @@ import type { TranslationKey } from "@/lib/i18n/translations";
 
 const navItems: Array<{ labelKey: TranslationKey; path: string }> = [
   { labelKey: "nav.dashboard", path: "/" },
+  { labelKey: "nav.timer", path: "/timer" },
   { labelKey: "nav.admin", path: "/admin" },
 ];
 

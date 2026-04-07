@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { mdiAlarm, mdiTimer } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
+import { HeaderBadge } from "@/components/layout/HeaderBadge";
 import { useTimerSocket } from "@/hooks/useTimerSocket";
 import { cn } from "@/lib/utils";
 
@@ -17,9 +19,12 @@ function formatTime(ms: number): string {
 /**
  * Compact timer badge for the header bar.
  * Shows countdown (MM:SS) when running, pulsing alert when alerting, hidden when idle.
+ * Clicking navigates to the timer page.
+ * Uses HeaderBadge for consistent styling with other header items.
  */
 export function TimerHeaderBadge() {
   const { state } = useTimerSocket();
+  const navigate = useNavigate();
   const [remainingMs, setRemainingMs] = useState(0);
   const rafRef = useRef<number | null>(null);
   const stateRef = useRef(state);
@@ -64,22 +69,27 @@ export function TimerHeaderBadge() {
         : "text-red-400";
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-1.5 border bg-slate-800 text-xs px-2 py-0.5 rounded",
-        isAlerting
-          ? "border-red-400/50 animate-pulse"
-          : "border-slate-700"
-      )}
+    <button
+      type="button"
+      onClick={() => navigate("/timer")}
+      className="contents"
+      aria-label="Go to timer"
     >
-      <Icon
-        path={isAlerting ? mdiAlarm : mdiTimer}
-        size={0.55}
-        className={textColor}
-      />
-      <span className={cn("font-semibold font-mono tabular-nums", textColor)}>
-        {isAlerting ? "00:00" : formatTime(remainingMs)}
-      </span>
-    </div>
+      <HeaderBadge
+        className={cn(
+          "cursor-pointer hover:bg-slate-700/60 transition-colors",
+          isAlerting && "animate-pulse"
+        )}
+      >
+        <Icon
+          path={isAlerting ? mdiAlarm : mdiTimer}
+          size={0.55}
+          className={textColor}
+        />
+        <span className={cn("font-semibold font-mono tabular-nums", textColor)}>
+          {isAlerting ? "00:00" : formatTime(remainingMs)}
+        </span>
+      </HeaderBadge>
+    </button>
   );
 }
