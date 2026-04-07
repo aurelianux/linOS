@@ -34,6 +34,7 @@ services:
       - ../../../config/dashboard.json:/app/config/dashboard.json:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - ../../../:/host-repo
+      - /home/linus/.ssh/linos_git_pull:/run/secrets/linos_git_pull_key:ro
     restart: unless-stopped
     networks:
       - dashboard-net
