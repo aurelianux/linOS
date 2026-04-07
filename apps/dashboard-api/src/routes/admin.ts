@@ -1,4 +1,5 @@
 import { execFile } from "child_process";
+import { access } from "fs/promises";
 import path from "path";
 import { promisify } from "util";
 import { Router, type Request, type Response } from "express";
@@ -9,6 +10,10 @@ import { dockerApiRequest, dockerApiRequestRaw, parseDockerLogs } from "./system
 const execFileAsync = promisify(execFile);
 
 const HOST_REPO_PATH = "/host-repo";
+const DEFAULT_LOCALE = "C";
+const GIT_COMMAND = "git";
+const SSH_MISSING_ERROR_FRAGMENT = "cannot run ssh";
+const SSH_CANDIDATE_PATHS = ["/usr/bin/ssh", "/bin/ssh"] as const;
 
 // ─── Response types ───────────────────────────────────────────────────────
 
@@ -43,11 +48,67 @@ interface GitStatusResult {
 // ─── Git helpers ──────────────────────────────────────────────────────────
 
 async function runGit(...args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync("git", ["-C", HOST_REPO_PATH, ...args], {
+  const { stdout } = await execFileAsync(GIT_COMMAND, ["-C", HOST_REPO_PATH, ...args], {
     timeout: 30_000,
-    env: { ...process.env, LC_ALL: "C" },
+    env: { ...process.env, LC_ALL: DEFAULT_LOCALE },
   });
   return stdout.trim();
+}
+
+async function resolveSshBinary(): Promise<string | null> {
+  for (const candidate of SSH_CANDIDATE_PATHS) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Continue checking fallback paths.
+    }
+  }
+  return null;
+}
+
+function buildGitEnv(extraEnv?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    LC_ALL: DEFAULT_LOCALE,
+    ...extraEnv,
+  };
+}
+
+async function runGitPullWithFallback(): Promise<GitPullResult> {
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      GIT_COMMAND,
+      ["-C", HOST_REPO_PATH, "pull"],
+      { timeout: 30_000, env: buildGitEnv() },
+    );
+    return { stdout: stdout.trim(), stderr: stderr.trim() };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const sshMissing = message.includes(SSH_MISSING_ERROR_FRAGMENT);
+    if (!sshMissing) throw err;
+
+    const sshBinaryPath = await resolveSshBinary();
+    if (!sshBinaryPath) {
+      throw new AppError(
+        "Git pull failed: SSH client is missing in the API runtime. Install openssh-client or mount an ssh binary into the container.",
+        500,
+        "GIT_PULL_FAILED",
+      );
+    }
+
+    const { stdout, stderr } = await execFileAsync(
+      GIT_COMMAND,
+      ["-C", HOST_REPO_PATH, "pull"],
+      {
+        timeout: 30_000,
+        env: buildGitEnv({
+          GIT_SSH_COMMAND: sshBinaryPath,
+        }),
+      },
+    );
+    return { stdout: stdout.trim(), stderr: stderr.trim() };
+  }
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────
@@ -170,18 +231,10 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
     "/admin/git-pull",
     async (_req: Request, res: Response): Promise<void> => {
       try {
-        const { stdout, stderr } = await execFileAsync(
-          "git",
-          ["-C", HOST_REPO_PATH, "pull"],
-          { timeout: 30_000, env: { ...process.env, LC_ALL: "C" } },
-        );
-
-        const data: GitPullResult = {
-          stdout: stdout.trim(),
-          stderr: stderr.trim(),
-        };
+        const data = await runGitPullWithFallback();
         res.json({ ok: true, data } satisfies ApiResponse<GitPullResult>);
       } catch (err: unknown) {
+        if (err instanceof AppError) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         throw new AppError(`Git pull failed: ${msg}`, 500, "GIT_PULL_FAILED");
       }
