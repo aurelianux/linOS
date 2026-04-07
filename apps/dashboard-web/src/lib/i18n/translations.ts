@@ -6,6 +6,7 @@ export const translations = {
     appVersion: "v0.1",
 
     "nav.dashboard": "Dashboard",
+    "nav.timer": "Uhr",
     "nav.admin": "Admin",
 
     "admin.subtitle": "Systemübersicht und Infrastrukturstatus.",
@@ -190,6 +191,7 @@ export const translations = {
     appVersion: "v0.1",
 
     "nav.dashboard": "Dashboard",
+    "nav.timer": "Timer",
     "nav.admin": "Admin",
 
     "admin.subtitle": "System overview and infrastructure status.",
