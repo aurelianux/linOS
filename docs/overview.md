@@ -33,6 +33,27 @@ linOS bundles multiple Docker stacks into a cohesive homelab and smart-home syst
 - Home Assistant Core with configuration in `stacks/homeassistant/config`.
 - Uses MQTT (Mosquitto) for sensors/actuators, Zigbee2MQTT for Zigbee devices, and integrations for LAN devices.
 
+### wyoming
+
+Self-hosted voice pipeline backend for the Home Assistant Voice PE device.
+
+- **wyoming-whisper** — speech-to-text via OpenAI Whisper (`base` model, German). Listens on TCP port 10300.
+- **wyoming-piper** — text-to-speech via Piper (`de_DE-thorsten-medium` voice). Listens on TCP port 10200.
+
+Both services use the Wyoming protocol and are reachable from Home Assistant at `localhost:10300` / `localhost:10200` (HA runs in `network_mode: host`). Model weights are persisted in named Docker volumes (`whisper-data`, `piper-data`) so they only download once.
+
+**Bring up:**
+```bash
+cd stacks/wyoming && docker compose up -d
+```
+On first start, Whisper downloads the `base` model (~145 MB) and Piper downloads the voice data (~60 MB). The healthcheck `start_period` is set to 120 s / 60 s respectively to allow for this.
+
+**Add to Home Assistant** (after both containers are healthy):
+1. Settings → Devices & Services → Add Integration → search **Wyoming Protocol**
+2. For Whisper (STT): host `localhost`, port `10300`
+3. For Piper (TTS): host `localhost`, port `10200`
+4. Assign the new STT/TTS providers in Settings → Voice Assistants → your pipeline.
+
 ### zigbee2mqtt
 
 - Connects the Zigbee coordinator (USB dongle).
@@ -56,6 +77,8 @@ Persistent data lives in:
 | Mosquitto | `stacks/infra/mosquitto/data/` |
 | AdGuard | `stacks/dns/work/` |
 | Caddy | `stacks/proxy/data/` (Docker volume `caddy_data`) |
+| Wyoming Whisper models | Docker volume `wyoming_whisper-data` |
+| Wyoming Piper voices | Docker volume `wyoming_piper-data` |
 
 These directories are not tracked in git and should be included in backups.
 
