@@ -544,6 +544,8 @@ One logical change per commit. No 500-line commits.
 | Zigbee2MQTT | `stacks/zigbee2mqtt` | 8082 | `z2m.manny.lan` |
 | Mosquitto MQTT | `stacks/infra` | 1883 (TCP) / 9001 (WS) | — (internal only) |
 | Node-RED | `stacks/infra` | 1880 | `flow.manny.lan` |
+| Wyoming Whisper (STT) | `stacks/wyoming` | 10300 (TCP) | — (internal only) |
+| Wyoming Piper (TTS) | `stacks/wyoming` | 10200 (TCP) | — (internal only) |
 | Service Index | `stacks/applications/service-index` | 8081 | `manny.lan` |
 | Dashboard Web | `stacks/applications/dashboard` | 4000 | `dashboard.manny.lan` |
 | Dashboard API | `stacks/applications/dashboard` | 4001 | `dashboard.manny.lan/api` |

@@ -68,6 +68,18 @@
       "category": "apps",
       "healthUrl": "http://<LINOS_HOST_IP>:8080",
       "stackPath": "stacks/applications/plane/plane-app"
+    },
+    {
+      "id": "wyoming-whisper",
+      "label": "Wyoming Whisper (STT)",
+      "category": "voice",
+      "stackPath": "stacks/wyoming"
+    },
+    {
+      "id": "wyoming-piper",
+      "label": "Wyoming Piper (TTS)",
+      "category": "voice",
+      "stackPath": "stacks/wyoming"
     }
   ]
 }
