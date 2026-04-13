@@ -156,6 +156,29 @@ export class VacuumRoutineService {
       return this.getState();
     }
 
+    return this.startRoutine(routine, delayMs);
+  }
+
+  /**
+   * Start a custom routine with ad-hoc steps (not from config).
+   * Used when the frontend builds or modifies segments interactively.
+   * @param steps The cleaning steps to execute
+   * @param delayMs Optional delay in milliseconds before starting
+   */
+  startCustom(steps: VacuumRoutineStep[], delayMs?: number): VacuumRoutineState {
+    const routine: VacuumRoutine = {
+      id: "custom",
+      label: "Custom",
+      steps,
+    };
+
+    return this.startRoutine(routine, delayMs);
+  }
+
+  /**
+   * Internal: start a routine (from config or custom).
+   */
+  private startRoutine(routine: VacuumRoutine, delayMs?: number): VacuumRoutineState {
     // Cancel existing routine if any
     this.cancel();
 
@@ -173,7 +196,7 @@ export class VacuumRoutineService {
 
     if (scheduledAt) {
       this.logger.info(
-        { routineId, delayMs },
+        { routineId: routine.id, delayMs },
         `Scheduled routine to start in ${delayMs}ms`
       );
       this.scheduledTimeout = setTimeout(() => {
@@ -184,7 +207,7 @@ export class VacuumRoutineService {
         this.executeCurrentStep();
       }, delayMs!);
     } else {
-      this.logger.info({ routineId }, "Starting routine immediately");
+      this.logger.info({ routineId: routine.id }, "Starting routine immediately");
       // Execute the first step asynchronously
       this.executeCurrentStep();
     }

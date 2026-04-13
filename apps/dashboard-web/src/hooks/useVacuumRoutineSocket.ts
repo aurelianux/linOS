@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchJson } from "@/lib/api/client";
-import type { VacuumRoutineState } from "@/lib/api/types";
+import type { VacuumRoutineState, VacuumRoutineStep } from "@/lib/api/types";
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
@@ -28,6 +28,7 @@ export interface UseVacuumRoutineSocket {
   state: VacuumRoutineState | null;
   connected: boolean;
   start: (routineId: string, delayMs?: number) => Promise<void>;
+  startCustom: (steps: VacuumRoutineStep[], delayMs?: number) => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   cancel: () => Promise<void>;
@@ -115,6 +116,15 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
     // State update comes via WebSocket
   }, []);
 
+  const startCustom = useCallback(async (steps: VacuumRoutineStep[], delayMs?: number) => {
+    await fetchJson<VacuumRoutineState>("/vacuum-routines/start-custom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ steps, delayMs }),
+    });
+    // State update comes via WebSocket
+  }, []);
+
   const pause = useCallback(async () => {
     await fetchJson<VacuumRoutineState>("/vacuum-routines/current/pause", {
       method: "POST",
@@ -136,5 +146,5 @@ export function useVacuumRoutineSocket(): UseVacuumRoutineSocket {
     // State update comes via WebSocket
   }, []);
 
-  return { state, connected, start, pause, resume, cancel };
+  return { state, connected, start, startCustom, pause, resume, cancel };
 }
