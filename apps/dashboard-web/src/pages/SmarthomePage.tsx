@@ -3,11 +3,7 @@ import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { CompactRoomCard } from "@/components/ha/CompactRoomCard";
 import { isLargeRoom } from "@/components/ha/roomHelpers";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
-import {
-  RoborockQuickPanel,
-} from "@/components/panels/RoborockQuickPanel";
-import { isVacuumActiveState } from "@/components/panels/roborockState";
-import { VacuumRoutinePanel } from "@/components/panels/VacuumRoutinePanel";
+import { VacuumPanel } from "@/components/panels/VacuumPanel";
 import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useVacuumRoutineSocket } from "@/hooks/useVacuumRoutineSocket";
@@ -96,10 +92,12 @@ export function SmarthomePage() {
     roborockEntityId ? (s.entities[roborockEntityId]?.state as string | undefined) : undefined
   );
 
-  const isVacuumActive = isVacuumActiveState(roborockState);
-  const isVacuumRoutineActive =
-    vacuumRoutineState?.executionState &&
-    vacuumRoutineState.executionState !== "idle";
+  const isVacuumActive =
+    roborockState === "cleaning" ||
+    roborockState === "paused" ||
+    roborockState === "returning" ||
+    (!!vacuumRoutineState?.executionState &&
+      vacuumRoutineState.executionState !== "idle");
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -124,31 +122,16 @@ export function SmarthomePage() {
         </CardErrorBoundary>
       )}
 
-      {/* 2. Reinigungsroutinen (Cleaning Routines) */}
-      {HA_CONFIGURED && dashConfig?.vacuum && (
-        <CardErrorBoundary>
-          <CollapsiblePanel
-            panelKey="vacuum-routines"
-            icon={mdiRobotVacuum}
-            title={t("vacuum.routines.title")}
-            defaultCollapsed
-            forceExpanded={isVacuumRoutineActive}
-          >
-            <VacuumRoutinePanel />
-          </CollapsiblePanel>
-        </CardErrorBoundary>
-      )}
-
-      {/* 3. Staubsauger (Vacuum) */}
+      {/* 2. Staubsauger (Vacuum) */}
       {HA_CONFIGURED && (
         <CardErrorBoundary>
           <CollapsiblePanel
-            panelKey="roborock"
+            panelKey="vacuum"
             icon={mdiRobotVacuum}
-            title={t("roborock.title")}
+            title={t("vacuum.title")}
             forceExpanded={isVacuumActive}
           >
-            <RoborockQuickPanel />
+            <VacuumPanel />
           </CollapsiblePanel>
         </CardErrorBoundary>
       )}
