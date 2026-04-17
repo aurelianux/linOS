@@ -84,9 +84,6 @@ function getAttr(
   return (entity.attributes as Record<string, unknown>)[key];
 }
 
-// `crypto.randomUUID()` is only defined in secure contexts (HTTPS/localhost).
-// The dashboard is served over plain HTTP on a LAN hostname, so we fall back
-// to `getRandomValues` (available everywhere) and finally `Math.random`.
 function makeSegmentId(): string {
   const cryptoObj: Crypto | undefined =
     typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
