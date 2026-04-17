@@ -69,5 +69,5 @@ Focus on small, composable components and predictable behavior.
 - <SECRET>
 - <TOKEN>
 - <DOMAIN>
-- Example user: linus
+- Example user: <your-user>
 - Example port: ${SERVICE_PORT:-0}
