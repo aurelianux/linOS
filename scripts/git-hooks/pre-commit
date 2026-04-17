@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Pre-commit guard: scan staged changes for secrets via gitleaks (Docker).
+# Install with: scripts/install-git-hooks.sh
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+exec "${REPO_ROOT}/scripts/secrets-scan.sh" --staged
