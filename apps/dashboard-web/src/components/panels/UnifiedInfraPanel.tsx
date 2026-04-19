@@ -27,14 +27,19 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { fetchJson } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils";
-import type {
-  ContainerInfo,
-  AdminStack,
-  ContainerRestartResult,
-  StackRestartResult,
-  GitPullResult,
-  GitStatus,
+import {
+  ApiErrorException,
+  type ContainerInfo,
+  type AdminStack,
+  type ContainerRestartResult,
+  type StackBuildStartResult,
+  type StackBuildStatus,
+  type GitPullResult,
+  type GitStatus,
 } from "@/lib/api/types";
+
+/** How often we poll /build-status while a build is running. */
+const BUILD_STATUS_POLL_MS = 2_000;
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -366,28 +371,72 @@ function DockerUnavailableNotice({
   );
 }
 
-// ─── Health Poller ────────────────────────────────────────────────────────
+// ─── Build Status Poller ──────────────────────────────────────────────────
 
-function useHealthPoller(active: boolean, onReconnect: () => void) {
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+/** A build launched on the host that we are currently tracking. */
+interface ActiveBuild {
+  buildId: string;
+  startedAt: string;
+}
+
+/**
+ * Polls /admin/stack/:project/build-status for every active build and fires
+ * `onResult` when the terminal state is reached (success | failed | stalled).
+ * Transient fetch failures are swallowed — this keeps the build observable
+ * across the api self-restart that happens when the `dashboard` stack itself
+ * is rebuilt.
+ *
+ * `onReachability(reachable)` fires for every poll cycle so the caller can
+ * surface a "Reconnecting…" overlay while the api is down mid-build.
+ */
+function useBuildStatusPoller(
+  activeBuilds: Record<string, ActiveBuild>,
+  onResult: (projectName: string, status: StackBuildStatus) => void,
+  onReachability: (reachable: boolean) => void,
+) {
+  // Latest callbacks via ref so the interval doesn't restart on each render.
+  const resultRef = useRef(onResult);
+  const reachRef = useRef(onReachability);
+  resultRef.current = onResult;
+  reachRef.current = onReachability;
 
   useEffect(() => {
-    if (!active) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+    const projects = Object.keys(activeBuilds);
+    if (projects.length === 0) {
+      reachRef.current(true);
       return;
     }
-    intervalRef.current = setInterval(async () => {
-      try {
-        await fetchJson<unknown>("/health");
-        onReconnect();
-      } catch {
-        // Still waiting
+
+    let cancelled = false;
+    const tick = async () => {
+      let anySucceeded = false;
+      for (const project of projects) {
+        const build = activeBuilds[project];
+        if (!build) continue;
+        try {
+          const status = await fetchJson<StackBuildStatus>(
+            `${API_ENDPOINTS.ADMIN_STACK_RESTART}/${project}/build-status?buildId=${encodeURIComponent(build.buildId)}`,
+          );
+          if (cancelled) return;
+          anySucceeded = true;
+          resultRef.current(project, status);
+        } catch {
+          // Keep polling — api may be mid-restart (dashboard stack rebuilds).
+        }
       }
-    }, 2000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (!cancelled) reachRef.current(anySucceeded);
     };
-  }, [active, onReconnect]);
+
+    // Kick once immediately so state updates don't wait a full interval.
+    void tick();
+    const id = setInterval(() => {
+      void tick();
+    }, BUILD_STATUS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [activeBuilds]);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -471,20 +520,13 @@ export function UnifiedInfraPanel() {
   // Container & stack restart states
   const [containerRestartStates, setContainerRestart] = useAutoResetState();
   const [stackRestartStates, setStackRestart] = useAutoResetState();
+  const [activeBuilds, setActiveBuilds] = useState<Record<string, ActiveBuild>>({});
   const [reconnecting, setReconnecting] = useState(false);
 
   // Git states
   const { data: gitStatus, loading: gitStatusLoading, refresh: refreshGitStatus } = useGitStatus();
   const [gitPullState, setGitPullState] = useState<ActionState>("idle");
   const [gitPullMessage, setGitPullMessage] = useState("");
-
-  // Health poller for dashboard self-restart
-  const handleReconnect = useCallback(() => {
-    setReconnecting(false);
-    setStackRestart("dashboard", "success");
-  }, [setStackRestart]);
-
-  useHealthPoller(reconnecting, handleReconnect);
 
   // Group containers
   const grouped = groupContainersByProject(containers, stacks);
@@ -506,23 +548,64 @@ export function UnifiedInfraPanel() {
     [setContainerRestart],
   );
 
-  // Stack restart handler (runs docker compose up --build -d)
+  // Called by the build-status poller when a terminal state is reached.
+  const handleBuildResult = useCallback(
+    (projectName: string, status: StackBuildStatus) => {
+      if (status.state === "success") {
+        setStackRestart(projectName, "success");
+        setActiveBuilds((prev) => {
+          if (!prev[projectName]) return prev;
+          const next = { ...prev };
+          delete next[projectName];
+          return next;
+        });
+        // New containers are up — refresh the list so state badges catch up.
+        refresh();
+      } else if (status.state === "failed" || status.state === "stalled") {
+        setStackRestart(projectName, "error");
+        setActiveBuilds((prev) => {
+          if (!prev[projectName]) return prev;
+          const next = { ...prev };
+          delete next[projectName];
+          return next;
+        });
+      }
+      // "running" | "unknown" → keep polling
+    },
+    [refresh, setStackRestart],
+  );
+
+  // Reachability callback — if a build is tracking the dashboard stack and
+  // the api is unreachable, show the "Reconnecting…" hint.
+  const handleReachability = useCallback((reachable: boolean) => {
+    setReconnecting(!reachable);
+  }, []);
+
+  useBuildStatusPoller(activeBuilds, handleBuildResult, handleReachability);
+
+  /**
+   * Stack restart handler — POSTs to /admin/stack/:project/restart.  The
+   * endpoint returns immediately after launching a detached build on the
+   * host; we then poll build-status until it resolves.
+   */
   const handleStackRestart = useCallback(
     async (projectName: string) => {
       setStackRestart(projectName, "loading");
       try {
-        const result = await fetchJson<StackRestartResult>(
+        const result = await fetchJson<StackBuildStartResult>(
           `${API_ENDPOINTS.ADMIN_STACK_RESTART}/${projectName}/restart`,
           { method: "POST" },
         );
-        if (result.failed.length > 0) {
+        setActiveBuilds((prev) => ({
+          ...prev,
+          [projectName]: { buildId: result.buildId, startedAt: result.startedAt },
+        }));
+      } catch (err) {
+        // 409 BUILD_ALREADY_RUNNING means the user's previous build is still
+        // in-flight.  We surface it the same as a generic error for now;
+        // future work: reattach to the live buildId via a latest-build lookup.
+        if (err instanceof ApiErrorException && err.code === "BUILD_ALREADY_RUNNING") {
           setStackRestart(projectName, "error");
-        } else {
-          setStackRestart(projectName, "success");
-        }
-      } catch {
-        if (projectName === "dashboard") {
-          setReconnecting(true);
           return;
         }
         setStackRestart(projectName, "error");

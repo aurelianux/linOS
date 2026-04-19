@@ -55,5 +55,7 @@ stacks/watch_*
 .env.linos
 stacks/**/.env
 
-# Runtime logs (written by smrestart / smstatus)
+# Runtime logs (written by smrestart / smstatus / stack build)
 logs/*.log
+# Per-stack build locks (held by flock during docker compose up --build -d)
+logs/.build-*.lock
