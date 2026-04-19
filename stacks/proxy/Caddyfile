@@ -50,6 +50,15 @@
 govee.{$LINOS_MAIN_DOMAIN} {
     reverse_proxy {$LINOS_HOST_IP}:8056
 }
- 
+
+# HA Voice Preview  Wyoming 
+{$LINOS_VOICE_HOST}:{$PROXY_HTTP_PORT} {
+	reverse_proxy 127.0.0.1:{$WHISPER_PORT}
+}
+
+
+{$LINOS_VOICE_HOST:{$PROXY_HTTP_PORT} {
+	reverse_proxy 127.0.0.1:{$PIPER_PORT}
+}
 
 

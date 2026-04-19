@@ -1,0 +1,14 @@
+services:
+  whisper:
+    image: rhasspy/wyoming-whisper:latest
+    command: --model base --language de
+    ports: ["10300:10300"]
+    volumes: ["./whisper-data:/data"]
+    restart: unless-stopped
+
+  piper:
+    image: rhasspy/wyoming-piper:latest
+    command: --voice de_DE-thorsten-medium
+    ports: ["10200:10200"]
+    volumes: ["./piper-data:/data"]
+    restart: unless-stopped
