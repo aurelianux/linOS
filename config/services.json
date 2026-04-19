@@ -80,6 +80,12 @@
       "label": "Wyoming Piper (TTS)",
       "category": "voice",
       "stackPath": "stacks/wyoming"
+    },
+    {
+      "id": "govee-mqtt",
+      "label": "Govee2MQTT",
+      "category": "smarthome",
+      "stackPath": "stacks/govee2mqtt"
     }
   ]
 }
