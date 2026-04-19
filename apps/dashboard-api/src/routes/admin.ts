@@ -4,6 +4,7 @@ import path from "path";
 import { promisify } from "util";
 import { Router, type Request, type Response } from "express";
 import { Client, type ConnectConfig } from "ssh2";
+import type pino from "pino";
 import { type DashboardConfig } from "../config/app-config.js";
 import { AppError, type ApiResponse } from "../middleware/errors.js";
 import { dockerApiRequest, dockerApiRequestRaw, parseDockerLogs } from "./system.js";
@@ -402,7 +403,7 @@ interface ParsedHeader {
 interface ParsedFooter {
   ok: boolean;
   exitCode: number | null;
-  finishedAt: string;
+  finishedAt: string | null;
 }
 
 function parseBuildHeader(line: string): ParsedHeader | null {
@@ -415,13 +416,18 @@ function parseBuildHeader(line: string): ParsedHeader | null {
   }
 }
 
-function parseBuildFooter(line: string): ParsedFooter | null {
+function parseBuildFooter(line: string, logger?: pino.Logger): ParsedFooter | null {
   if (line.startsWith(`${BUILD_OK_MARKER} `)) {
+    const payload = line.slice(BUILD_OK_MARKER.length + 1);
     try {
-      const data = JSON.parse(line.slice(BUILD_OK_MARKER.length + 1)) as { finishedAt: string };
+      const data = JSON.parse(payload) as { finishedAt: string };
       return { ok: true, exitCode: 0, finishedAt: data.finishedAt };
-    } catch {
-      return { ok: true, exitCode: 0, finishedAt: "" };
+    } catch (err) {
+      logger?.warn(
+        { marker: BUILD_OK_MARKER, payload, err },
+        "Build footer JSON parse failed — finishedAt will be null",
+      );
+      return { ok: true, exitCode: 0, finishedAt: null };
     }
   }
   if (line.startsWith(`${BUILD_FAIL_MARKER}:`)) {
@@ -429,13 +435,17 @@ function parseBuildFooter(line: string): ParsedFooter | null {
     const spaceIdx = rest.indexOf(" ");
     const codeStr = spaceIdx === -1 ? rest : rest.slice(0, spaceIdx);
     const code = Number.parseInt(codeStr, 10);
-    let finishedAt = "";
+    let finishedAt: string | null = null;
     if (spaceIdx !== -1) {
+      const payload = rest.slice(spaceIdx + 1);
       try {
-        const data = JSON.parse(rest.slice(spaceIdx + 1)) as { finishedAt: string };
+        const data = JSON.parse(payload) as { finishedAt: string };
         finishedAt = data.finishedAt;
-      } catch {
-        /* ignore */
+      } catch (err) {
+        logger?.warn(
+          { marker: BUILD_FAIL_MARKER, payload, err },
+          "Build footer JSON parse failed — finishedAt will be null",
+        );
       }
     }
     return { ok: false, exitCode: Number.isFinite(code) ? code : null, finishedAt };
@@ -453,7 +463,7 @@ function isSafeBuildId(buildId: string): boolean {
   return /^[0-9]+-[a-zA-Z0-9_-]+$/.test(buildId);
 }
 
-async function readBuildStatus(buildId: string): Promise<StackBuildStatusResult> {
+async function readBuildStatus(buildId: string, logger?: pino.Logger): Promise<StackBuildStatusResult> {
   const logPath = buildLogPathFor(buildId);
   let content: string;
   let lastModifiedMs: number;
@@ -473,7 +483,7 @@ async function readBuildStatus(buildId: string): Promise<StackBuildStatusResult>
   // Footer is always the last non-empty line that matches a sentinel.
   let footer: ParsedFooter | null = null;
   for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const f = parseBuildFooter(lines[i] ?? "");
+    const f = parseBuildFooter(lines[i] ?? "", logger);
     if (f) {
       footer = f;
       break;
@@ -493,7 +503,7 @@ async function readBuildStatus(buildId: string): Promise<StackBuildStatusResult>
   }
 
   const startedAt = header?.startedAt ?? null;
-  const finishedAt = footer?.finishedAt || null;
+  const finishedAt = footer?.finishedAt ?? null;
   let durationMs: number | null = null;
   if (startedAt && finishedAt) {
     const s = Date.parse(startedAt);
@@ -515,7 +525,7 @@ async function readBuildStatus(buildId: string): Promise<StackBuildStatusResult>
 
 // ─── Router ───────────────────────────────────────────────────────────────
 
-export function adminRouter(dashboardConfig: DashboardConfig): Router {
+export function adminRouter(dashboardConfig: DashboardConfig, logger?: pino.Logger): Router {
   const router = Router();
 
   const allowedProjects = new Set(
@@ -608,7 +618,7 @@ export function adminRouter(dashboardConfig: DashboardConfig): Router {
         );
       }
 
-      const data = await readBuildStatus(buildId);
+      const data = await readBuildStatus(buildId, logger);
       res.json({ ok: true, data } satisfies ApiResponse<StackBuildStatusResult>);
     },
   );

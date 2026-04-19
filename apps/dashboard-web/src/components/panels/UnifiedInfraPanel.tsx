@@ -227,6 +227,7 @@ function StackGroup({
   expanded,
   onToggle,
   stackRestartState,
+  stackMessage,
   containerStates,
   onStackRestart,
   onContainerRestart,
@@ -237,6 +238,7 @@ function StackGroup({
   expanded: boolean;
   onToggle: () => void;
   stackRestartState: ActionState;
+  stackMessage?: string;
   containerStates: Record<string, ActionState>;
   onStackRestart: () => void;
   onContainerRestart: (id: string) => void;
@@ -308,6 +310,20 @@ function StackGroup({
           </Button>
         </div>
       </div>
+
+      {/* Transient status message (e.g. BUILD_ALREADY_RUNNING) */}
+      {stackMessage && (
+        <p
+          role="status"
+          aria-live="polite"
+          className={cn(
+            "text-xs pl-6 pb-2",
+            stackRestartState === "error" ? "text-amber-400" : "text-slate-400",
+          )}
+        >
+          {stackMessage}
+        </p>
+      )}
 
       {/* Container rows */}
       {expanded && containers.length > 0 && (
@@ -388,30 +404,46 @@ interface ActiveBuild {
  *
  * `onReachability(reachable)` fires for every poll cycle so the caller can
  * surface a "Reconnecting…" overlay while the api is down mid-build.
+ *
+ * The interval is keyed on a primitive digest of the build set (project:buildId
+ * pairs, sorted). Identity-only changes to `activeBuilds` (e.g. `setActiveBuilds`
+ * rewriting the record on a peripheral render) don't tear down the interval,
+ * so a running tick can't lose its result to a cancel–restart race when a
+ * second build is added or removed mid-poll.
  */
 function useBuildStatusPoller(
   activeBuilds: Record<string, ActiveBuild>,
   onResult: (projectName: string, status: StackBuildStatus) => void,
   onReachability: (reachable: boolean) => void,
 ) {
-  // Latest callbacks via ref so the interval doesn't restart on each render.
+  // Latest callbacks + builds via ref so the interval doesn't restart on each
+  // render or on any identity change that doesn't alter the set of build IDs.
   const resultRef = useRef(onResult);
   const reachRef = useRef(onReachability);
+  const buildsRef = useRef(activeBuilds);
   resultRef.current = onResult;
   reachRef.current = onReachability;
+  buildsRef.current = activeBuilds;
+
+  const buildsKey = Object.entries(activeBuilds)
+    .map(([p, b]) => `${p}:${b.buildId}`)
+    .sort()
+    .join(",");
 
   useEffect(() => {
-    const projects = Object.keys(activeBuilds);
-    if (projects.length === 0) {
+    if (buildsKey === "") {
       reachRef.current(true);
       return;
     }
 
     let cancelled = false;
     const tick = async () => {
+      const builds = buildsRef.current;
+      const projects = Object.keys(builds);
+      if (projects.length === 0) return;
       let anySucceeded = false;
       for (const project of projects) {
-        const build = activeBuilds[project];
+        const build = builds[project];
         if (!build) continue;
         try {
           const status = await fetchJson<StackBuildStatus>(
@@ -436,7 +468,7 @@ function useBuildStatusPoller(
       cancelled = true;
       clearInterval(id);
     };
-  }, [activeBuilds]);
+  }, [buildsKey]);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -520,8 +552,23 @@ export function UnifiedInfraPanel() {
   // Container & stack restart states
   const [containerRestartStates, setContainerRestart] = useAutoResetState();
   const [stackRestartStates, setStackRestart] = useAutoResetState();
+  const [stackMessages, setStackMessages] = useState<Record<string, string>>({});
   const [activeBuilds, setActiveBuilds] = useState<Record<string, ActiveBuild>>({});
   const [reconnecting, setReconnecting] = useState(false);
+
+  const setStackMessage = useCallback((projectName: string, message: string) => {
+    setStackMessages((prev) => ({ ...prev, [projectName]: message }));
+    if (message) {
+      setTimeout(() => {
+        setStackMessages((prev) => {
+          if (prev[projectName] !== message) return prev;
+          const next = { ...prev };
+          delete next[projectName];
+          return next;
+        });
+      }, 4000);
+    }
+  }, []);
 
   // Git states
   const { data: gitStatus, loading: gitStatusLoading, refresh: refreshGitStatus } = useGitStatus();
@@ -559,8 +606,11 @@ export function UnifiedInfraPanel() {
           delete next[projectName];
           return next;
         });
-        // New containers are up — refresh the list so state badges catch up.
+        // `docker compose up -d` returns as soon as containers are created, not
+        // when they're healthy. Give healthchecks / startup a moment before we
+        // refresh the container list, otherwise badges read "starting".
         refresh();
+        setTimeout(() => { refresh(); }, 2500);
       } else if (status.state === "failed" || status.state === "stalled") {
         setStackRestart(projectName, "error");
         setActiveBuilds((prev) => {
@@ -591,6 +641,7 @@ export function UnifiedInfraPanel() {
   const handleStackRestart = useCallback(
     async (projectName: string) => {
       setStackRestart(projectName, "loading");
+      setStackMessage(projectName, "");
       try {
         const result = await fetchJson<StackBuildStartResult>(
           `${API_ENDPOINTS.ADMIN_STACK_RESTART}/${projectName}/restart`,
@@ -601,17 +652,19 @@ export function UnifiedInfraPanel() {
           [projectName]: { buildId: result.buildId, startedAt: result.startedAt },
         }));
       } catch (err) {
-        // 409 BUILD_ALREADY_RUNNING means the user's previous build is still
-        // in-flight.  We surface it the same as a generic error for now;
-        // future work: reattach to the live buildId via a latest-build lookup.
+        // 409 BUILD_ALREADY_RUNNING means a previous build is still in-flight.
+        // Surface it with a distinct user message so the user knows not to
+        // retry (future work: reattach to the live buildId via a latest-build
+        // lookup so the UI can jump into the running build's state).
         if (err instanceof ApiErrorException && err.code === "BUILD_ALREADY_RUNNING") {
           setStackRestart(projectName, "error");
+          setStackMessage(projectName, t("infra.buildAlreadyRunning"));
           return;
         }
         setStackRestart(projectName, "error");
       }
     },
-    [setStackRestart],
+    [setStackRestart, setStackMessage, t],
   );
 
   // Open live log viewer for a container
@@ -718,6 +771,7 @@ export function UnifiedInfraPanel() {
               expanded={expandedStacks.has(stack.projectName)}
               onToggle={() => toggleStack(stack.projectName)}
               stackRestartState={stackRestartStates[stack.projectName] ?? "idle"}
+              stackMessage={stackMessages[stack.projectName]}
               containerStates={containerRestartStates}
               onStackRestart={() => handleStackRestart(stack.projectName)}
               onContainerRestart={handleContainerRestart}
