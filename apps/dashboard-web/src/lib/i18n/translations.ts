@@ -57,6 +57,7 @@ export const translations = {
     "infra.building": "Baut…",
     "infra.buildSuccess": "Deployed",
     "infra.buildError": "Build fehlgeschlagen",
+    "infra.buildAlreadyRunning": "Build läuft bereits — bitte warten.",
 
     "serviceStatus.title": "Stack Status",
     "serviceStatus.refresh": "Aktualisieren",
@@ -248,6 +249,7 @@ export const translations = {
     "infra.building": "Building…",
     "infra.buildSuccess": "Deployed",
     "infra.buildError": "Build failed",
+    "infra.buildAlreadyRunning": "Build already running — please wait.",
 
     "serviceStatus.title": "Stack Status",
     "serviceStatus.refresh": "Refresh",
