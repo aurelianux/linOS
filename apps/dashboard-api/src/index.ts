@@ -4,6 +4,7 @@ import { createApp, finalize } from "./app.js";
 import { setupLightNotification, registerLightNotificationShutdown } from "./light-notification-setup.js";
 import { setupTimer } from "./timer-setup.js";
 import { setupVacuumRoutines } from "./vacuum-routine-setup.js";
+import { setupLightingMode } from "./lighting-mode-setup.js";
 import { createContainerLogsWebSocket } from "./ws/container-logs-ws.js";
 
 /**
@@ -60,6 +61,9 @@ async function main() {
 
   // Attach vacuum routine feature (REST routes + WebSocket)
   const vacuumWss = setupVacuumRoutines(app, server, logger, dashboardConfig);
+
+  // Attach lighting mode feature (REST routes only — no WebSocket)
+  setupLightingMode(app, logger);
 
   // Attach container logs WebSocket (live log streaming)
   const containerLogsWss = createContainerLogsWebSocket(server, logger);

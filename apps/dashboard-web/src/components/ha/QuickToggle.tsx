@@ -1,7 +1,10 @@
-import { useEntity } from "@hakit/core";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useOptimisticAction } from "@/hooks/useOptimisticAction";
+import { useLightingModes } from "@/hooks/useLightingModes";
+import { fetchJson } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import type { ModeState } from "@/lib/api/types";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
 const MODE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -11,41 +14,38 @@ const MODE_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 interface QuickToggleProps {
-  entityId: `input_select.${string}`;
+  scope: "all" | { room: string };
   label: string;
   modes?: string[];
 }
 
 export function QuickToggle({
-  entityId,
+  scope,
   label,
   modes = ["hell", "chill", "aus"],
 }: QuickToggleProps) {
-  const entity = useEntity(entityId, { returnNullIfNotFound: true });
   const { t } = useTranslation();
-  const {
-    optimisticValue: optimisticMode,
-    execute,
-  } = useOptimisticAction<string>();
+  const { data: modeState } = useLightingModes();
+  const { optimisticValue: optimisticMode, execute } = useOptimisticAction<string>();
 
-  const isUnavailable =
-    !entity ||
-    entity.state === "unavailable" ||
-    entity.state === "unknown";
-
-  const currentMode = optimisticMode ?? entity?.state ?? "";
+  const roomId = scope === "all" ? null : scope.room;
+  const serverMode = roomId !== null ? (modeState?.[roomId] ?? null) : null;
+  const currentMode = optimisticMode ?? serverMode ?? "";
 
   const handleModeSelect = (mode: string) => {
-    if (isUnavailable || !entity || currentMode === mode) return;
-    execute(mode, async () => {
-      await entity.service.selectOption({
-        serviceData: { option: mode },
-      });
-    });
+    if (currentMode === mode) return;
+    const path =
+      scope === "all"
+        ? `${API_ENDPOINTS.MODE}/${mode}`
+        : `${API_ENDPOINTS.MODE}/${mode}/${scope.room}`;
+
+    execute(mode, () =>
+      fetchJson<ModeState>(path, { method: "POST" }).then(() => undefined)
+    );
   };
 
   return (
-    <div className={cn("flex items-center gap-3", isUnavailable && "opacity-50")}>
+    <div className="flex items-center gap-3">
       <span className="text-xs font-medium text-slate-500 shrink-0 min-w-0 truncate">
         {label}
       </span>
@@ -59,12 +59,10 @@ export function QuickToggle({
             <button
               key={mode}
               type="button"
-              disabled={isUnavailable}
               onClick={() => handleModeSelect(mode)}
               className={cn(
                 "px-3 py-1 rounded-full text-xs font-medium",
                 "transition-all duration-200",
-                "disabled:cursor-not-allowed",
                 isActive && colors
                   ? cn(colors.bg, colors.text, "shadow-sm")
                   : "text-slate-400 hover:text-slate-200"
