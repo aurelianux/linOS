@@ -1,6 +1,5 @@
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
-import { useDashboardConfig } from "@/hooks/useDashboardConfig";
-import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
+import type { DashboardRoom } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getCardForDomain } from "./domainCards";
 import { QuickToggle } from "./QuickToggle";
@@ -8,7 +7,7 @@ import { getAirQualityEntityIds } from "./roomHelpers";
 
 interface CompactRoomCardProps {
   room: DashboardRoom;
-  quickToggleEntity?: `input_select.${string}`;
+  showQuickToggle?: boolean;
 }
 
 /**
@@ -17,17 +16,15 @@ interface CompactRoomCardProps {
  */
 export function CompactRoomCard({
   room,
-  quickToggleEntity,
+  showQuickToggle = false,
 }: CompactRoomCardProps) {
   const { t } = useTranslation();
-  const { data: config } = useDashboardConfig();
-  const quickToggles = config?.quickToggles as QuickToggleConfig | undefined;
 
   const airQualityIds = getAirQualityEntityIds(room);
   const filteredEntities = room.entities.filter(
     (id) => !airQualityIds.has(id)
   );
-  const hasContent = filteredEntities.length > 0 || !!quickToggleEntity;
+  const hasContent = filteredEntities.length > 0 || showQuickToggle;
 
   if (!hasContent) {
     return <p className="text-xs text-slate-500">{t("rooms.noEntities")}</p>;
@@ -36,12 +33,11 @@ export function CompactRoomCard({
   return (
     <div className="space-y-2">
       {/* Quick toggle for this room */}
-      {quickToggleEntity && (
-        <CardErrorBoundary entityId={quickToggleEntity}>
+      {showQuickToggle && (
+        <CardErrorBoundary entityId={room.id}>
           <QuickToggle
-            entityId={quickToggleEntity}
+            scope={{ room: room.id }}
             label={room.name}
-            modes={quickToggles?.modes}
           />
         </CardErrorBoundary>
       )}

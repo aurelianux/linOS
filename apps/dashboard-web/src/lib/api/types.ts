@@ -273,6 +273,12 @@ export interface GitStatus {
 }
 
 /**
+ * Current lighting mode per room.
+ * Returned by GET /api/mode. Values are "hell" | "chill" | "aus" | "unknown".
+ */
+export type ModeState = Record<string, string>;
+
+/**
  * API error class for typed error handling
  */
 export class ApiErrorException extends Error {

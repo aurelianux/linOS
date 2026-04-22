@@ -1,11 +1,13 @@
 import { Icon } from "@/components/ui/icon";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { useScrollSuppression } from "@/hooks/useScrollSuppression";
-import type { DashboardConfig, QuickToggleConfig } from "@/lib/api/types";
+import { useLightingModes } from "@/hooks/useLightingModes";
+import { fetchJson } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import type { DashboardConfig, ModeState, QuickToggleConfig } from "@/lib/api/types";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
-import { useHass } from "@hakit/core";
 import { mdiCheck } from "@mdi/js";
 import { useCallback, useMemo, useState } from "react";
 
@@ -27,9 +29,8 @@ interface QuickAccessPanelProps {
 
 export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const { t } = useTranslation();
-  const helpers = useHass((s) => s.helpers);
-  const entities = useHass((s) => s.entities);
   const suppressTaps = useScrollSuppression();
+  const { data: modeState } = useLightingModes();
 
   const [userSelectedRoomIds, setUserSelectedRoomIds] = useState<Set<string> | null>(null);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
@@ -38,20 +39,16 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const quickToggles = config.quickToggles as QuickToggleConfig | undefined;
   const rooms = config.rooms;
 
-  const roomToggleMap = useMemo(
-    () =>
-      quickToggles
-        ? new Map(quickToggles.rooms.map((r) => [r.roomId, r.entity]))
-        : new Map<string, `input_select.${string}`>(),
+  const toggleRoomIds = useMemo(
+    () => new Set(quickToggles?.rooms.map((r) => r.roomId) ?? []),
     [quickToggles]
   );
 
   const availableRooms = useMemo(
-    () => rooms.filter((r) => roomToggleMap.has(r.id)),
-    [rooms, roomToggleMap]
+    () => rooms.filter((r) => toggleRoomIds.has(r.id)),
+    [rooms, toggleRoomIds]
   );
 
-  // Derive effective selection: default to wohnzimmer until user interacts
   const defaultRoomIds = useMemo(() => {
     const hasWohnzimmer = availableRooms.some((r) => r.id === "wohnzimmer");
     return hasWohnzimmer ? new Set(["wohnzimmer"]) : new Set<string>();
@@ -60,10 +57,9 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const selectedRoomIds = userSelectedRoomIds ?? defaultRoomIds;
   const setSelectedRoomIds = setUserSelectedRoomIds;
 
-  // Read current mode from the first selected room's entity for display indicator
+  // Read current mode of first selected room from the backend state for the indicator
   const firstSelectedRoomId = Array.from(selectedRoomIds)[0];
-  const firstEntityId = firstSelectedRoomId ? roomToggleMap.get(firstSelectedRoomId) : undefined;
-  const currentEntityState = firstEntityId ? (entities[firstEntityId]?.state as string | undefined) : undefined;
+  const currentRoomMode = firstSelectedRoomId ? (modeState?.[firstSelectedRoomId] ?? undefined) : undefined;
 
   const modes = quickToggles?.modes ?? [];
   const allSelected = availableRooms.length > 0 && availableRooms.every((r) => selectedRoomIds.has(r.id));
@@ -90,10 +86,6 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
     setSelectedMode(null);
   };
 
-  const handleModeSelect = (mode: string) => {
-    setSelectedMode(mode);
-  };
-
   const buildSummary = (): string => {
     if (selectedRoomIds.size === 0) {
       return t("quickToggle.noSelection");
@@ -116,21 +108,18 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
 
     setExecutionState("executing");
 
-    const entityIds = Array.from(selectedRoomIds)
-      .map((roomId) => roomToggleMap.get(roomId))
-      .filter((e): e is `input_select.${string}` => !!e);
-
     try {
-      await Promise.all(
-        entityIds.map((entityId) =>
-          helpers.callService({
-            domain: "input_select",
-            service: "select_option",
-            serviceData: { option: selectedMode },
-            target: { entity_id: entityId },
-          })
-        )
-      );
+      if (allSelected) {
+        // All rooms selected — single backend call for efficiency
+        await fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/${selectedMode}`, { method: "POST" });
+      } else {
+        // Subset of rooms — one call per room in parallel
+        await Promise.all(
+          Array.from(selectedRoomIds).map((roomId) =>
+            fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/${selectedMode}/${roomId}`, { method: "POST" })
+          )
+        );
+      }
 
       setExecutionState("success");
       setTimeout(() => {
@@ -138,13 +127,12 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
         setSelectedMode(null);
       }, 1500);
     } catch (err: unknown) {
-      console.error("Failed to set quick access mode:", err);
+      console.error("Failed to apply lighting mode:", err);
       setExecutionState("error");
       setTimeout(() => setExecutionState("idle"), 2000);
     }
-  }, [selectedMode, selectedRoomIds, executionState, roomToggleMap, helpers]);
+  }, [selectedMode, selectedRoomIds, executionState, allSelected]);
 
-  // Build mode segment options from config
   const modeSegmentOptions = modes.map((mode) => {
     const opt = MODE_OPTIONS.find((m) => m.value === mode);
     return {
@@ -188,13 +176,13 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
         <div className="flex gap-2">
           {modeSegmentOptions.map((opt) => {
             const isActive = selectedMode === opt.value;
-            const isCurrent = currentEntityState === opt.value && selectedMode !== opt.value;
+            const isCurrent = currentRoomMode === opt.value && selectedMode !== opt.value;
             return (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => {
-                  if (!suppressTaps) handleModeSelect(opt.value);
+                  if (!suppressTaps) setSelectedMode(opt.value);
                 }}
                 className={cn(
                   "flex-1 py-3 rounded-lg text-sm font-semibold transition-all duration-200",
