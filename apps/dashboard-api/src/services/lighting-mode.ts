@@ -1,6 +1,6 @@
 import type pino from "pino";
 import { AppError } from "../middleware/errors.js";
-import type { ModesConfig } from "../config/modes.js";
+import type { LightEntityState, QuickToggleConfig } from "../config/app-config.js";
 
 const HA_CALL_TIMEOUT_MS = 5_000;
 
@@ -9,20 +9,37 @@ export type ModeState = Record<string, string>;
 
 export class LightingModeService {
   private currentModes: Record<string, string> = {};
+  private readonly validModes: string[];
+  private readonly validRooms: string[];
+  private readonly roomModeConfigs: Record<string, Record<string, Record<string, LightEntityState>>>;
 
   constructor(
     private readonly logger: pino.Logger,
     private readonly haUrl: string,
     private readonly haToken: string,
-    private readonly config: ModesConfig
-  ) {}
+    quickToggles: QuickToggleConfig | undefined
+  ) {
+    if (!quickToggles) {
+      this.validModes = [];
+      this.validRooms = [];
+      this.roomModeConfigs = {};
+      return;
+    }
+
+    this.validModes = quickToggles.modes;
+    this.validRooms = quickToggles.rooms.map((r) => r.roomId);
+    this.roomModeConfigs = Object.fromEntries(
+      quickToggles.rooms.map((r) => [r.roomId, r.modeConfig])
+    );
+  }
+
+  getValidModes(): string[] { return this.validModes; }
+  getValidRooms(): string[] { return this.validRooms; }
 
   getModeState(): ModeState {
-    const state: ModeState = {};
-    for (const roomId of Object.keys(this.config)) {
-      state[roomId] = this.currentModes[roomId] ?? "unknown";
-    }
-    return state;
+    return Object.fromEntries(
+      this.validRooms.map((roomId) => [roomId, this.currentModes[roomId] ?? "unknown"])
+    );
   }
 
   async applyMode(roomId: string, mode: string): Promise<void> {
@@ -34,13 +51,7 @@ export class LightingModeService {
       );
     }
 
-    const roomConfig = this.config[roomId];
-    if (!roomConfig) {
-      this.logger.warn({ roomId, mode }, "Room not found in modes config — skipping");
-      return;
-    }
-
-    const modeEntities = roomConfig[mode as keyof typeof roomConfig];
+    const modeEntities = this.roomModeConfigs[roomId]?.[mode];
     if (!modeEntities || Object.keys(modeEntities).length === 0) {
       this.logger.warn({ roomId, mode }, "No entities for mode — skipping");
       return;
@@ -51,19 +62,14 @@ export class LightingModeService {
     this.logger.info({ roomId, mode }, "Lighting mode applied");
   }
 
-  /**
-   * Apply the same mode to every room defined in the config.
-   * Rooms are applied sequentially so HA is not flooded.
-   */
+  /** Apply the same mode to every configured room sequentially to avoid flooding HA. */
   async applyModeAllRooms(mode: string): Promise<void> {
-    for (const roomId of Object.keys(this.config)) {
+    for (const roomId of this.validRooms) {
       await this.applyMode(roomId, mode);
     }
   }
 
-  private async callSceneApply(
-    entities: Record<string, { state: string; brightness?: number; color_temp?: number }>
-  ): Promise<void> {
+  private async callSceneApply(entities: Record<string, LightEntityState>): Promise<void> {
     const url = `${this.haUrl}/api/services/scene/apply`;
 
     const response = await fetch(url, {

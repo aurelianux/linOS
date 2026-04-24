@@ -2,7 +2,7 @@ import type { Express } from "express";
 import type pino from "pino";
 import { LightingModeService } from "./services/lighting-mode.js";
 import { lightingModeRouter } from "./routes/lighting-mode.js";
-import { MODES_CONFIG } from "./config/modes.js";
+import type { DashboardConfig } from "./config/app-config.js";
 import { loadLightNotificationEnv } from "./config/light-notification-env.js";
 
 /**
@@ -10,12 +10,17 @@ import { loadLightNotificationEnv } from "./config/light-notification-env.js";
  *
  * Call this after createApp() but before finalize().
  * HA credentials are shared with the light-notification service
- * (LINOS_HA_URL + LINOS_HA_TOKEN).
+ * (LINOS_HA_URL + LINOS_HA_TOKEN). Mode definitions come from
+ * dashboardConfig.quickToggles in dashboard.json.
  *
  * Routes are always mounted so the frontend receives proper error codes
  * even when HA is not configured (GET /mode works; POST returns 503).
  */
-export function setupLightingMode(app: Express, logger: pino.Logger): void {
+export function setupLightingMode(
+  app: Express,
+  logger: pino.Logger,
+  dashboardConfig: DashboardConfig
+): void {
   const modeLogger = logger.child({ feature: "lighting-mode" });
 
   const haEnv = loadLightNotificationEnv();
@@ -31,13 +36,17 @@ export function setupLightingMode(app: Express, logger: pino.Logger): void {
     modeLogger,
     haEnv.LINOS_HA_URL ?? "",
     haEnv.LINOS_HA_TOKEN ?? "",
-    MODES_CONFIG
+    dashboardConfig.quickToggles
   );
 
   app.use(lightingModeRouter(service));
 
   modeLogger.info(
-    { rooms: Object.keys(MODES_CONFIG), haConfigured: !!(haEnv.LINOS_HA_URL && haEnv.LINOS_HA_TOKEN) },
+    {
+      modes: service.getValidModes(),
+      rooms: service.getValidRooms(),
+      haConfigured: !!(haEnv.LINOS_HA_URL && haEnv.LINOS_HA_TOKEN),
+    },
     "Lighting mode feature initialized"
   );
 }
