@@ -66,13 +66,19 @@ export interface DashboardRoom {
   airQuality?: AirQualityConfig | undefined;
 }
 
+export interface LightEntityState {
+  state: "on" | "off";
+  brightness?: number | undefined;  // 0–255
+  color_temp?: number | undefined;  // mireds
+}
+
 export interface RoomQuickToggle {
   roomId: string;
-  entity: string;
+  /** Target light states per mode name. Keys are mode names (e.g. "hell"), values map entity ID → state. */
+  modeConfig: Record<string, Record<string, LightEntityState>>;
 }
 
 export interface QuickToggleConfig {
-  globalEntity: string;
   modes: string[];
   rooms: RoomQuickToggle[];
 }
@@ -148,13 +154,18 @@ const dashboardRoomSchema = z.object({
   airQuality: airQualitySchema.optional(),
 });
 
+const lightEntityStateSchema = z.object({
+  state: z.enum(["on", "off"]),
+  brightness: z.number().int().min(0).max(255).optional(),
+  color_temp: z.number().int().positive().optional(),
+});
+
 const roomQuickToggleSchema = z.object({
   roomId: z.string().min(1),
-  entity: z.string().min(1),
+  modeConfig: z.record(z.string(), z.record(z.string(), lightEntityStateSchema)),
 });
 
 const quickToggleConfigSchema = z.object({
-  globalEntity: z.string().min(1),
   modes: z.array(z.string().min(1)).min(1),
   rooms: z.array(roomQuickToggleSchema),
 });

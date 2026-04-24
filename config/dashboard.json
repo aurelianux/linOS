@@ -66,20 +66,62 @@
     }
   ],
   "lightColorPresets": [
-    { "id": "warmweiss", "label": "Warm", "displayColor": "#f5a623", "colorTemp": 370 },
-    { "id": "neutral", "label": "Neutral", "displayColor": "#f0e6d0", "colorTemp": 250 },
-    { "id": "kaltweiss", "label": "Cool", "displayColor": "#cce5ff", "colorTemp": 153 },
-    { "id": "orange", "label": "Orange", "displayColor": "#ff8c00", "hsColor": [30, 90] },
-    { "id": "blau", "label": "Blue", "displayColor": "#5b9bd5", "hsColor": [220, 60] }
+    { "id": "warmweiss", "label": "Warm",    "displayColor": "#f5a623", "colorTemp": 370 },
+    { "id": "neutral",   "label": "Neutral", "displayColor": "#f0e6d0", "colorTemp": 250 },
+    { "id": "kaltweiss", "label": "Cool",    "displayColor": "#cce5ff", "colorTemp": 153 },
+    { "id": "orange",    "label": "Orange",  "displayColor": "#ff8c00", "hsColor": [30, 90] },
+    { "id": "blau",      "label": "Blue",    "displayColor": "#5b9bd5", "hsColor": [220, 60] }
   ],
   "quickToggles": {
-    "globalEntity": "input_select.lighting_mode",
     "modes": ["hell", "chill", "aus"],
     "rooms": [
-      { "roomId": "wohnzimmer", "entity": "input_select.lighting_mode_wohnzimmer" },
-      { "roomId": "kueche", "entity": "input_select.lighting_mode_kueche" },
-      { "roomId": "schlafzimmer", "entity": "input_select.lighting_mode_schlafzimmer" },
-      { "roomId": "flur", "entity": "input_select.lighting_mode_flur" }
+      {
+        "roomId": "wohnzimmer",
+        "modeConfig": {
+          "hell": {
+            "light.bidschirm":      { "state": "on", "brightness": 255, "color_temp": 370 },
+            "light.links":          { "state": "on", "brightness": 255, "color_temp": 370 },
+            "light.rechts":         { "state": "on", "brightness": 255, "color_temp": 370 },
+            "light.notenschlussel": { "state": "on", "brightness": 255, "color_temp": 370 }
+          },
+          "chill": {
+            "light.bidschirm":      { "state": "on", "brightness": 70, "color_temp": 500 },
+            "light.links":          { "state": "on", "brightness": 70, "color_temp": 500 },
+            "light.rechts":         { "state": "off" },
+            "light.notenschlussel": { "state": "off" }
+          },
+          "aus": {
+            "light.bidschirm":      { "state": "off" },
+            "light.links":          { "state": "off" },
+            "light.rechts":         { "state": "off" },
+            "light.notenschlussel": { "state": "off" }
+          }
+        }
+      },
+      {
+        "roomId": "kueche",
+        "modeConfig": {
+          "hell":  { "light.kuche": { "state": "on",  "brightness": 255, "color_temp": 250 } },
+          "chill": { "light.kuche": { "state": "on",  "brightness": 80,  "color_temp": 370 } },
+          "aus":   { "light.kuche": { "state": "off" } }
+        }
+      },
+      {
+        "roomId": "schlafzimmer",
+        "modeConfig": {
+          "hell":  { "light.nachttisch": { "state": "on",  "brightness": 255, "color_temp": 370 } },
+          "chill": { "light.nachttisch": { "state": "on",  "brightness": 40,  "color_temp": 500 } },
+          "aus":   { "light.nachttisch": { "state": "off" } }
+        }
+      },
+      {
+        "roomId": "flur",
+        "modeConfig": {
+          "hell":  { "light.flur": { "state": "on",  "brightness": 255, "color_temp": 250 } },
+          "chill": { "light.flur": { "state": "on",  "brightness": 60,  "color_temp": 370 } },
+          "aus":   { "light.flur": { "state": "off" } }
+        }
+      }
     ]
   },
   "adminStacks": [
@@ -101,11 +143,11 @@
   "roborock": {
     "entityId": "vacuum.s7_max_ultra",
     "segments": [
-      { "id": 16, "roomId": "kueche", "defaultSelected": false },
-      { "id": 17, "roomId": "flur", "defaultSelected": true },
+      { "id": 16, "roomId": "kueche",       "defaultSelected": false },
+      { "id": 17, "roomId": "flur",         "defaultSelected": true  },
       { "id": 18, "roomId": "schlafzimmer", "defaultSelected": false },
-      { "id": 19, "roomId": "badezimmer", "defaultSelected": false },
-      { "id": 20, "roomId": "wohnzimmer", "defaultSelected": true }
+      { "id": 19, "roomId": "badezimmer",   "defaultSelected": false },
+      { "id": 20, "roomId": "wohnzimmer",   "defaultSelected": true  }
     ],
     "defaultFanPower": 103,
     "defaultWaterBoxMode": 203,

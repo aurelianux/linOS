@@ -63,7 +63,7 @@ async function main() {
   const vacuumWss = setupVacuumRoutines(app, server, logger, dashboardConfig);
 
   // Attach lighting mode feature (REST routes only — no WebSocket)
-  setupLightingMode(app, logger);
+  setupLightingMode(app, logger, dashboardConfig);
 
   // Attach container logs WebSocket (live log streaming)
   const containerLogsWss = createContainerLogsWebSocket(server, logger);
