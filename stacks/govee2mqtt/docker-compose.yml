@@ -1,0 +1,47 @@
+name: govee2mqtt
+
+services:
+  govee2mqtt:
+    image: ghcr.io/wez/govee2mqtt:latest
+    container_name: govee2mqtt
+    restart: unless-stopped
+
+    # Host-Networking ist Pflicht: Govee LAN-API nutzt UDP-Multicast
+    # (239.255.255.250) fürs Device-Discovery. Im Bridge-Netzwerk
+    # funktioniert das nicht zuverlässig.
+    network_mode: host
+
+    environment:
+      # --- MQTT (Mosquitto läuft auf Manny selbst via infra-Stack) ---
+      GOVEE_MQTT_HOST: ${LINOS_HOST_IP}
+      GOVEE_MQTT_PORT: 1883
+      GOVEE_MQTT_USER: ${MOSQUITTO_USER}
+      GOVEE_MQTT_PASSWORD: ${MOSQUITTO_PASSWORD}
+
+      # --- Govee-Credentials ---
+      # Email/Password: entsperrt AWS IoT (low-latency Push) + Room-Mapping
+      GOVEE_EMAIL: ${GOVEE_EMAIL}
+      GOVEE_PASSWORD: ${GOVEE_PASSWORD}
+      # API-Key: für Scenes, Music Modes, Segment-Colors
+      GOVEE_API_KEY: ${GOVEE_API_KEY}
+
+      # --- Lokalisierung ---
+      GOVEE_TEMPERATURE_SCALE: C
+      TZ: Europe/Berlin
+
+      # --- Logging ---
+      RUST_LOG_STYLE: always
+      # Bei Problemen: RUST_LOG=govee=trace
+      RUST_LOG: ${GOVEE2MQTT_LOG_LEVEL:-info}
+
+    volumes:
+      # Persistenz: Cache für Device-Infos, AWS-IoT-Certs etc.
+      - ./data:/data
+
+    healthcheck:
+      # Web-UI des Bridge auf Port 8056 (default). Wenn das steht, lebt der Service.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8056/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

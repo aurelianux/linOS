@@ -7,7 +7,9 @@ import { VacuumPanel } from "@/components/panels/VacuumPanel";
 import { Icon } from "@/components/ui/icon";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useVacuumRoutineSocket } from "@/hooks/useVacuumRoutineSocket";
-import type { DashboardRoom, QuickToggleConfig } from "@/lib/api/types";
+import { fetchJson } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import type { DashboardRoom, ModeState, QuickToggleConfig } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -16,13 +18,12 @@ import { useHass } from "@hakit/core";
 import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum } from "@mdi/js";
 import { useCallback, useState } from "react";
 
-function buildQuickToggleMap(
+/** Returns the set of room IDs that have a mode toggle configured. */
+function buildQuickToggleRooms(
   quickToggles: QuickToggleConfig | undefined
-): Map<string, `input_select.${string}`> {
-  if (!quickToggles) return new Map();
-  return new Map(
-    quickToggles.rooms.map((r) => [r.roomId, r.entity])
-  );
+): Set<string> {
+  if (!quickToggles) return new Set();
+  return new Set(quickToggles.rooms.map((r) => r.roomId));
 }
 
 function buildRoomLayout(rooms: DashboardRoom[]): Array<{
@@ -35,37 +36,28 @@ function buildRoomLayout(rooms: DashboardRoom[]): Array<{
   }));
 }
 
-/** Header action button: sets the global entity to "aus" (all lights off). */
-function AllOffButton({ entityId }: { entityId: `input_select.${string}` }) {
-  const helpers = useHass((s) => s.helpers);
-  const entityState = useHass((s) => s.entities[entityId]?.state as string | undefined);
+/** Header action button: applies "aus" (all lights off) to all rooms. */
+function AllOffButton() {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
 
-  const isUnavailable = !entityState || entityState === "unavailable" || entityState === "unknown";
-
   const handleAllOff = useCallback(async () => {
-    if (isUnavailable || busy) return;
+    if (busy) return;
     setBusy(true);
     try {
-      helpers.callService({
-        domain: "input_select",
-        service: "select_option",
-        serviceData: { option: "aus" },
-        target: { entity_id: entityId },
-      });
+      await fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/aus`, { method: "POST" });
     } catch (err: unknown) {
       console.error("Failed to set all off:", err);
     } finally {
       setBusy(false);
     }
-  }, [isUnavailable, busy, helpers, entityId]);
+  }, [busy]);
 
   return (
     <button
       type="button"
       onClick={handleAllOff}
-      disabled={busy || isUnavailable}
+      disabled={busy}
       title={t("quickToggle.allOff")}
       aria-label={t("quickToggle.allOff")}
       className={cn(
@@ -84,9 +76,8 @@ export function SmarthomePage() {
   const { data: dashConfig, loading, error } = useDashboardConfig();
   const { state: vacuumRoutineState } = useVacuumRoutineSocket();
   const rooms = dashConfig?.rooms ?? [];
-  const quickToggleMap = buildQuickToggleMap(dashConfig?.quickToggles);
+  const quickToggleRooms = buildQuickToggleRooms(dashConfig?.quickToggles);
   const roomLayout = buildRoomLayout(rooms);
-  const globalEntity = dashConfig?.quickToggles?.globalEntity;
   const roborockEntityId = dashConfig?.roborock?.entityId;
   const roborockState = useHass((s) =>
     roborockEntityId ? (s.entities[roborockEntityId]?.state as string | undefined) : undefined
@@ -113,9 +104,7 @@ export function SmarthomePage() {
             panelKey="quick-access"
             icon={mdiLightbulbGroup}
             title={t("quickToggle.title")}
-            headerActions={
-              globalEntity ? <AllOffButton entityId={globalEntity} /> : undefined
-            }
+            headerActions={dashConfig?.quickToggles ? <AllOffButton /> : undefined}
           >
             {dashConfig ? <QuickAccessPanel config={dashConfig} /> : null}
           </CollapsiblePanel>
@@ -172,7 +161,7 @@ export function SmarthomePage() {
                   >
                     <CompactRoomCard
                       room={room}
-                      quickToggleEntity={quickToggleMap.get(room.id)}
+                      showQuickToggle={quickToggleRooms.has(room.id)}
                     />
                   </CollapsiblePanel>
                 </CardErrorBoundary>

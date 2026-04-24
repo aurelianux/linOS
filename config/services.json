@@ -70,16 +70,22 @@
       "stackPath": "stacks/applications/plane/plane-app"
     },
     {
-      "id": "wyoming-whisper",
+      "id": "whisper",
       "label": "Wyoming Whisper (STT)",
       "category": "voice",
-      "stackPath": "stacks/wyoming"
+      "stackPath": "stacks/ha-voice"
     },
     {
-      "id": "wyoming-piper",
+      "id": "piper",
       "label": "Wyoming Piper (TTS)",
       "category": "voice",
-      "stackPath": "stacks/wyoming"
+      "stackPath": "stacks/ha-voice"
+    },
+    {
+      "id": "govee-mqtt",
+      "label": "Govee2MQTT",
+      "category": "smarthome",
+      "stackPath": "stacks/govee2mqtt"
     }
   ]
 }

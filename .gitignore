@@ -59,3 +59,6 @@ stacks/**/.env
 logs/*.log
 # Per-stack build locks (held by flock during docker compose up --build -d)
 logs/.build-*.lock
+
+#govee2mqtt
+stacks/govee2mqtt/data/
