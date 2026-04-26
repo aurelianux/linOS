@@ -88,13 +88,13 @@
             "light.bidschirm":      { "state": "on", "brightness": 30, "color_temp": 500 },
             "light.links":          { "state": "on", "brightness": 30, "color_temp": 500 },
             "light.rechts":         { "state": "on", "brightness": 30, "color_temp": 500 },
-            "light.notenschlussel": { "state": "on", "brightness": 70, "color_temp": 370 },
+            "light.notenschlussel": { "state": "on", "brightness": 70, "color_temp": 370 }
           },
           "dunkel": {
             "light.bidschirm":      { "state": "on", "brightness": 3, "color_temp": 500 },
             "light.links":          { "state": "off" },
             "light.rechts":         { "state": "on", "brightness": 3, "color_temp": 500 },
-            "light.notenschlussel": { "state": "off" },
+            "light.notenschlussel": { "state": "off" }
           },
           "aus": {
             "light.bidschirm":      { "state": "off" },
@@ -196,7 +196,7 @@
             "waterBoxMode": 203
           },
           {
-            "mode": "mop",
+            "mode": "vacuum_and_mop",
             "segments": ["flur", "kueche", "wohnzimmer", "schlafzimmer", "badezimmer"],
             "fanPower": 0,
             "waterBoxMode": 203
