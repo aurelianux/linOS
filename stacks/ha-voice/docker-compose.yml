@@ -1,14 +1,36 @@
+name: ha-voice
+
 services:
-  whisper:
-    image: rhasspy/wyoming-whisper:latest
-    command: --model base --language de
-    ports: ["10300:10300"]
-    volumes: ["./whisper-data:/data"]
+  faster-whisper:
+    image: lscr.io/linuxserver/faster-whisper:gpu
+    container_name: faster-whisper
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility, compute]
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-Europe/Berlin}
+      WHISPER_MODEL: medium
+      WHISPER_BEAM: 5
+      WHISPER_LANG: de
+    ports:
+      - "${WYOMING_WHISPER_PORT:-10300}:10300"
+    volumes:
+      - ./whisper-data:/config
     restart: unless-stopped
 
   piper:
     image: rhasspy/wyoming-piper:latest
+    container_name: wyoming-piper
     command: --voice de_DE-thorsten-medium
-    ports: ["10200:10200"]
-    volumes: ["./piper-data:/data"]
+    ports:
+      - "${WYOMING_PIPER_PORT:-10200}:10200"
+    volumes:
+      - ./piper-data:/data
     restart: unless-stopped
