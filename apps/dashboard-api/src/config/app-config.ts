@@ -286,6 +286,7 @@ export interface ServiceEntry {
   healthHost?: string | undefined;
   healthPort?: number | undefined;
   stackPath?: string | undefined;
+  host?: string | undefined;
 }
 
 export interface ServicesConfig {
@@ -301,6 +302,7 @@ const serviceEntrySchema = z.object({
   healthHost: z.string().optional(),
   healthPort: z.number().int().positive().optional(),
   stackPath: z.string().optional(),
+  host: z.string().optional(),
 });
 
 const servicesConfigSchema = z.object({

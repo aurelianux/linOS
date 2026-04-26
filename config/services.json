@@ -5,87 +5,100 @@
       "label": "Caddy Reverse Proxy",
       "category": "network",
       "healthUrl": "http://<LINOS_HOST_IP>:80",
-      "stackPath": "stacks/proxy"
+      "stackPath": "stacks/proxy",
+      "host": "manny"
     },
     {
       "id": "adguard",
       "label": "AdGuard Home",
       "category": "network",
       "healthUrl": "http://<LINOS_HOST_IP>:3000",
-      "stackPath": "stacks/dns"
+      "stackPath": "stacks/dns",
+      "host": "manny"
     },
     {
       "id": "homeassistant",
       "label": "Home Assistant",
       "category": "smarthome",
       "healthUrl": "http://<LINOS_HOST_IP>:8123",
-      "stackPath": "stacks/homeassistant"
+      "stackPath": "stacks/homeassistant",
+      "host": "manny"
     },
     {
       "id": "zigbee2mqtt",
       "label": "Zigbee2MQTT",
       "category": "smarthome",
       "healthUrl": "http://<LINOS_HOST_IP>:8082",
-      "stackPath": "stacks/zigbee2mqtt"
+      "stackPath": "stacks/zigbee2mqtt",
+      "host": "manny"
     },
     {
       "id": "mosquitto",
       "label": "Mosquitto MQTT",
       "category": "automation",
-      "stackPath": "stacks/infra"
+      "stackPath": "stacks/infra",
+      "host": "manny"
     },
     {
       "id": "nodered",
       "label": "Node-RED",
       "category": "automation",
       "healthUrl": "http://<LINOS_HOST_IP>:1880",
-      "stackPath": "stacks/infra"
+      "stackPath": "stacks/infra",
+      "host": "manny"
     },
     {
       "id": "service-index",
       "label": "Service Index",
       "category": "dashboard",
       "healthUrl": "http://<LINOS_HOST_IP>:8081",
-      "stackPath": "stacks/applications/service-index"
+      "stackPath": "stacks/applications/service-index",
+      "host": "manny"
     },
     {
       "id": "dashboard-web",
       "label": "Dashboard Web",
       "category": "dashboard",
       "healthUrl": "http://dashboard-dashboard-web-1:4000",
-      "stackPath": "stacks/applications/dashboard"
+      "stackPath": "stacks/applications/dashboard",
+      "host": "manny"
     },
     {
       "id": "dashboard-api",
       "label": "Dashboard API",
       "category": "dashboard",
       "healthUrl": "http://127.0.0.1:4001/health",
-      "stackPath": "stacks/applications/dashboard"
+      "stackPath": "stacks/applications/dashboard",
+      "host": "manny"
     },
     {
       "id": "plane",
       "label": "Plane App",
       "category": "apps",
       "healthUrl": "http://<LINOS_HOST_IP>:8080",
-      "stackPath": "stacks/applications/plane/plane-app"
+      "stackPath": "stacks/applications/plane/plane-app",
+      "host": "manny"
     },
     {
       "id": "whisper",
       "label": "Wyoming Whisper (STT)",
       "category": "voice",
-      "stackPath": "stacks/ha-voice"
+      "stackPath": "stacks/ha-voice",
+      "host": "manny"
     },
     {
       "id": "piper",
       "label": "Wyoming Piper (TTS)",
       "category": "voice",
-      "stackPath": "stacks/ha-voice"
+      "stackPath": "stacks/ha-voice",
+      "host": "manny"
     },
     {
       "id": "govee-mqtt",
       "label": "Govee2MQTT",
       "category": "smarthome",
-      "stackPath": "stacks/govee2mqtt"
+      "stackPath": "stacks/govee2mqtt",
+      "host": "manny"
     }
   ]
 }

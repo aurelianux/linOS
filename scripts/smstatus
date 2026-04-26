@@ -1,23 +1,116 @@
 #!/usr/bin/env bash
 # smstatus – Show the current status of all linOS Docker containers.
 #
+# Reads host assignments from config/services.json and runs docker ps
+# against each host's Docker context. Output is grouped by host.
+#
 # Usage:
-#   ./scripts/smstatus
+#   ./scripts/smstatus [--host <name>]
+#
+#   --host <name>   Only show containers for this host. If omitted,
+#                   all hosts defined in services.json are queried.
 #
 # Logs are written to logs/smstatus_<timestamp>.log.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CONFIG="$REPO_ROOT/config/services.json"
 LOGS_DIR="$REPO_ROOT/logs"
 TS=$(date +%Y%m%d_%H%M%S)
 LOGFILE="$LOGS_DIR/smstatus_${TS}.log"
+
+HOST_FILTER=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host)
+      if [[ -z "${2:-}" ]]; then
+        echo "ERROR: --host requires an argument" >&2
+        exit 1
+      fi
+      HOST_FILTER="$2"
+      shift 2
+      ;;
+    *)
+      echo "ERROR: Unknown argument: $1" >&2
+      echo "Usage: $0 [--host <name>]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 mkdir -p "$LOGS_DIR"
 
 _run() {
     echo "=== linOS Container Status @ $(date) ==="
-    docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || true
+    echo ""
+
+    python3 - "$CONFIG" "$HOST_FILTER" <<'PYEOF'
+import json, subprocess, sys
+
+def normalize_host(h):
+    return (h or "").strip() or "manny"
+
+def context_args(host):
+    """Return extra docker CLI args to target a non-default host context."""
+    if host == "manny":
+        return []
+    return ["--context", host]
+
+config_path = sys.argv[1]
+host_filter = sys.argv[2] if len(sys.argv) > 2 else ""
+
+with open(config_path) as f:
+    data = json.load(f)
+
+# Collect unique hosts in order of first appearance
+hosts_seen = []
+hosts_set = set()
+for s in data["services"]:
+    h = normalize_host(s.get("host", ""))
+    if h not in hosts_set:
+        hosts_seen.append(h)
+        hosts_set.add(h)
+
+# Apply --host filter
+if host_filter:
+    hosts_seen = [h for h in hosts_seen if h == host_filter]
+    if not hosts_seen:
+        print(f"No services found for host '{host_filter}'. Nothing to show.")
+        sys.exit(0)
+
+# Validate Docker contexts up front — fail before running anything
+needed_contexts = sorted(h for h in hosts_seen if h != "manny")
+missing = []
+for ctx in needed_contexts:
+    r = subprocess.run(["docker", "context", "inspect", ctx], capture_output=True)
+    if r.returncode != 0:
+        missing.append(ctx)
+if missing:
+    for ctx in missing:
+        print(f"ERROR: Docker context '{ctx}' not found.", file=sys.stderr)
+        print(
+            f"       Create it with:  "
+            f"docker context create {ctx} --docker \"host=ssh://user@<ip>\"",
+            file=sys.stderr,
+        )
+    sys.exit(1)
+
+for host in hosts_seen:
+    print(f"--- Host: {host} ---")
+    cmd = (
+        ["docker"]
+        + context_args(host)
+        + ["ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"]
+    )
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.stdout:
+        print(r.stdout, end="")
+    if r.returncode != 0 and r.stderr:
+        print(r.stderr, end="")
+    print()
+PYEOF
 }
 
 _run 2>&1 | tee "$LOGFILE"
