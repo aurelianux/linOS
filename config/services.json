@@ -94,6 +94,14 @@
       "host": "berta"
     },
     {
+      "id": "ollama",
+      "label": "Ollama LLM",
+      "category": "llm",
+      "healthUrl": "http://<LINOS_HOST_BERTA_IP>:<LLM_PORT>/api/tags",
+      "stackPath": "stacks/llm",
+      "host": "berta"
+    },
+    {
       "id": "govee-mqtt",
       "label": "Govee2MQTT",
       "category": "smarthome",
