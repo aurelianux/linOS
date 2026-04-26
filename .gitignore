@@ -14,6 +14,7 @@ stacks/homeassistant/config/backups/
 stacks/homeassistant/config/tts/
 stacks/homeassistant/config/deps/
 stacks/homeassistant/config/secrets.yaml
+stacks/homeassistant/config
 
 # Mosquitto runtime data
 stacks/infra/mosquitto/data/
