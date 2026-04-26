@@ -84,14 +84,14 @@
       "label": "Wyoming Whisper (STT)",
       "category": "voice",
       "stackPath": "stacks/ha-voice",
-      "host": "manny"
+      "host": "berta"
     },
     {
       "id": "piper",
       "label": "Wyoming Piper (TTS)",
       "category": "voice",
       "stackPath": "stacks/ha-voice",
-      "host": "manny"
+      "host": "berta"
     },
     {
       "id": "govee-mqtt",
