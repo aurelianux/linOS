@@ -73,7 +73,7 @@
     { "id": "blau",      "label": "Blue",    "displayColor": "#5b9bd5", "hsColor": [220, 60] }
   ],
   "quickToggles": {
-    "modes": ["hell", "chill", "aus"],
+    "modes": ["hell", "chill", "dunkel", "aus"],
     "rooms": [
       {
         "roomId": "wohnzimmer",

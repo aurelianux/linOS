@@ -1,3 +1,4 @@
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useOptimisticAction } from "@/hooks/useOptimisticAction";
@@ -6,11 +7,41 @@ import { fetchJson } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import type { ModeState } from "@/lib/api/types";
 import type { TranslationKey } from "@/lib/i18n/translations";
+import {
+  mdiBrightness7,
+  mdiBrightness4,
+  mdiWeatherNight,
+  mdiLightbulbOff,
+} from "@mdi/js";
 
-const MODE_COLORS: Record<string, { bg: string; text: string }> = {
-  hell: { bg: "bg-amber-400", text: "text-slate-950" },
-  chill: { bg: "bg-sky-400", text: "text-slate-950" },
-  aus: { bg: "bg-slate-600", text: "text-slate-100" },
+const MODE_CONFIG: Record<
+  string,
+  { labelKey: TranslationKey; icon: string; activeBg: string; activeText: string }
+> = {
+  hell: {
+    labelKey: "quickToggle.mode.hell",
+    icon: mdiBrightness7,
+    activeBg: "bg-amber-400",
+    activeText: "text-slate-950",
+  },
+  chill: {
+    labelKey: "quickToggle.mode.chill",
+    icon: mdiBrightness4,
+    activeBg: "bg-sky-400",
+    activeText: "text-slate-950",
+  },
+  dunkel: {
+    labelKey: "quickToggle.mode.dunkel",
+    icon: mdiWeatherNight,
+    activeBg: "bg-violet-400",
+    activeText: "text-slate-950",
+  },
+  aus: {
+    labelKey: "quickToggle.mode.aus",
+    icon: mdiLightbulbOff,
+    activeBg: "bg-slate-600",
+    activeText: "text-slate-100",
+  },
 };
 
 interface QuickToggleProps {
@@ -22,7 +53,7 @@ interface QuickToggleProps {
 export function QuickToggle({
   scope,
   label,
-  modes = ["hell", "chill", "aus"],
+  modes = ["hell", "chill", "dunkel", "aus"],
 }: QuickToggleProps) {
   const { t } = useTranslation();
   const { data: modeState } = useLightingModes();
@@ -52,23 +83,24 @@ export function QuickToggle({
       <div className="flex rounded-full bg-slate-800 p-0.5">
         {modes.map((mode) => {
           const isActive = currentMode === mode;
-          const colors = MODE_COLORS[mode];
-          const translationKey = `quickToggle.mode.${mode}` as TranslationKey;
+          const cfg = MODE_CONFIG[mode];
+          if (!cfg) return null;
 
           return (
             <button
               key={mode}
               type="button"
               onClick={() => handleModeSelect(mode)}
+              title={t(cfg.labelKey)}
               className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium",
+                "px-2.5 py-1 rounded-full",
                 "transition-all duration-200",
-                isActive && colors
-                  ? cn(colors.bg, colors.text, "shadow-sm")
+                isActive
+                  ? cn(cfg.activeBg, cfg.activeText, "shadow-sm")
                   : "text-slate-400 hover:text-slate-200"
               )}
             >
-              {t(translationKey)}
+              <Icon path={cfg.icon} size={0.7} />
             </button>
           );
         })}
