@@ -1,73 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, RefObject, MutableRefObject } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import {
+  type GestureDirection,
+  type UseLightGestureOptions,
+  type UseLightGestureResult,
+  HINT_DELAY_MS,
+  brightnessToPercent,
+  computeMoveOutcome,
+} from "./useLightGesture.helpers.js";
 
-export type GestureDirection = "none" | "vertical" | "left" | "right";
-
-const CARD_HEIGHT = 140;
-const DRAG_THRESHOLD = 8;
-const DIRECTION_LOCK_THRESHOLD = 12;
-const HINT_DELAY_MS = 150;
-
-function brightnessToPercent(b: number): number {
-  return Math.round((b / 255) * 100);
-}
-
-/** Find the dot index whose center is closest to clientX using actual DOM rects. */
-function findClosestDot(
-  clientX: number,
-  dots: (HTMLDivElement | null)[]
-): number {
-  let closest = 0;
-  let minDist = Infinity;
-  for (let i = 0; i < dots.length; i++) {
-    const dot = dots[i];
-    if (!dot) continue;
-    const rect = dot.getBoundingClientRect();
-    const center = rect.left + rect.width / 2;
-    const dist = Math.abs(clientX - center);
-    if (dist < minDist) {
-      minDist = dist;
-      closest = i;
-    }
-  }
-  return closest;
-}
-
-interface UseLightGestureOptions {
-  cardRef: RefObject<HTMLDivElement | null>;
-  isOn: boolean;
-  brightness: number;
-  isUnavailable: boolean;
-  presetCount: number;
-  onBrightnessCommit: (percent: number) => void;
-  onColorSelect?: (index: number) => void;
-  onTurnOff?: () => void;
-}
-
-interface UseLightGestureResult {
-  showHints: boolean;
-  direction: GestureDirection;
-  dragBrightness: number | null;
-  colorIndex: number | null;
-  dotRefs: MutableRefObject<(HTMLDivElement | null)[]>;
-  handlers: {
-    onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
-    onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void;
-    onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => void;
-    onPointerCancel: (e: ReactPointerEvent<HTMLDivElement>) => void;
-    onLostPointerCapture: (e: ReactPointerEvent<HTMLDivElement>) => void;
-  };
-}
+export type { GestureDirection };
 
 export function useLightGesture({
-  cardRef,
-  isOn,
-  brightness,
-  isUnavailable,
-  presetCount,
-  onBrightnessCommit,
-  onColorSelect,
-  onTurnOff,
+  cardRef, isOn, brightness, isUnavailable, presetCount,
+  onBrightnessCommit, onColorSelect, onTurnOff,
 }: UseLightGestureOptions): UseLightGestureResult {
   const [showHints, setShowHints] = useState(false);
   const [direction, setDirection] = useState<GestureDirection>("none");
@@ -75,7 +21,6 @@ export function useLightGesture({
   const [colorIndex, setColorIndex] = useState<number | null>(null);
 
   const dotRefs = useRef<(HTMLDivElement | null)[]>([]);
-
   const activePointerId = useRef<number | null>(null);
   const startY = useRef(0);
   const startX = useRef(0);
@@ -90,184 +35,82 @@ export function useLightGesture({
     setColorIndex(null);
     directionLocked.current = "none";
     activePointerId.current = null;
-    if (hintTimer.current) {
-      clearTimeout(hintTimer.current);
-      hintTimer.current = null;
-    }
+    if (hintTimer.current) { clearTimeout(hintTimer.current); hintTimer.current = null; }
   }, []);
 
-  // Escape key cancels gesture
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && activePointerId.current !== null) {
-        const el = cardRef.current;
-        if (el && activePointerId.current !== null) {
-          el.releasePointerCapture(activePointerId.current);
-        }
+        cardRef.current?.releasePointerCapture(activePointerId.current);
         resetGesture();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [resetGesture, cardRef]);
-
-  // Cleanup on unmount
-  useEffect(() => {
     return () => {
+      window.removeEventListener("keydown", handleKeyDown);
       if (hintTimer.current) clearTimeout(hintTimer.current);
     };
-  }, []);
+  }, [resetGesture, cardRef]);
 
-  const onPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (isUnavailable) return;
-      e.preventDefault();
+  const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (isUnavailable) return;
+    e.preventDefault();
+    cardRef.current?.setPointerCapture(e.pointerId);
+    activePointerId.current = e.pointerId;
+    startY.current = e.clientY;
+    startX.current = e.clientX;
+    startBrightness.current = isOn ? brightnessToPercent(brightness) : 0;
+    directionLocked.current = "none";
+    setDirection("none"); setDragBrightness(null); setColorIndex(null); setShowHints(false);
+    hintTimer.current = setTimeout(() => { setShowHints(true); hintTimer.current = null; }, HINT_DELAY_MS);
+  }, [isUnavailable, brightness, isOn, cardRef]);
 
-      const el = cardRef.current;
-      if (el) el.setPointerCapture(e.pointerId);
+  const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (activePointerId.current === null || e.pointerId !== activePointerId.current) return;
+    if (e.pointerType === "mouse" && e.buttons === 0) return;
+    if (isUnavailable) return;
 
-      activePointerId.current = e.pointerId;
-      startY.current = e.clientY;
-      startX.current = e.clientX;
-      startBrightness.current = isOn ? brightnessToPercent(brightness) : 0;
-      directionLocked.current = "none";
+    const dy = startY.current - e.clientY;
+    const dx = e.clientX - startX.current;
+    const outcome = computeMoveOutcome(
+      dy, dx, directionLocked.current, presetCount, isOn,
+      startBrightness.current, e.clientX, dotRefs.current
+    );
 
-      setDirection("none");
-      setDragBrightness(null);
-      setColorIndex(null);
+    if (outcome.kind === "lock") {
+      if (hintTimer.current) { clearTimeout(hintTimer.current); hintTimer.current = null; }
       setShowHints(false);
+      directionLocked.current = outcome.direction;
+      setDirection(outcome.direction);
+      if (outcome.initialColorIndex !== null) setColorIndex(outcome.initialColorIndex);
+    } else if (outcome.kind === "brightness") {
+      setDragBrightness(outcome.value);
+    } else if (outcome.kind === "color") {
+      setColorIndex(outcome.index);
+    }
+  }, [isUnavailable, isOn, presetCount]);
 
-      // Delayed hint display — quick taps produce zero visual change
-      hintTimer.current = setTimeout(() => {
-        setShowHints(true);
-        hintTimer.current = null;
-      }, HINT_DELAY_MS);
-    },
-    [isUnavailable, brightness, isOn, cardRef]
-  );
+  const onPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (activePointerId.current === null) return;
+    const dir = directionLocked.current;
+    const currentDragBrightness = dragBrightness;
+    const currentColorIndex = colorIndex;
+    cardRef.current?.releasePointerCapture(e.pointerId);
+    if (dir === "vertical" && currentDragBrightness !== null) onBrightnessCommit(currentDragBrightness);
+    else if (dir === "left" && currentColorIndex !== null) onColorSelect?.(currentColorIndex);
+    else if (dir === "right") onTurnOff?.();
+    resetGesture();
+  }, [cardRef, dragBrightness, colorIndex, onBrightnessCommit, onColorSelect, onTurnOff, resetGesture]);
 
-  const onPointerMove = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      // Bug fix: ignore hover (no active press) and wrong pointer
-      if (activePointerId.current === null) return;
-      if (e.pointerId !== activePointerId.current) return;
-      if (e.pointerType === "mouse" && e.buttons === 0) return;
-      if (isUnavailable) return;
+  const onPointerCancel = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    cardRef.current?.releasePointerCapture(e.pointerId);
+    resetGesture();
+  }, [cardRef, resetGesture]);
 
-      const dy = startY.current - e.clientY;
-      const dx = e.clientX - startX.current;
-      const absDy = Math.abs(dy);
-      const absDx = Math.abs(dx);
-
-      // Phase 1: Detect and lock direction
-      if (directionLocked.current === "none") {
-        const dist = Math.sqrt(dy * dy + dx * dx);
-        if (dist < DRAG_THRESHOLD) return;
-
-        if (dist >= DIRECTION_LOCK_THRESHOLD) {
-          // Cancel hint timer — direction is now known
-          if (hintTimer.current) {
-            clearTimeout(hintTimer.current);
-            hintTimer.current = null;
-          }
-          setShowHints(false);
-
-          if (absDy > absDx) {
-            directionLocked.current = "vertical";
-          } else if (dx < -DIRECTION_LOCK_THRESHOLD && presetCount > 0) {
-            directionLocked.current = "left";
-          } else if (dx > DIRECTION_LOCK_THRESHOLD && isOn) {
-            directionLocked.current = "right";
-          }
-          setDirection(directionLocked.current);
-
-          // Bug fix: compute initial colorIndex when locking to "left"
-          if (directionLocked.current === "left") {
-            const dots = dotRefs.current;
-            // Dots may not be mounted yet on this frame — will be set on next move
-            if (dots.length > 0 && dots[0]) {
-              setColorIndex(findClosestDot(e.clientX, dots));
-            }
-          }
-        }
-        return;
-      }
-
-      // Phase 2: Active drag in locked direction
-      if (directionLocked.current === "vertical") {
-        const sensitivity = CARD_HEIGHT;
-        const delta = (dy / sensitivity) * 100;
-        const newPercent = Math.max(1, Math.min(100, startBrightness.current + delta));
-        const rounded = Math.round(newPercent);
-        setDragBrightness(rounded);
-      } else if (directionLocked.current === "left") {
-        const dots = dotRefs.current;
-        if (dots.length > 0 && dots[0]) {
-          setColorIndex(findClosestDot(e.clientX, dots));
-        }
-      }
-      // "right": no continuous tracking needed
-    },
-    [isUnavailable, isOn, presetCount]
-  );
-
-  const onPointerUp = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (activePointerId.current === null) return;
-
-      // Read refs BEFORE releasing capture — releasePointerCapture may
-      // synchronously fire lostpointercapture → resetGesture → clear refs
-      const dir = directionLocked.current;
-      const currentDragBrightness = dragBrightness;
-      const currentColorIndex = colorIndex;
-
-      const el = cardRef.current;
-      if (el) el.releasePointerCapture(e.pointerId);
-
-      if (dir === "vertical" && currentDragBrightness !== null) {
-        onBrightnessCommit(currentDragBrightness);
-      } else if (dir === "left" && currentColorIndex !== null) {
-        onColorSelect?.(currentColorIndex);
-      } else if (dir === "right") {
-        onTurnOff?.();
-      }
-      // dir === "none" (tap): do nothing
-
-      resetGesture();
-    },
-    [cardRef, dragBrightness, colorIndex, onBrightnessCommit, onColorSelect, onTurnOff, resetGesture]
-  );
-
-  const onPointerCancel = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      const el = cardRef.current;
-      if (el && activePointerId.current !== null) {
-        el.releasePointerCapture(e.pointerId);
-      }
-      resetGesture();
-    },
-    [cardRef, resetGesture]
-  );
-
-  const onLostPointerCapture = useCallback(
-    () => {
-      resetGesture();
-    },
-    [resetGesture]
-  );
+  const onLostPointerCapture = useCallback(() => { resetGesture(); }, [resetGesture]);
 
   return {
-    showHints,
-    direction,
-    dragBrightness,
-    colorIndex,
-    dotRefs,
-    handlers: {
-      onPointerDown,
-      onPointerMove,
-      onPointerUp,
-      onPointerCancel,
-      onLostPointerCapture,
-    },
+    showHints, direction, dragBrightness, colorIndex, dotRefs,
+    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture },
   };
 }
