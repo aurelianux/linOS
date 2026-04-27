@@ -44,6 +44,10 @@ const MODE_CONFIG: Record<
   },
 };
 
+const LONG_PRESS_DURATION_MS = 600;
+const SUCCESS_DISPLAY_DURATION_MS = 1200;
+const ERROR_DISPLAY_DURATION_MS = 1500;
+
 type ButtonState = "idle" | "executing" | "success" | "error";
 
 interface QuickAccessPanelProps {
@@ -118,11 +122,11 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
           );
         }
         setButtonStates((prev) => ({ ...prev, [mode]: "success" }));
-        setTimeout(() => setButtonStates((prev) => ({ ...prev, [mode]: "idle" })), 1200);
+        setTimeout(() => setButtonStates((prev) => ({ ...prev, [mode]: "idle" })), SUCCESS_DISPLAY_DURATION_MS);
       } catch (err: unknown) {
         console.error("Failed to apply lighting mode:", err);
         setButtonStates((prev) => ({ ...prev, [mode]: "error" }));
-        setTimeout(() => setButtonStates((prev) => ({ ...prev, [mode]: "idle" })), 1500);
+        setTimeout(() => setButtonStates((prev) => ({ ...prev, [mode]: "idle" })), ERROR_DISPLAY_DURATION_MS);
       }
     },
     [selectedRoomIds, allSelected]
@@ -134,7 +138,7 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
       longPressTimerRef.current = setTimeout(() => {
         longPressTriggeredRef.current = true;
         void applyMode(mode);
-      }, 600);
+      }, LONG_PRESS_DURATION_MS);
     },
     [applyMode]
   );
