@@ -1,75 +1,17 @@
 import { CardErrorBoundary } from "@/components/common/CardErrorBoundary";
 import { CollapsiblePanel } from "@/components/common/CollapsiblePanel";
 import { CompactRoomCard } from "@/components/ha/CompactRoomCard";
-import { isLargeRoom } from "@/components/ha/roomHelpers";
 import { QuickAccessPanel } from "@/components/ha/QuickAccessPanel";
 import { VacuumPanel } from "@/components/panels/VacuumPanel";
-import { Icon } from "@/components/ui/icon";
+import { AllOffButton, buildQuickToggleRooms, buildRoomLayout } from "@/components/panels/SmarthomePage.helpers";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useVacuumRoutineSocket } from "@/hooks/useVacuumRoutineSocket";
-import { fetchJson } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import type { DashboardRoom, ModeState, QuickToggleConfig } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { useHass } from "@hakit/core";
-import { mdiLightbulbGroup, mdiLightbulbOff, mdiRobotVacuum } from "@mdi/js";
-import { useCallback, useState } from "react";
-
-/** Returns the set of room IDs that have a mode toggle configured. */
-function buildQuickToggleRooms(
-  quickToggles: QuickToggleConfig | undefined
-): Set<string> {
-  if (!quickToggles) return new Set();
-  return new Set(quickToggles.rooms.map((r) => r.roomId));
-}
-
-function buildRoomLayout(rooms: DashboardRoom[]): Array<{
-  room: DashboardRoom;
-  spanFull: boolean;
-}> {
-  return rooms.map((room) => ({
-    room,
-    spanFull: isLargeRoom(room),
-  }));
-}
-
-/** Header action button: applies "aus" (all lights off) to all rooms. */
-function AllOffButton() {
-  const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
-
-  const handleAllOff = useCallback(async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/aus`, { method: "POST" });
-    } catch (err: unknown) {
-      console.error("Failed to set all off:", err);
-    } finally {
-      setBusy(false);
-    }
-  }, [busy]);
-
-  return (
-    <button
-      type="button"
-      onClick={handleAllOff}
-      disabled={busy}
-      title={t("quickToggle.allOff")}
-      aria-label={t("quickToggle.allOff")}
-      className={cn(
-        "p-1 rounded transition-colors",
-        "text-slate-400 hover:text-red-400 hover:bg-slate-800",
-        "disabled:opacity-50 disabled:cursor-not-allowed"
-      )}
-    >
-      <Icon path={mdiLightbulbOff} size={0.75} />
-    </button>
-  );
-}
+import { mdiLightbulbGroup, mdiRobotVacuum } from "@mdi/js";
 
 export function SmarthomePage() {
   const { t } = useTranslation();
@@ -84,48 +26,29 @@ export function SmarthomePage() {
   );
 
   const isVacuumActive =
-    roborockState === "cleaning" ||
-    roborockState === "paused" ||
-    roborockState === "returning" ||
-    (!!vacuumRoutineState?.executionState &&
-      vacuumRoutineState.executionState !== "idle");
+    roborockState === "cleaning" || roborockState === "paused" || roborockState === "returning" ||
+    (!!vacuumRoutineState?.executionState && vacuumRoutineState.executionState !== "idle");
 
   return (
     <div className="p-4 md:p-6 space-y-5">
-      {/* Page header */}
-      <h2 className="text-2xl font-bold text-slate-100">
-        {t("nav.dashboard")}
-      </h2>
+      <h2 className="text-2xl font-bold text-slate-100">{t("nav.dashboard")}</h2>
 
-      {/* 1. Schnellzugriff (Quick Access) */}
       {HA_CONFIGURED && (
         <CardErrorBoundary>
-          <CollapsiblePanel
-            panelKey="quick-access"
-            icon={mdiLightbulbGroup}
-            title={t("quickToggle.title")}
-            headerActions={dashConfig?.quickToggles ? <AllOffButton /> : undefined}
-          >
+          <CollapsiblePanel panelKey="quick-access" icon={mdiLightbulbGroup} title={t("quickToggle.title")} headerActions={dashConfig?.quickToggles ? <AllOffButton /> : undefined}>
             {dashConfig ? <QuickAccessPanel config={dashConfig} /> : null}
           </CollapsiblePanel>
         </CardErrorBoundary>
       )}
 
-      {/* 2. Staubsauger (Vacuum) */}
       {HA_CONFIGURED && (
         <CardErrorBoundary>
-          <CollapsiblePanel
-            panelKey="vacuum"
-            icon={mdiRobotVacuum}
-            title={t("vacuum.title")}
-            forceExpanded={isVacuumActive}
-          >
+          <CollapsiblePanel panelKey="vacuum" icon={mdiRobotVacuum} title={t("vacuum.title")} forceExpanded={isVacuumActive}>
             <VacuumPanel />
           </CollapsiblePanel>
         </CardErrorBoundary>
       )}
 
-      {/* Rooms section */}
       {HA_CONFIGURED && !loading && !error && rooms.length === 0 && (
         <div className="rounded-lg border border-slate-800 bg-slate-900 px-6 py-8 text-center space-y-2">
           <p className="text-slate-300 font-medium">{t("rooms.noRooms")}</p>
@@ -135,34 +58,19 @@ export function SmarthomePage() {
 
       {HA_CONFIGURED && error && (
         <div className="rounded-lg border border-red-900/50 bg-slate-900 px-6 py-4">
-          <p className="text-sm text-red-400">
-            {t("entity.failedToLoad")}: {error}
-          </p>
+          <p className="text-sm text-red-400">{t("entity.failedToLoad")}: {error}</p>
         </div>
       )}
 
       {HA_CONFIGURED && rooms.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-slate-400 mb-3">
-            {t("rooms.title")}
-          </h3>
+          <h3 className="text-sm font-medium text-slate-400 mb-3">{t("rooms.title")}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {roomLayout.map(({ room, spanFull }) => (
-              <div
-                key={room.id}
-                className={cn(spanFull && "md:col-span-2")}
-              >
+              <div key={room.id} className={cn(spanFull && "md:col-span-2")}>
                 <CardErrorBoundary>
-                  <CollapsiblePanel
-                    panelKey={`room-${room.id}`}
-                    icon={resolveDashboardIcon(room.icon)}
-                    title={room.name}
-                    defaultCollapsed
-                  >
-                    <CompactRoomCard
-                      room={room}
-                      showQuickToggle={quickToggleRooms.has(room.id)}
-                    />
+                  <CollapsiblePanel panelKey={`room-${room.id}`} icon={resolveDashboardIcon(room.icon)} title={room.name} defaultCollapsed>
+                    <CompactRoomCard room={room} showQuickToggle={quickToggleRooms.has(room.id)} />
                   </CollapsiblePanel>
                 </CardErrorBoundary>
               </div>
