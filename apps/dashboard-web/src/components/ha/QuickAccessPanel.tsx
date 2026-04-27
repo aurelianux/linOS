@@ -8,20 +8,47 @@ import type { DashboardConfig, ModeState, QuickToggleConfig } from "@/lib/api/ty
 import type { TranslationKey } from "@/lib/i18n/translations";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
-import { mdiCheck } from "@mdi/js";
-import { useCallback, useMemo, useState } from "react";
+import {
+  mdiBrightness7,
+  mdiBrightness4,
+  mdiWeatherNight,
+  mdiLightbulbOff,
+  mdiCheck,
+  mdiAlertCircle,
+} from "@mdi/js";
+import { useCallback, useMemo, useRef, useState } from "react";
 
-const MODE_OPTIONS: Array<{
-  value: string;
-  labelKey: TranslationKey;
-  activeClass: string;
-}> = [
-  { value: "hell", labelKey: "quickToggle.mode.hell", activeClass: "bg-amber-400 text-slate-950" },
-  { value: "chill", labelKey: "quickToggle.mode.chill", activeClass: "bg-sky-400 text-slate-950" },
-  { value: "aus", labelKey: "quickToggle.mode.aus", activeClass: "bg-slate-600 text-slate-100" },
-];
+const MODE_CONFIG: Record<
+  string,
+  { labelKey: TranslationKey; icon: string; activeClass: string }
+> = {
+  hell: {
+    labelKey: "quickToggle.mode.hell",
+    icon: mdiBrightness7,
+    activeClass: "bg-amber-400 text-slate-950 border-transparent shadow-sm ring-1 ring-white/20",
+  },
+  chill: {
+    labelKey: "quickToggle.mode.chill",
+    icon: mdiBrightness4,
+    activeClass: "bg-sky-400 text-slate-950 border-transparent shadow-sm ring-1 ring-white/20",
+  },
+  dunkel: {
+    labelKey: "quickToggle.mode.dunkel",
+    icon: mdiWeatherNight,
+    activeClass: "bg-violet-400 text-slate-950 border-transparent shadow-sm ring-1 ring-white/20",
+  },
+  aus: {
+    labelKey: "quickToggle.mode.aus",
+    icon: mdiLightbulbOff,
+    activeClass: "bg-slate-600 text-slate-100 border-transparent shadow-sm ring-1 ring-white/20",
+  },
+};
 
-type ExecutionState = "idle" | "executing" | "success" | "error";
+const LONG_PRESS_DURATION_MS = 600;
+const SUCCESS_DISPLAY_DURATION_MS = 1200;
+const ERROR_DISPLAY_DURATION_MS = 1500;
+
+type ButtonState = "idle" | "executing" | "success" | "error";
 
 interface QuickAccessPanelProps {
   config: DashboardConfig;
@@ -33,8 +60,9 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const { data: modeState } = useLightingModes();
 
   const [userSelectedRoomIds, setUserSelectedRoomIds] = useState<Set<string> | null>(null);
-  const [selectedMode, setSelectedMode] = useState<string | null>(null);
-  const [executionState, setExecutionState] = useState<ExecutionState>("idle");
+  const [buttonStates, setButtonStates] = useState<Record<string, ButtonState>>({});
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   const quickToggles = config.quickToggles as QuickToggleConfig | undefined;
   const rooms = config.rooms;
@@ -57,7 +85,6 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const selectedRoomIds = userSelectedRoomIds ?? defaultRoomIds;
   const setSelectedRoomIds = setUserSelectedRoomIds;
 
-  // Read current mode of first selected room from the backend state for the indicator
   const firstSelectedRoomId = Array.from(selectedRoomIds)[0];
   const currentRoomMode = firstSelectedRoomId ? (modeState?.[firstSelectedRoomId] ?? undefined) : undefined;
 
@@ -65,12 +92,7 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
   const allSelected = availableRooms.length > 0 && availableRooms.every((r) => selectedRoomIds.has(r.id));
 
   const handleSelectAll = () => {
-    if (allSelected) {
-      setSelectedRoomIds(new Set());
-    } else {
-      setSelectedRoomIds(new Set(availableRooms.map((r) => r.id)));
-    }
-    setSelectedMode(null);
+    setSelectedRoomIds(allSelected ? new Set() : new Set(availableRooms.map((r) => r.id)));
   };
 
   const handleRoomToggle = (roomId: string) => {
@@ -83,64 +105,58 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
       }
       return next;
     });
-    setSelectedMode(null);
   };
 
-  const buildSummary = (): string => {
-    if (selectedRoomIds.size === 0) {
-      return t("quickToggle.noSelection");
-    }
-    if (!selectedMode) {
-      return t("quickToggle.selectMode");
-    }
-    const roomNames = availableRooms
-      .filter((r) => selectedRoomIds.has(r.id))
-      .map((r) => r.name);
-    const modeOption = MODE_OPTIONS.find((m) => m.value === selectedMode);
-    const modeLabel = modeOption ? t(modeOption.labelKey) : selectedMode;
-    return `${roomNames.join(" & ")} → ${modeLabel}`;
-  };
-
-  const canExecute = selectedRoomIds.size > 0 && selectedMode !== null && executionState !== "executing";
-
-  const handleExecute = useCallback(async () => {
-    if (!selectedMode || selectedRoomIds.size === 0 || executionState === "executing") return;
-
-    setExecutionState("executing");
-
-    try {
-      if (allSelected) {
-        // All rooms selected — single backend call for efficiency
-        await fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/${selectedMode}`, { method: "POST" });
-      } else {
-        // Subset of rooms — one call per room in parallel
-        await Promise.all(
-          Array.from(selectedRoomIds).map((roomId) =>
-            fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/${selectedMode}/${roomId}`, { method: "POST" })
-          )
-        );
+  const applyMode = useCallback(
+    async (mode: string) => {
+      if (selectedRoomIds.size === 0) return;
+      setButtonStates((prev) => ({ ...prev, [mode]: "executing" }));
+      try {
+        if (allSelected) {
+          await fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/${mode}`, { method: "POST" });
+        } else {
+          await Promise.all(
+            Array.from(selectedRoomIds).map((roomId) =>
+              fetchJson<ModeState>(`${API_ENDPOINTS.MODE}/${mode}/${roomId}`, { method: "POST" })
+            )
+          );
+        }
+        setButtonStates((prev) => ({ ...prev, [mode]: "success" }));
+        setTimeout(() => setButtonStates((prev) => ({ ...prev, [mode]: "idle" })), SUCCESS_DISPLAY_DURATION_MS);
+      } catch (err: unknown) {
+        console.error("Failed to apply lighting mode:", err);
+        setButtonStates((prev) => ({ ...prev, [mode]: "error" }));
+        setTimeout(() => setButtonStates((prev) => ({ ...prev, [mode]: "idle" })), ERROR_DISPLAY_DURATION_MS);
       }
+    },
+    [selectedRoomIds, allSelected]
+  );
 
-      setExecutionState("success");
-      setTimeout(() => {
-        setExecutionState("idle");
-        setSelectedMode(null);
-      }, 1500);
-    } catch (err: unknown) {
-      console.error("Failed to apply lighting mode:", err);
-      setExecutionState("error");
-      setTimeout(() => setExecutionState("idle"), 2000);
+  const handleModePointerDown = useCallback(
+    (mode: string) => {
+      longPressTriggeredRef.current = false;
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        void applyMode(mode);
+      }, LONG_PRESS_DURATION_MS);
+    },
+    [applyMode]
+  );
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
-  }, [selectedMode, selectedRoomIds, executionState, allSelected]);
+  }, []);
 
-  const modeSegmentOptions = modes.map((mode) => {
-    const opt = MODE_OPTIONS.find((m) => m.value === mode);
-    return {
-      value: mode,
-      labelKey: (opt?.labelKey ?? mode) as TranslationKey,
-      activeClass: opt?.activeClass,
-    };
-  });
+  const handleModeClick = useCallback(
+    (mode: string) => {
+      if (suppressTaps || longPressTriggeredRef.current) return;
+      void applyMode(mode);
+    },
+    [suppressTaps, applyMode]
+  );
 
   if (!quickToggles) return null;
 
@@ -170,59 +186,58 @@ export function QuickAccessPanel({ config }: QuickAccessPanelProps) {
         </div>
       </div>
 
-      {/* Mode selection buttons */}
+      {/* Mode icon buttons */}
       <div>
         <p className="text-xs text-slate-500 mb-1.5">{t("quickToggle.selectMode")}</p>
         <div className="flex gap-2">
-          {modeSegmentOptions.map((opt) => {
-            const isActive = selectedMode === opt.value;
-            const isCurrent = currentRoomMode === opt.value && selectedMode !== opt.value;
+          {modes.map((mode) => {
+            const cfg = MODE_CONFIG[mode];
+            if (!cfg) return null;
+            const btnState = buttonStates[mode] ?? "idle";
+            const isCurrent = currentRoomMode === mode;
+            const isExecuting = btnState === "executing";
+            const isSuccess = btnState === "success";
+            const isError = btnState === "error";
+            const isDisabled = selectedRoomIds.size === 0 || isExecuting;
+            const iconPath = isSuccess ? mdiCheck : isError ? mdiAlertCircle : cfg.icon;
+
             return (
               <button
-                key={opt.value}
+                key={mode}
                 type="button"
-                onClick={() => {
-                  if (!suppressTaps) setSelectedMode(opt.value);
-                }}
+                disabled={isDisabled}
+                onPointerDown={() => handleModePointerDown(mode)}
+                onPointerUp={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                onClick={() => handleModeClick(mode)}
+                title={t(cfg.labelKey)}
                 className={cn(
-                  "flex-1 py-3 rounded-lg text-sm font-semibold transition-all duration-200",
-                  "border select-none",
-                  isActive && opt.activeClass
-                    ? cn(opt.activeClass, "border-transparent shadow-sm")
-                    : isCurrent
-                      ? "bg-slate-800 text-slate-300 border-slate-500 ring-1 ring-slate-500"
-                      : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
+                  "flex-1 py-3 rounded-lg flex flex-col items-center gap-1.5",
+                  "border select-none transition-all duration-200 active:scale-95",
+                  isError
+                    ? "bg-red-500/20 border-red-500 text-red-400"
+                    : isSuccess
+                      ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
+                      : isCurrent
+                        ? cfg.activeClass
+                        : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200"
                 )}
               >
-                {t(opt.labelKey)}
+                <Icon
+                  path={iconPath}
+                  size={0.9}
+                  className={cn(
+                    "transition-all duration-200",
+                    isExecuting && "animate-pulse",
+                    (isSuccess || isError) && "animate-scale-in"
+                  )}
+                />
+                <span className="text-xs font-medium">{t(cfg.labelKey)}</span>
               </button>
             );
           })}
         </div>
       </div>
-
-      {/* Execute button */}
-      <button
-        type="button"
-        disabled={!canExecute}
-        onClick={handleExecute}
-        className={cn(
-          "w-full py-3 rounded-lg text-sm font-semibold transition-all duration-200",
-          "border select-none flex items-center justify-center gap-2",
-          executionState === "success"
-            ? "bg-emerald-500 text-slate-950 border-emerald-500"
-            : executionState === "error"
-              ? "bg-red-500 text-slate-950 border-red-500"
-              : canExecute
-                ? "bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 active:bg-amber-500"
-                : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
-        )}
-      >
-        {executionState === "success" && (
-          <Icon path={mdiCheck} size={0.7} className="animate-scale-in" />
-        )}
-        {executionState === "executing" ? "…" : executionState === "success" ? t("quickToggle.execute") : buildSummary()}
-      </button>
     </div>
   );
 }
