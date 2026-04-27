@@ -123,15 +123,26 @@ export interface DashboardRoom {
 }
 
 /**
+ * Target state for a light entity within a mode definition.
+ * Mirrors the backend shape — consumed from dashboard.json via GET /api/dashboard/config.
+ */
+export interface LightEntityState {
+  state: "on" | "off";
+  brightness?: number;
+  color_temp?: number;
+}
+
+/**
  * Quick toggle configuration for room lighting modes.
+ * The backend LightingModeService owns the actual HA scene.apply call —
+ * the frontend only needs to know which rooms have a toggle.
  */
 export interface RoomQuickToggle {
   roomId: string;
-  entity: `input_select.${string}`;
+  modeConfig: Record<string, Record<string, LightEntityState>>;
 }
 
 export interface QuickToggleConfig {
-  globalEntity: `input_select.${string}`;
   modes: string[];
   rooms: RoomQuickToggle[];
 }
