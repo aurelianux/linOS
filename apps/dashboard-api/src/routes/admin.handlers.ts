@@ -1,15 +1,13 @@
 import { type Request, type Response } from "express";
-import type pino from "pino";
 import { AppError, type ApiResponse } from "../middleware/errors.js";
 import { dockerApiRequest, dockerApiRequestRaw, parseDockerLogs } from "./system.docker.js";
-import { loadHostSshConfig, runGitPullViaSsh, type GitPullResult } from "./admin.helpers.js";
-import { launchStackBuildViaSsh, type StackBuildStartResult } from "./admin.build.js";
-import { readBuildStatus, isSafeBuildId, type StackBuildStatusResult } from "./admin.status.js";
+import { loadHostSshConfig, runGitPullViaSsh, runStackActionViaSsh, type GitPullResult, type StackAction } from "./admin.helpers.js";
 
 interface ContainerRestartResult { name: string; success: boolean; }
 interface ContainerLogsResult { logs: string; }
+interface StackActionResult { projectName: string; action: StackAction; initiated: boolean; }
 
-export type { ContainerRestartResult, ContainerLogsResult, GitPullResult, StackBuildStartResult, StackBuildStatusResult };
+export type { ContainerRestartResult, ContainerLogsResult, GitPullResult, StackActionResult };
 
 export function handleContainerRestart() {
   return async (req: Request, res: Response): Promise<void> => {
@@ -61,9 +59,12 @@ export function handleGitPull() {
   };
 }
 
-export function handleStackRestart(
+const VALID_ACTIONS = new Set<string>(["build", "up", "down"]);
+
+export function handleStackAction(
   allowedProjects: Set<string>,
-  hostComposePath: (projectName: string, remoteRepoPath: string) => string | null,
+  getComposePath: (projectName: string) => string | undefined,
+  getEnvFile: (projectName: string) => string | undefined,
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     const rawParam = req.params.projectName;
@@ -71,43 +72,22 @@ export function handleStackRestart(
     if (!projectName || !allowedProjects.has(projectName)) {
       throw new AppError(`Unknown stack: ${projectName ?? "undefined"}`, 400, "INVALID_STACK");
     }
-    const config = loadHostSshConfig();
-    const composeFilePath = hostComposePath(projectName, config.remoteRepoPath);
-    if (!composeFilePath) {
+
+    const rawAction = (req.body as Record<string, unknown>)?.action;
+    if (typeof rawAction !== "string" || !VALID_ACTIONS.has(rawAction)) {
+      throw new AppError(`Invalid action: ${String(rawAction ?? "undefined")}`, 400, "INVALID_ACTION");
+    }
+    const action = rawAction as StackAction;
+
+    const composePath = getComposePath(projectName);
+    if (!composePath) {
       throw new AppError(`No composePath configured for stack: ${projectName}`, 400, "MISSING_COMPOSE_PATH");
     }
-    const launch = await launchStackBuildViaSsh({ config, projectName, composeFilePath });
-    const data: StackBuildStartResult = {
-      projectName,
-      buildId: launch.buildId,
-      pid: launch.pid,
-      logPath: launch.logPath,
-      startedAt: launch.startedAt,
-      commitHash: launch.commitHash,
-    };
-    res.json({ ok: true, data } satisfies ApiResponse<StackBuildStartResult>);
-  };
-}
 
-export function handleBuildStatus(allowedProjects: Set<string>, logger?: pino.Logger) {
-  return async (req: Request, res: Response): Promise<void> => {
-    const rawParam = req.params.projectName;
-    const projectName = Array.isArray(rawParam) ? rawParam[0] : rawParam;
-    if (!projectName || !allowedProjects.has(projectName)) {
-      throw new AppError(`Unknown stack: ${projectName ?? "undefined"}`, 400, "INVALID_STACK");
-    }
-    const rawBuildId = req.query.buildId;
-    const buildId =
-      typeof rawBuildId === "string" ? rawBuildId
-      : Array.isArray(rawBuildId) ? String(rawBuildId[0])
-      : "";
-    if (!buildId || !isSafeBuildId(buildId)) {
-      throw new AppError("Missing or invalid buildId", 400, "INVALID_BUILD_ID");
-    }
-    if (!buildId.endsWith(`-${projectName}`)) {
-      throw new AppError(`buildId does not belong to stack ${projectName}`, 400, "INVALID_BUILD_ID");
-    }
-    const data = await readBuildStatus(buildId, logger);
-    res.json({ ok: true, data } satisfies ApiResponse<StackBuildStatusResult>);
+    const config = loadHostSshConfig();
+    await runStackActionViaSsh(config, { composePath, action, envFile: getEnvFile(projectName) });
+
+    const data: StackActionResult = { projectName, action, initiated: action === "build" };
+    res.json({ ok: true, data } satisfies ApiResponse<StackActionResult>);
   };
 }

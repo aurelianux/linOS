@@ -1,3 +1,4 @@
+import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { AppError } from "../middleware/errors.js";
@@ -67,6 +68,45 @@ export interface GitPullResult {
 export async function runGitPullViaSsh(config: HostSshConfig): Promise<GitPullResult> {
   const command = `${GIT_COMMAND} -C ${shellEscapeSingleQuoted(config.remoteRepoPath)} pull`;
   const { stdout, stderr } = await runSshCommand(config, command);
+  return { stdout, stderr };
+}
+
+export type StackAction = "build" | "up" | "down";
+
+const SSH_STACK_SYNC_TIMEOUT_MS = 90_000;
+const SSH_STACK_BACKGROUND_TIMEOUT_MS = 10_000;
+
+export interface StackActionSshResult { stdout: string; stderr: string }
+
+export async function runStackActionViaSsh(
+  config: HostSshConfig,
+  params: { composePath: string; action: StackAction; envFile?: string | undefined },
+): Promise<StackActionSshResult> {
+  const { composePath, action, envFile } = params;
+  const stackDir = path.posix.join(config.remoteRepoPath, composePath);
+  const escapedDir = shellEscapeSingleQuoted(stackDir);
+  const scriptsDir = shellEscapeSingleQuoted(path.posix.join(config.remoteRepoPath, "scripts"));
+
+  let coreCmd: string;
+  let timeoutMs: number;
+  if (action === "build") {
+    // Run in background — build can take minutes and may restart the API itself
+    coreCmd = `nohup ${scriptsDir}/dcb >/dev/null 2>&1 &`;
+    timeoutMs = SSH_STACK_BACKGROUND_TIMEOUT_MS;
+  } else if (action === "up") {
+    coreCmd = `docker compose up -d`;
+    timeoutMs = SSH_STACK_SYNC_TIMEOUT_MS;
+  } else {
+    coreCmd = `docker compose down`;
+    timeoutMs = SSH_STACK_SYNC_TIMEOUT_MS;
+  }
+
+  const envPrefix = envFile
+    ? `set -a; source ${shellEscapeSingleQuoted(path.posix.join(config.remoteRepoPath, envFile))}; set +a; `
+    : "";
+
+  const command = `${envPrefix}cd ${escapedDir} && ${coreCmd}`;
+  const { stdout, stderr } = await runSshCommand(config, command, { execTimeoutMs: timeoutMs });
   return { stdout, stderr };
 }
 

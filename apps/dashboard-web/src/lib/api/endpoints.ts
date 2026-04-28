@@ -6,7 +6,7 @@ export const API_ENDPOINTS = {
   SERVICES_STATUS: "/services/status",
   DASHBOARD_CONFIG: "/dashboard/config",
   MODE: "/mode",
-  ADMIN_STACK_RESTART: "/admin/stack",
+  ADMIN_STACK_ACTION: "/admin/stack",
   ADMIN_CONTAINER: "/admin/container",
   ADMIN_GIT_PULL: "/admin/git-pull",
   ADMIN_GIT_STATUS: "/admin/git-status",

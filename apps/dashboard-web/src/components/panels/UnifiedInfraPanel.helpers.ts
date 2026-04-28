@@ -1,15 +1,9 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import type { ContainerInfo, AdminStack, StackBuildStatus } from "@/lib/api/types";
-import { fetchJson } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-
-export const BUILD_STATUS_POLL_MS = 2_000;
+import { useState, useRef, useCallback } from "react";
+import type { ContainerInfo, AdminStack } from "@/lib/api/types";
 
 export type ActionState = "idle" | "loading" | "success" | "error";
 
 export interface LogTarget { id: string; name: string }
-
-export interface ActiveBuild { buildId: string; startedAt: string }
 
 export const STATE_BADGE_MAP: Record<string, { variant: "success" | "warning" | "destructive" | "secondary"; label: string }> = {
   running: { variant: "success", label: "Running" },
@@ -44,46 +38,4 @@ export function useAutoResetState() {
     }
   }, []);
   return [states, setState] as const;
-}
-
-export function useBuildStatusPoller(
-  activeBuilds: Record<string, ActiveBuild>,
-  onResult: (projectName: string, status: StackBuildStatus) => void,
-  onReachability: (reachable: boolean) => void,
-) {
-  const resultRef = useRef(onResult);
-  const reachRef = useRef(onReachability);
-  const buildsRef = useRef(activeBuilds);
-  useLayoutEffect(() => {
-    resultRef.current = onResult;
-    reachRef.current = onReachability;
-    buildsRef.current = activeBuilds;
-  });
-
-  const buildsKey = Object.entries(activeBuilds).map(([p, b]) => `${p}:${b.buildId}`).sort().join(",");
-
-  useEffect(() => {
-    if (buildsKey === "") { reachRef.current(true); return; }
-    let cancelled = false;
-    const tick = async () => {
-      const builds = buildsRef.current;
-      const projects = Object.keys(builds);
-      if (projects.length === 0) return;
-      let anySucceeded = false;
-      for (const project of projects) {
-        const build = builds[project];
-        if (!build) continue;
-        try {
-          const status = await fetchJson<StackBuildStatus>(`${API_ENDPOINTS.ADMIN_STACK_RESTART}/${project}/build-status?buildId=${encodeURIComponent(build.buildId)}`);
-          if (cancelled) return;
-          anySucceeded = true;
-          resultRef.current(project, status);
-        } catch { /* keep polling during api self-restart */ }
-      }
-      if (!cancelled) reachRef.current(anySucceeded);
-    };
-    void tick();
-    const id = setInterval(() => { void tick(); }, BUILD_STATUS_POLL_MS);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [buildsKey]);
 }

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# docker compose up --build -d — run from the compose directory
+set -euo pipefail
+docker compose up --build -d "$@"

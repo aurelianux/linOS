@@ -141,7 +141,7 @@
     { "projectName": "dns",           "label": "AdGuard Home",            "composePath": "stacks/dns" },
     { "projectName": "proxy",         "label": "Caddy",                   "composePath": "stacks/proxy" },
     { "projectName": "service-index", "label": "Service Index",           "composePath": "stacks/applications/service-index" },
-    { "projectName": "plane-app",     "label": "Plane",                   "composePath": "stacks/applications/plane/plane-app" }
+    { "projectName": "plane-app",     "label": "Plane",                   "composePath": "stacks/applications/plane/plane-app", "envFile": ".env.linos" }
   ],
   "motionSensors": [
     {

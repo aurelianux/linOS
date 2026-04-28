@@ -21,7 +21,7 @@ export function createRouter(
   router.use(servicesRouter(servicesConfig.services, logger));
   router.use(systemRouter());
   router.use(dashboardRouter(dashboardConfig));
-  router.use(adminRouter(dashboardConfig, logger));
+  router.use(adminRouter(dashboardConfig));
 
   return router;
 }

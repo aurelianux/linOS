@@ -229,35 +229,12 @@ export interface DashboardConfig {
   adminStacks?: AdminStack[];
 }
 
-/**
- * Response from POST /admin/stack/:project/restart.
- * A build has been LAUNCHED on the host, not finished — poll the build-status
- * endpoint with `buildId` to observe progress.
- */
-export interface StackBuildStartResult {
+export type StackAction = "build" | "up" | "down";
+
+export interface StackActionResult {
   projectName: string;
-  buildId: string;
-  pid: number;
-  logPath: string;
-  startedAt: string;
-  commitHash: string;
-}
-
-export type BuildState = "running" | "success" | "failed" | "stalled" | "unknown";
-
-/**
- * Response from GET /admin/stack/:project/build-status?buildId=…
- */
-export interface StackBuildStatus {
-  buildId: string;
-  state: BuildState;
-  exitCode: number | null;
-  startedAt: string | null;
-  finishedAt: string | null;
-  durationMs: number | null;
-  commitHash: string | null;
-  /** Last ~40 non-empty lines of the build log, oldest first. */
-  tail: string[];
+  action: StackAction;
+  initiated: boolean;
 }
 
 export interface ContainerRestartResult {
