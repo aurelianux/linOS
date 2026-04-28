@@ -337,7 +337,8 @@ LIGHTS.map((id) => <LightCard key={id} entityId={id} />)
 ### Component simplicity — one job per component
 - A component renders UI. It does not contain business logic, data transformations, or unrelated state.
 - Extract derived values to plain functions or custom hooks above the component.
-- If a component exceeds ~80 lines, consider splitting — a large render is a sign of mixed concerns.
+- **Hard limit: 150 lines per file.** Pure-data files (translations, type defs, static config) are exempt.
+- When a file exceeds 150 lines, split into co-located siblings using the `Foo.helpers.ts` / `Foo.views.tsx` / `Foo.state.ts` pattern — same directory, named by concern.
 - Sub-components that are only used once inside a parent file are fine to co-locate in the same file.
 - Props stay simple: pass data and callbacks — never pass entire store slices or complex objects when scalar values suffice.
 
@@ -516,6 +517,7 @@ One logical change per commit. No 500-line commits.
 □ All user-visible strings go through t() from useTranslation()
 □ No magic strings — entity IDs, room names, paths in named constants or config files
 □ Components are focused — no business logic mixed into render
+□ No file exceeds 150 lines (pure-data files exempt) — split into Foo.helpers.ts / Foo.views.tsx / Foo.state.ts siblings if needed
 □ No duplicated logic — shared code lives in lib/ or hooks/
 □ HA entities: null / unavailable / unknown all handled
 □ HA service calls wrapped in try/catch
