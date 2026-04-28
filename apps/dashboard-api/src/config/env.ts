@@ -29,6 +29,10 @@ const envSchema = z.object({
   // Defaults to config/dashboard.json at the repo root
   DASHBOARD_CONFIG_PATH: z.string().optional(),
 
+  // Berta host IP — used to reach the berta-agent metrics service
+  LINOS_HOST_BERTA_IP: z.string().optional(),
+  BERTA_AGENT_PORT: z.coerce.number().default(4002),
+
   // Optional SSH target used by /admin/git-pull endpoint
   LINOS_GIT_PULL_SSH_HOST: z.string().optional(),
   LINOS_GIT_PULL_SSH_PORT: z.coerce.number().int().positive().optional(),

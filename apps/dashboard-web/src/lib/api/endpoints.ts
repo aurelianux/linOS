@@ -3,6 +3,7 @@ export const API_ENDPOINTS = {
   SYSTEM_INFO: "/system/info",
   SYSTEM_VITALS: "/system/vitals",
   SYSTEM_CONTAINERS: "/system/containers",
+  BERTA_METRICS: "/system/berta",
   SERVICES_STATUS: "/services/status",
   DASHBOARD_CONFIG: "/dashboard/config",
   MODE: "/mode",

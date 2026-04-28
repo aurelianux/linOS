@@ -72,7 +72,7 @@ export function createApp(
   // ─────────────────────────────────────
   // Routes
   // ─────────────────────────────────────
-  app.use(createRouter(servicesConfig, logger, dashboardConfig));
+  app.use(createRouter(servicesConfig, logger, dashboardConfig, env));
 
   // NOTE: notFound + error middleware registered via finalize() in index.ts
   // after all late-mounted features (timer, etc.) are attached.

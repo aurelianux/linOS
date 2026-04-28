@@ -6,6 +6,7 @@ import { TimerHeaderBadge } from "@/components/layout/TimerHeaderBadge";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { useMetricHistory } from "@/hooks/useMetricHistory";
 import { useSystemVitals } from "@/hooks/useSystemVitals";
+import { useBertaMetrics } from "@/hooks/useBertaMetrics";
 import type { AirQualityConfig, DashboardRoom } from "@/lib/api/types";
 import { HA_CONFIGURED } from "@/lib/ha/config";
 import { resolveDashboardIcon } from "@/lib/ha/dashboardIcons";
@@ -107,6 +108,49 @@ function SystemBadge() {
         percent={data.memoryUsedPercent}
         history={ramHistory}
       />
+    </HeaderBadge>
+  );
+}
+
+/** Berta metrics badge — CPU, RAM, GPU */
+function BertaBadge() {
+  const { data } = useBertaMetrics();
+  const cpuHistory = useMetricHistory(data?.metrics?.cpuLoadPercent ?? null);
+  const ramHistory = useMetricHistory(
+    data?.metrics
+      ? Math.round(
+          ((data.metrics.totalMemoryBytes - data.metrics.freeMemoryBytes) /
+            data.metrics.totalMemoryBytes) *
+            100
+        )
+      : null
+  );
+  const gpuHistory = useMetricHistory(data?.metrics?.gpu?.utilizationPercent ?? null);
+
+  if (!data?.available || data.metrics === null) return null;
+
+  const { metrics } = data;
+  const ramPercent = Math.round(
+    ((metrics.totalMemoryBytes - metrics.freeMemoryBytes) / metrics.totalMemoryBytes) * 100
+  );
+
+  return (
+    <HeaderBadge title="Berta">
+      <span className="text-xs font-medium text-slate-500">berta</span>
+      <span className="text-slate-600 mx-0.5">·</span>
+      <SystemMetricBadge label="CPU" percent={metrics.cpuLoadPercent} history={cpuHistory} />
+      <span className="text-slate-600 mx-0.5">|</span>
+      <SystemMetricBadge label="RAM" percent={ramPercent} history={ramHistory} />
+      {metrics.gpu !== null && (
+        <>
+          <span className="text-slate-600 mx-0.5">|</span>
+          <SystemMetricBadge
+            label="GPU"
+            percent={metrics.gpu.utilizationPercent}
+            history={gpuHistory}
+          />
+        </>
+      )}
     </HeaderBadge>
   );
 }
@@ -274,6 +318,7 @@ export function Header() {
           <TimerHeaderBadge />
           {/* System metrics */}
           <SystemBadge />
+          <BertaBadge />
           {/* Climate rooms */}
           {climateRooms.map(({ room, airQuality }) => (
             <ClimateBadge

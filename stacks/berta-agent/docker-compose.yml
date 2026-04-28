@@ -1,0 +1,16 @@
+services:
+  berta-agent:
+    build:
+      context: ../../apps
+      dockerfile: berta-agent/Dockerfile
+    environment:
+      PORT: ${BERTA_AGENT_PORT:-4002}
+      NODE_ENV: production
+    restart: unless-stopped
+    ports:
+      - "${BERTA_AGENT_PORT:-4002}:4002"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

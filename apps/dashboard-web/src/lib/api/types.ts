@@ -98,6 +98,39 @@ export interface ContainersData {
 }
 
 /**
+ * NVIDIA GPU metrics from berta-agent.
+ */
+export interface GpuMetrics {
+  name: string;
+  utilizationPercent: number;
+  memoryUsedMiB: number;
+  memoryTotalMiB: number;
+}
+
+/**
+ * Berta host system metrics.
+ * Returned inside GET /api/system/berta
+ */
+export interface BertaMetrics {
+  hostname: string;
+  uptimeSeconds: number;
+  cpuLoadPercent: number;
+  totalMemoryBytes: number;
+  freeMemoryBytes: number;
+  gpu: GpuMetrics | null;
+}
+
+/**
+ * Response envelope for GET /api/system/berta.
+ * available=false when berta-agent is unreachable or not configured.
+ */
+export interface BertaData {
+  available: boolean;
+  metrics: BertaMetrics | null;
+  unavailableReason: string | null;
+}
+
+/**
  * Dashboard entity configuration.
  * Returned by GET /api/dashboard/config
  */
