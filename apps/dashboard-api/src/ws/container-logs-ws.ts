@@ -9,7 +9,6 @@ const INITIAL_TAIL_LINES = 200;
 
 interface SubscribeMessage { action: "subscribe"; containerId: string; tail?: number; }
 interface UnsubscribeMessage { action: "unsubscribe"; }
-type ClientMessage = SubscribeMessage | UnsubscribeMessage;
 interface LinesMessage { type: "lines"; data: string[]; }
 interface SubscribedMessage { type: "subscribed"; containerId: string; }
 interface ErrorMessage { type: "error"; message: string; }
@@ -74,7 +73,6 @@ export function createContainerLogsWebSocket(_server: Server, logger: pino.Logge
             sendJson(ws, { type: "error", message: err.message });
             cleanup();
           },
-          log,
         );
         sendJson(ws, { type: "subscribed", containerId });
       } else if (isUnsubscribeMessage(msg)) {

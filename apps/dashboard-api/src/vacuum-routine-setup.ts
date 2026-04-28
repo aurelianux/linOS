@@ -7,10 +7,7 @@ import { VacuumHaClient } from "./services/vacuum-ha-client.js";
 import { vacuumRoutinesRouter } from "./routes/vacuum-routines.js";
 import { createVacuumRoutineWebSocket } from "./ws/vacuum-routine-ws.js";
 import type { DashboardConfig } from "./config/app-config.js";
-import {
-  loadLightNotificationEnv,
-  isLightNotificationConfigured,
-} from "./config/light-notification-env.js";
+import { loadLightNotificationEnv } from "./config/light-notification-env.js";
 
 /**
  * Attach vacuum routine feature to an existing Express app + HTTP server.

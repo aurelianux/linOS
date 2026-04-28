@@ -1,6 +1,5 @@
 import { readFile } from "fs/promises";
 import { Client, type ConnectConfig } from "ssh2";
-import type pino from "pino";
 
 const SSH_READY_TIMEOUT_MS = 10_000;
 const SSH_EXEC_TIMEOUT_MS = 30_000;

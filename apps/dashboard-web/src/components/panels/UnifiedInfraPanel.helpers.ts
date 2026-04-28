@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import type { ContainerInfo, AdminStack, StackBuildStatus } from "@/lib/api/types";
 import { fetchJson } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
@@ -54,9 +54,11 @@ export function useBuildStatusPoller(
   const resultRef = useRef(onResult);
   const reachRef = useRef(onReachability);
   const buildsRef = useRef(activeBuilds);
-  resultRef.current = onResult;
-  reachRef.current = onReachability;
-  buildsRef.current = activeBuilds;
+  useLayoutEffect(() => {
+    resultRef.current = onResult;
+    reachRef.current = onReachability;
+    buildsRef.current = activeBuilds;
+  });
 
   const buildsKey = Object.entries(activeBuilds).map(([p, b]) => `${p}:${b.buildId}`).sort().join(",");
 

@@ -1,7 +1,6 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
-import type pino from "pino";
-import { AppError, type ApiResponse } from "../middleware/errors.js";
+import { AppError } from "../middleware/errors.js";
 import { type HostSshConfig, runSshCommand } from "./admin.ssh.js";
 
 const execFileAsync = promisify(execFile);

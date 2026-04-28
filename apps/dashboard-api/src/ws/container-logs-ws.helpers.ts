@@ -1,5 +1,4 @@
 import http from "http";
-import type pino from "pino";
 import { DOCKER_SOCKET, parseDockerLogs } from "../routes/system.docker.js";
 
 const FLUSH_INTERVAL_MS = 250;
@@ -13,7 +12,6 @@ export function followContainerLogs(
   tail: number,
   onLines: (lines: string[]) => void,
   onError: (err: Error) => void,
-  logger: pino.Logger,
 ): () => void {
   let aborted = false;
   let currentReq: http.ClientRequest | null = null;
