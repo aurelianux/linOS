@@ -1,10 +1,10 @@
-import { mdiRestart, mdiCheck, mdiLoading, mdiChevronDown, mdiTextBoxOutline, mdiRocketLaunchOutline } from "@mdi/js";
+import { mdiRestart, mdiCheck, mdiLoading, mdiChevronDown, mdiTextBoxOutline, mdiRocketLaunchOutline, mdiRefresh, mdiStop } from "@mdi/js";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { cn } from "@/lib/utils";
-import type { ContainerInfo, AdminStack } from "@/lib/api/types";
+import type { ContainerInfo, AdminStack, StackAction } from "@/lib/api/types";
 import { StateBadge } from "./UnifiedInfraPanel.sections";
 import type { ActionState } from "./UnifiedInfraPanel.helpers";
 
@@ -28,15 +28,51 @@ export function ContainerRow({ container, restartState, onRestart, onViewLogs }:
   );
 }
 
-export function StackGroup({ stack, containers, expanded, onToggle, stackRestartState, stackMessage, containerStates, onStackRestart, onContainerRestart, onViewLogs }: {
-  stack: AdminStack; containers: ContainerInfo[]; expanded: boolean; onToggle: () => void;
-  stackRestartState: ActionState; stackMessage?: string; containerStates: Record<string, ActionState>;
-  onStackRestart: () => void; onContainerRestart: (id: string) => void; onViewLogs: (id: string, name: string) => void;
+function StackActionButton({ action, state, onClick, disabled }: {
+  action: StackAction; state: ActionState; onClick: () => void; disabled?: boolean;
 }) {
   const { t } = useTranslation();
+
+  const labels: Record<StackAction, { idle: string; loading: string; success: string; error: string; hint: string }> = {
+    build: { idle: t("infra.stackBuild"), loading: t("infra.stackBuilding"), success: t("infra.stackBuildSuccess"), error: t("infra.stackBuildError"), hint: t("infra.stackBuildHint") },
+    up:    { idle: t("infra.stackUp"),    loading: t("infra.stackUpping"),    success: t("infra.stackUpSuccess"),    error: t("infra.stackUpError"),    hint: t("infra.stackUpHint") },
+    down:  { idle: t("infra.stackDown"),  loading: t("infra.stackDowning"),   success: t("infra.stackDownSuccess"),  error: t("infra.stackDownError"),  hint: t("infra.stackDownHint") },
+  };
+
+  const icons: Record<StackAction, string> = {
+    build: mdiRocketLaunchOutline,
+    up: mdiRefresh,
+    down: mdiStop,
+  };
+
+  const label = labels[action];
+  const iconPath = state === "loading" ? mdiLoading : state === "success" ? mdiCheck : icons[action];
+  const text = state === "loading" ? label.loading : state === "success" ? label.success : state === "error" ? label.error : label.idle;
+
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={onClick}
+      disabled={disabled || state === "loading"}
+      className={cn("gap-1 text-xs h-7 px-2", state === "success" && "text-emerald-400", state === "error" && "text-red-400")}
+      title={label.hint}
+    >
+      <Icon path={iconPath} size={0.6} className={cn(state === "loading" && "animate-spin")} />
+      <span className="hidden sm:inline">{text}</span>
+    </Button>
+  );
+}
+
+export function StackGroup({ stack, containers, expanded, onToggle, stackActionStates, containerStates, onStackAction, onContainerRestart, onViewLogs }: {
+  stack: AdminStack; containers: ContainerInfo[]; expanded: boolean; onToggle: () => void;
+  stackActionStates: Record<StackAction, ActionState>; containerStates: Record<string, ActionState>;
+  onStackAction: (action: StackAction) => void; onContainerRestart: (id: string) => void; onViewLogs: (id: string, name: string) => void;
+}) {
   const allRunning = containers.length > 0 && containers.every((c) => c.state === "running");
   const someDown = containers.some((c) => c.state !== "running");
   const runningCount = containers.filter((c) => c.state === "running").length;
+  const anyActionLoading = Object.values(stackActionStates).some((s) => s === "loading");
 
   return (
     <div className="border-b border-slate-800 last:border-0">
@@ -49,19 +85,17 @@ export function StackGroup({ stack, containers, expanded, onToggle, stackRestart
           </Badge>
         </button>
         <div className="flex items-center gap-1 shrink-0">
-          <Button variant="secondary" size="sm" onClick={onStackRestart} disabled={stackRestartState === "loading" || containers.length === 0} className={cn("gap-1 text-xs h-7 px-2", stackRestartState === "success" && "text-emerald-400", stackRestartState === "error" && "text-red-400")} title={t("infra.buildRestartHint")}>
-            <Icon path={stackRestartState === "loading" ? mdiLoading : stackRestartState === "success" ? mdiCheck : mdiRocketLaunchOutline} size={0.6} className={cn(stackRestartState === "loading" && "animate-spin")} />
-            {stackRestartState === "loading" ? t("infra.building") : stackRestartState === "success" ? t("infra.buildSuccess") : stackRestartState === "error" ? t("infra.buildError") : t("infra.buildRestart")}
-          </Button>
+          <StackActionButton action="build" state={stackActionStates.build ?? "idle"} onClick={() => onStackAction("build")} disabled={anyActionLoading} />
+          <StackActionButton action="up"    state={stackActionStates.up ?? "idle"}    onClick={() => onStackAction("up")}    disabled={anyActionLoading} />
+          <StackActionButton action="down"  state={stackActionStates.down ?? "idle"}  onClick={() => onStackAction("down")}  disabled={anyActionLoading} />
         </div>
       </div>
-      {stackMessage && <p role="status" aria-live="polite" className={cn("text-xs pl-6 pb-2", stackRestartState === "error" ? "text-amber-400" : "text-slate-400")}>{stackMessage}</p>}
       {expanded && containers.length > 0 && (
         <div className="pb-2">
           {containers.map((c) => <ContainerRow key={c.id} container={c} restartState={containerStates[c.id] ?? "idle"} onRestart={() => onContainerRestart(c.id)} onViewLogs={() => onViewLogs(c.id, c.name)} />)}
         </div>
       )}
-      {expanded && containers.length === 0 && <p className="text-xs text-slate-500 pl-4 pb-2">{t("infra.noContainers")}</p>}
+      {expanded && containers.length === 0 && <p className="text-xs text-slate-500 pl-4 pb-2">No containers</p>}
     </div>
   );
 }

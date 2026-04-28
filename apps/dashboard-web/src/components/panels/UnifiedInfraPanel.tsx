@@ -12,13 +12,15 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { fetchJson } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils";
-import { ApiErrorException, type ContainerRestartResult, type StackBuildStartResult, type StackBuildStatus, type GitPullResult } from "@/lib/api/types";
+import type { ContainerRestartResult, StackActionResult, GitPullResult, StackAction } from "@/lib/api/types";
 import {
-  type ActionState, type LogTarget, type ActiveBuild,
-  groupContainersByProject, useAutoResetState, useBuildStatusPoller,
+  type ActionState, type LogTarget,
+  groupContainersByProject, useAutoResetState,
 } from "./UnifiedInfraPanel.helpers";
 import { GitStatusSection, DockerUnavailableNotice } from "./UnifiedInfraPanel.sections";
 import { StackGroup } from "./UnifiedInfraPanel.containers";
+
+type StackActionStates = Record<StackAction, ActionState>;
 
 export function UnifiedInfraPanel() {
   const { t } = useTranslation();
@@ -39,19 +41,27 @@ export function UnifiedInfraPanel() {
 
   const [logTarget, setLogTarget] = useState<LogTarget | null>(null);
   const [containerRestartStates, setContainerRestart] = useAutoResetState();
-  const [stackRestartStates, setStackRestart] = useAutoResetState();
-  const [stackMessages, setStackMessages] = useState<Record<string, string>>({});
-  const [activeBuilds, setActiveBuilds] = useState<Record<string, ActiveBuild>>({});
-  const [reconnecting, setReconnecting] = useState(false);
+  const [stackActionStates, setStackAction] = useState<Record<string, StackActionStates>>({});
   const { data: gitStatus, loading: gitStatusLoading, refresh: refreshGitStatus } = useGitStatus();
   const [gitPullState, setGitPullState] = useState<ActionState>("idle");
   const [gitPullMessage, setGitPullMessage] = useState("");
 
   const grouped = groupContainersByProject(containers, stacks);
 
-  const setStackMessage = useCallback((projectName: string, message: string) => {
-    setStackMessages((prev) => ({ ...prev, [projectName]: message }));
-    if (message) setTimeout(() => { setStackMessages((prev) => { if (prev[projectName] !== message) return prev; const next = { ...prev }; delete next[projectName]; return next; }); }, 4000);
+  const setStackActionState = useCallback((projectName: string, action: StackAction, state: ActionState) => {
+    setStackAction((prev) => ({
+      ...prev,
+      [projectName]: { ...(prev[projectName] ?? { build: "idle", up: "idle", down: "idle" }), [action]: state },
+    }));
+    if (state === "success" || state === "error") {
+      const delay = state === "success" ? 2000 : 4000;
+      setTimeout(() => {
+        setStackAction((prev) => ({
+          ...prev,
+          [projectName]: { ...(prev[projectName] ?? { build: "idle", up: "idle", down: "idle" }), [action]: "idle" },
+        }));
+      }, delay);
+    }
   }, []);
 
   const handleContainerRestart = useCallback(async (containerId: string) => {
@@ -60,29 +70,20 @@ export function UnifiedInfraPanel() {
     catch { setContainerRestart(containerId, "error"); }
   }, [setContainerRestart]);
 
-  const handleBuildResult = useCallback((projectName: string, status: StackBuildStatus) => {
-    if (status.state === "success") {
-      setStackRestart(projectName, "success");
-      setActiveBuilds((prev) => { if (!prev[projectName]) return prev; const next = { ...prev }; delete next[projectName]; return next; });
-      refresh(); setTimeout(() => { refresh(); }, 2500);
-    } else if (status.state === "failed" || status.state === "stalled") {
-      setStackRestart(projectName, "error");
-      setActiveBuilds((prev) => { if (!prev[projectName]) return prev; const next = { ...prev }; delete next[projectName]; return next; });
-    }
-  }, [refresh, setStackRestart]);
-
-  useBuildStatusPoller(activeBuilds, handleBuildResult, useCallback((reachable: boolean) => { setReconnecting(!reachable); }, []));
-
-  const handleStackRestart = useCallback(async (projectName: string) => {
-    setStackRestart(projectName, "loading"); setStackMessage(projectName, "");
+  const handleStackAction = useCallback(async (projectName: string, action: StackAction) => {
+    setStackActionState(projectName, action, "loading");
     try {
-      const result = await fetchJson<StackBuildStartResult>(`${API_ENDPOINTS.ADMIN_STACK_RESTART}/${projectName}/restart`, { method: "POST" });
-      setActiveBuilds((prev) => ({ ...prev, [projectName]: { buildId: result.buildId, startedAt: result.startedAt } }));
-    } catch (err) {
-      if (err instanceof ApiErrorException && err.code === "BUILD_ALREADY_RUNNING") { setStackRestart(projectName, "error"); setStackMessage(projectName, t("infra.buildAlreadyRunning")); return; }
-      setStackRestart(projectName, "error");
+      await fetchJson<StackActionResult>(`${API_ENDPOINTS.ADMIN_STACK_ACTION}/${projectName}/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      setStackActionState(projectName, action, "success");
+      if (action !== "build") { refresh(); setTimeout(() => refresh(), 2500); }
+    } catch {
+      setStackActionState(projectName, action, "error");
     }
-  }, [setStackRestart, setStackMessage, t]);
+  }, [setStackActionState, refresh]);
 
   const handleGitPull = useCallback(async () => {
     setGitPullState("loading"); setGitPullMessage("");
@@ -92,6 +93,8 @@ export function UnifiedInfraPanel() {
       setTimeout(() => { setGitPullState("idle"); setGitPullMessage(""); }, 5000);
     } catch { setGitPullState("error"); setGitPullMessage(t("admin.actions.gitPullError")); setTimeout(() => { setGitPullState("idle"); setGitPullMessage(""); }, 5000); }
   }, [t, refreshGitStatus]);
+
+  const IDLE_STACK_STATES: StackActionStates = { build: "idle", up: "idle", down: "idle" };
 
   return (
     <CollapsiblePanel panelKey="infra" icon={mdiServerNetwork} title={t("infra.title")} onRefresh={() => { refresh(); refreshGitStatus(); }} loading={dockerLoading} lastUpdated={lastUpdated}>
@@ -103,13 +106,23 @@ export function UnifiedInfraPanel() {
         </Button>
         {gitPullMessage && <p className={cn("text-xs truncate", gitPullState === "success" && "text-emerald-400", gitPullState === "error" && "text-red-400")} title={gitPullMessage}>{gitPullMessage}</p>}
       </div>
-      {reconnecting && <div className="flex items-center gap-2 py-2"><Icon path={mdiLoading} size={0.7} className="text-amber-400 animate-spin" /><span className="text-xs text-amber-400">{t("infra.reconnecting")}</span></div>}
       {dockerData && !dockerData.available && <DockerUnavailableNotice reason={dockerData.unavailableReason ?? "Docker not available."} code={dockerData.unavailableCode ?? null} />}
       {dockerLoading && !dockerData && <LoadingState />}
       {dockerData?.available && stacks.length > 0 && (
         <div className="pt-2">
           {stacks.map((stack) => (
-            <StackGroup key={stack.projectName} stack={stack} containers={grouped.get(stack.projectName) ?? []} expanded={expandedStacks.has(stack.projectName)} onToggle={() => toggleStack(stack.projectName)} stackRestartState={stackRestartStates[stack.projectName] ?? "idle"} stackMessage={stackMessages[stack.projectName]} containerStates={containerRestartStates} onStackRestart={() => handleStackRestart(stack.projectName)} onContainerRestart={handleContainerRestart} onViewLogs={(id, name) => setLogTarget({ id, name })} />
+            <StackGroup
+              key={stack.projectName}
+              stack={stack}
+              containers={grouped.get(stack.projectName) ?? []}
+              expanded={expandedStacks.has(stack.projectName)}
+              onToggle={() => toggleStack(stack.projectName)}
+              stackActionStates={stackActionStates[stack.projectName] ?? IDLE_STACK_STATES}
+              containerStates={containerRestartStates}
+              onStackAction={(action) => handleStackAction(stack.projectName, action)}
+              onContainerRestart={handleContainerRestart}
+              onViewLogs={(id, name) => setLogTarget({ id, name })}
+            />
           ))}
         </div>
       )}

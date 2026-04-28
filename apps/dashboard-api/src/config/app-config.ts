@@ -129,6 +129,8 @@ export interface AdminStack {
   label: string;
   /** Path relative to repo root, e.g. "stacks/applications/dashboard" */
   composePath?: string;
+  /** Env file to source before running compose commands, relative to repo root (e.g. ".env.linos") */
+  envFile?: string | undefined;
 }
 
 export interface DashboardConfig {
@@ -215,6 +217,7 @@ const adminStackSchema = z.object({
   projectName: z.string().min(1),
   label: z.string().min(1),
   composePath: z.string(),
+  envFile: z.string().optional(),
 });
 
 const dashboardConfigSchema = z.object({
